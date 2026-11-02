@@ -75,6 +75,15 @@ echo "▸ Empreinte"
 
 rm -rf "$TRAVAIL"
 
+# makepkg exige que la source déclarée dans le PKGBUILD soit présente dans pkg/.
+# On crée le lien ici pour que « cd pkg && makepkg -si » fonctionne sans étape
+# manuelle, comme l'indique le README.
+if [ -d "$RACINE/pkg" ]; then
+  rm -f "$RACINE/pkg/${NOM}-${VERSION}.tar.gz"
+  ln -s "../dist/${NOM}-${VERSION}.tar.gz" "$RACINE/pkg/${NOM}-${VERSION}.tar.gz"
+  echo "▸ Lien de source créé dans pkg/"
+fi
+
 TAILLE="$(du -h "$ARCHIVE" | cut -f1)"
 echo
 echo "✓ Archive prête : $ARCHIVE ($TAILLE)"

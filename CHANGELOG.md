@@ -4,6 +4,22 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.4.2] — 2026-11-03
+
+### Corrigé
+- **La construction du paquet échouait pour un nouvel arrivant.** Le README indiquait
+  `cd pkg && makepkg -si`, mais `makepkg` exige que l'archive source déclarée dans le
+  PKGBUILD soit présente dans `pkg/`. Seul un lien manuel le permettait. `npm run dist`
+  le crée désormais automatiquement.
+
+### Vérifié depuis un clone Git vierge
+- `git clone` puis `npm install` puis `npm start` : l'application se lance
+  (Electron 45 télécharge son binaire au premier démarrage, sans script postinstall)
+- `npm run dist` puis `cd pkg && makepkg -si` : le paquet se construit sans intervention
+- L'installateur en une ligne résout correctement la dernière release
+- Le paquet publié est téléchargeable, son empreinte SHA-256 correspond, et le paquet
+  extrait se lance (0 erreur, `chrome-sandbox` en 4755)
+
 ## [2.4.1] — 2026-11-03
 
 Audit complet : 4 bugs corrigés, sécurité du rendu renforcée.

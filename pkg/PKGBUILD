@@ -1,6 +1,6 @@
 # Maintainer: Cerveau <cerveau@localhost>
 pkgname=cerveau
-pkgver=2.4.1
+pkgver=2.4.2
 pkgrel=1
 pkgdesc="Assistant IA francophone : coffre Obsidian, agent de code et intégration GitHub"
 arch=('x86_64' 'aarch64')
