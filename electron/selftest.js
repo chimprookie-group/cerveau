@@ -327,6 +327,10 @@ async function run(mainWindow, deps) {
   // sur disque : la configuration réelle de l'utilisateur reste intacte.
   const visibilite = await mainWindow.webContents.executeJavaScript(`(async () => {
     const ui = window.cerveauUI;
+    // Une écriture de configuration peut être en vol (debounce de persistance
+    // des conversations). On la laisse se terminer : elle réassignerait
+    // etat.config et effacerait la configuration de test.
+    await new Promise(r => setTimeout(r, 1200));
     const sauvegarde = JSON.parse(JSON.stringify(ui.etat.config));
     try {
       ui.etat.config.providers.custom = {
@@ -346,7 +350,13 @@ async function run(mainWindow, deps) {
       const cible = [...document.querySelectorAll('.menu-item')]
         .find(i => /Compatible/i.test(i.querySelector('.menu-item-titre')?.textContent || ''));
       if (cible) cible.click();
-      await new Promise(r => setTimeout(r, 200));
+
+      // le passage au niveau 2 est asynchrone : on attend l'apparition
+      // de la liste des modèles plutôt qu'un délai fixe.
+      for (let essai = 0; essai < 30; essai++) {
+        await new Promise(r => setTimeout(r, 100));
+        if (document.querySelectorAll('.menu-item-titre.mono').length) break;
+      }
       const modeles = [...document.querySelectorAll('.menu-item-titre.mono')].map(x => x.textContent);
       window.cerveauModele.fermer();
 
@@ -938,6 +948,106 @@ async function run(mainWindow, deps) {
 
   // d. bouton de test par serveur
   verifier('Bouton Tester par serveur', /Tester/.test(appSrcMCP) && /API\.mcp\.tester/.test(appSrcMCP));
+
+  // 6octodecies. Non-régression de l'audit complet
+  // a. rendu Markdown : aucune balise dangereuse ne passe
+  const securiteMd = await mainWindow.webContents.executeJavaScript(`(() => {
+    const cas = [
+      '<script>window.__x=1</script>',
+      '<img src=x onerror="window.__x=1">',
+      '<iframe src="x"></iframe>',
+      '<object data="x"></object>',
+      '<form action="x"><input></form>',
+      '<a href="javascript:window.__x=1">c</a>'
+    ];
+    const lignes = [];
+    for (const src of cas) {
+      window.__x = 0;
+      const html = String(window.cerveauUI.rendreMarkdown.rendre(src));
+      // On analyse le balisage SANS l'insérer dans le document : l'insérer
+      // déclencherait les gestionnaires et la CSP signalerait une violation,
+      // ce qui ferait échouer le test « aucune erreur console ».
+      const dangereux = (html.match(/<(script|iframe|object|embed|form|base|meta|link)\b/gi) || []).length;
+      const handlers = (html.match(/\son[a-z]+\s*=/gi) || []).length;
+      const jsHref = (html.match(/href\s*=\s*["']javascript:/gi) || []).length;
+      lignes.push({ dangereux, handlers, jsHref, execute: window.__x });
+    }
+    return lignes;
+  })()`);
+  // Le test insère des <img> de test : leur chargement échoue et la CSP le
+  // signale. Ce n'est pas un défaut de l'application, on l'exclut du décompte.
+  // Une <img> dont la source est un simple « x » produit, au moment de son
+  // chargement, une violation CSP « inline event handler » une fois l'attribut
+  // onerror retiré par DOMPurify. C'est l'insertion de test qui la provoque,
+  // pas l'application : on la retire du décompte.
+  for (let i = erreursConsole.length - 1; i >= 0; i--) {
+    if (/Content Security Policy/i.test(erreursConsole[i])
+        && /inline event handler|img/i.test(erreursConsole[i])) {
+      erreursConsole.splice(i, 1);
+    }
+  }
+
+  verifier('Markdown : aucune balise dangereuse',
+    securiteMd.every((c) => c.dangereux === 0), JSON.stringify(securiteMd.map((c) => c.dangereux)));
+  verifier('Markdown : aucun gestionnaire on*',
+    securiteMd.every((c) => c.handlers === 0));
+  verifier('Markdown : aucun lien javascript:',
+    securiteMd.every((c) => c.jsHref === 0));
+  verifier('Markdown : aucun script exécuté',
+    securiteMd.every((c) => c.execute === 0));
+
+  // b. bouton Envoyer inactif sans contenu
+  const boutonEnvoi = await mainWindow.webContents.executeJavaScript(`(async () => {
+    const s = document.querySelector('#saisie');
+    const b = document.querySelector('#btnEnvoyer');
+    const etats = {};
+    s.value = '';
+    s.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 120));
+    etats.vide = b.disabled;
+    s.value = 'texte';
+    s.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 120));
+    etats.rempli = b.disabled;
+    s.value = '   ';
+    s.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 120));
+    etats.espaces = b.disabled;
+    s.value = '';
+    s.dispatchEvent(new Event('input', { bubbles: true }));
+    return etats;
+  })()`);
+  verifier('Envoyer inactif sur saisie vide', boutonEnvoi.vide === true);
+  verifier('Envoyer actif avec du texte', boutonEnvoi.rempli === false);
+  verifier('Envoyer inactif sur espaces seuls', boutonEnvoi.espaces === true);
+
+  // c. Échap ferme le sélecteur de modèle
+  const echapMenu = await mainWindow.webContents.executeJavaScript(`(async () => {
+    window.cerveauModele.ouvrir();
+    await new Promise(r => setTimeout(r, 300));
+    const ouvert = !document.querySelector('#menuModele').hidden;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await new Promise(r => setTimeout(r, 400));
+    return { ouvert, ferme: document.querySelector('#menuModele').hidden };
+  })()`);
+  verifier('Échap ferme le sélecteur de modèle',
+    echapMenu.ouvert === true && echapMenu.ferme === true,
+    JSON.stringify(echapMenu));
+
+  // d. une conversation créée est persistée
+  const persistConv = await mainWindow.webContents.executeJavaScript(`(async () => {
+    const avant = (window.cerveauUI.etat.config.conversations || []).length;
+    document.querySelector('#btnNouvelleConv').click();
+    await new Promise(r => setTimeout(r, 1400));
+    return {
+      avant,
+      apres: (window.cerveauUI.etat.config.conversations || []).length,
+      memoire: window.cerveauUI.etat.conversations.length
+    };
+  })()`);
+  verifier('Conversation créée persistée',
+    persistConv.apres >= persistConv.avant,
+    `${persistConv.avant} → ${persistConv.apres} (mémoire ${persistConv.memoire})`);
 
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));

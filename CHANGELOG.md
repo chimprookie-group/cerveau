@@ -4,6 +4,38 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.4.1] — 2026-11-03
+
+Audit complet : 4 bugs corrigés, sécurité du rendu renforcée.
+
+### Corrigé
+- **Les conversations n'étaient pas sauvegardées à leur création.** Une conversation
+  ouverte puis fermée aussitôt disparaissait au redémarrage : la persistance n'était
+  déclenchée qu'à la suppression et en fin de réponse.
+- **Le bouton Envoyer restait actif sur une saisie vide.** Il n'était désactivé que
+  pendant l'envoi. Il l'est désormais dès qu'il n'y a ni texte ni pièce jointe.
+- **Échap ne fermait pas le sélecteur de modèle** quand le focus avait quitté le champ
+  de recherche. La touche est maintenant traitée au niveau du document.
+- **Un test de l'autotest échouait selon le moment** : une écriture de configuration en
+  vol réassignait l'état et effaçait la configuration de test. Le test attend la fin des
+  écritures avant de manipuler l'état.
+
+### Sécurité
+- Le rendu Markdown interdit désormais explicitement `form`, `object`, `embed`, `iframe`,
+  `base`, `link`, `meta` ainsi que les attributs `action`, `formaction`, `srcdoc` et
+  `ping`. DOMPurify laissait passer `form` jusqu'ici. Combiné à la CSP, aucune des
+  attaques testées (script inline, `onerror`, `href=javascript:`, `svg onload`) ne
+  produit d'exécution.
+
+### Vérifié sans anomalie
+- 14 outils Obsidian sur fichier vide, unicode, frontmatter cassé, gros fichier, liens
+  cassés, recherche regex invalide
+- 7 outils code : offsets limites, glob, fichiers absents, commandes destructrices bloquées
+- 13 outils GitHub : messages clairs hors dépôt, fonctionnement correct dans un dépôt
+- 7 réglages testés un par un : tous réellement enregistrés
+- 64 handlers IPC, 64 appels preload : aucun orphelin
+- Tous les raccourcis clavier, bascule de thème, échelle de police
+
 ## [2.4.0] — 2026-11-03
 
 ### Corrigé

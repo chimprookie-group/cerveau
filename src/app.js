@@ -186,7 +186,11 @@ const renduMarkdown = (() => {
     if (window.DOMPurify) {
       html = DOMPurify.sanitize(html, {
         ADD_ATTR: ['data-note', 'data-tag', 'target', 'rel', 'title'],
-        ADD_TAGS: ['input']
+        ADD_TAGS: ['input'],
+        // formulaires et cadres n'ont aucune raison d'apparaître dans une note :
+        // une note est du contenu, pas une page web.
+        FORBID_TAGS: ['form', 'object', 'embed', 'iframe', 'base', 'link', 'meta'],
+        FORBID_ATTR: ['action', 'formaction', 'srcdoc', 'ping']
       });
     }
     return html;
@@ -251,6 +255,7 @@ async function demarrer() {
   definirMode(etat.config.mode || 'complet');
   afficherConversations();
   nouvelleConversation({ silencieux: true });
+  ajusterHauteurSaisie();
 
   synchroniserHauteurEntete();
 
@@ -1338,6 +1343,8 @@ function nouvelleConversation({ silencieux = false } = {}) {
   etat.conversationCourante = conv;
   afficherConversation();
   afficherConversations();
+  // sans cela, une conversation créée puis fermée aussitôt serait perdue
+  persisterConversations();
   if (!silencieux) $('#saisie').focus();
 }
 
@@ -2671,6 +2678,15 @@ function ajusterHauteurSaisie() {
   const s = $('#saisie');
   s.style.height = 'auto';
   s.style.height = `${Math.min(s.scrollHeight, 220)}px`;
+
+  // Le bouton Envoyer reste inactif tant qu'il n'y a rien à envoyer :
+  // cliquer dessus ne doit produire ni message vide ni erreur silencieuse.
+  const btn = $('#btnEnvoyer');
+  if (btn && !etat.enCours) {
+    const aDuTexte = s.value.trim().length > 0;
+    const aDesPieces = Array.isArray(piecesJointes) && piecesJointes.length > 0;
+    btn.disabled = !(aDuTexte || aDesPieces);
+  }
 }
 
 function basculerSidebar() {

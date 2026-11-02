@@ -418,6 +418,14 @@
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'm') {
         ev.preventDefault();
         etatMenu.ouvert ? fermerMenu() : ouvrirMenu();
+        return;
+      }
+      // Échap ferme le menu où que soit le focus : sinon il reste ouvert
+      // quand on a cliqué ailleurs avant de presser la touche.
+      if (ev.key === 'Escape' && etatMenu.ouvert) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        fermerMenu();
       }
     });
 
