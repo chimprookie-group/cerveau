@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';" />
+  <title>Cerveau</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-theme="sombre">
+  <div id="app">
+
+    <!-- ══════════════ BARRE LATÉRALE ══════════════ -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-tete">
+        <div class="marque">
+          <div class="logo" aria-hidden="true">🐵</div>
+          <div>
+            <div class="marque-nom">Cerveau</div>
+            <div class="marque-sous" id="vaultNom">Aucun coffre</div>
+          </div>
+        </div>
+        <button id="btnNouvelleConv" class="btn-icone" title="Nouvelle conversation (Ctrl+N)">＋</button>
+      </div>
+
+      <div class="sidebar-onglets" role="tablist">
+        <button class="onglet actif" data-onglet="conversations" role="tab">Discussions</button>
+        <button class="onglet" data-onglet="coffre" role="tab">Coffre</button>
+      </div>
+
+      <div class="sidebar-corps">
+        <!-- Volet conversations -->
+        <div class="volet actif" id="volet-conversations">
+          <div class="recherche-mini">
+            <input type="search" id="rechercheConv" placeholder="Rechercher une discussion…" />
+          </div>
+          <div id="listeConversations" class="liste-conversations"></div>
+        </div>
+
+        <!-- Volet coffre -->
+        <div class="volet" id="volet-coffre">
+          <div class="recherche-mini">
+            <input type="search" id="rechercheNotes" placeholder="Rechercher dans le coffre…" />
+          </div>
+          <div class="actions-coffre">
+            <button class="btn-mini" id="btnNouvelleNote">+ Note</button>
+            <button class="btn-mini" id="btnNouveauDossier">+ Dossier</button>
+            <button class="btn-mini" id="btnOuvrirObsidian" title="Ouvrir dans Obsidian">Obsidian ↗</button>
+          </div>
+          <div id="arbreCoffre" class="arbre-coffre"></div>
+          <div class="section-tags">
+            <div class="section-titre">Tags</div>
+            <div id="listeTags" class="liste-tags"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-pied">
+        <button id="btnWorkspaceRapide" class="btn-pied" title="Choisir l'espace de travail">
+          <span id="wsPiedIcone">📁</span> <span id="wsPiedNom">Aucun projet</span>
+        </button>
+        <button id="btnReglages" class="btn-pied">⚙ Réglages</button>
+        <div class="statut" id="statutFournisseur">—</div>
+      </div>
+    </aside>
+
+    <!-- ══════════════ ZONE PRINCIPALE ══════════════ -->
+    <main id="principal" class="principal">
+      <header class="entete">
+        <button id="btnBasculerSidebar" class="btn-icone" title="Basculer la barre latérale (Ctrl+B)">☰</button>
+        <div class="entete-titre">
+          <h1 id="titreConversation">Nouvelle conversation</h1>
+          <span id="sousTitreConversation" class="sous-titre">Prêt à travailler</span>
+        </div>
+        <div class="entete-actions">
+          <div class="selecteur-mode" id="selecteurMode">
+            <button class="mode-btn" data-mode="notes" title="Notes Obsidian">Notes</button>
+            <button class="mode-btn" data-mode="code" title="Développement">Code</button>
+            <button class="mode-btn actif" data-mode="complet" title="Notes + code + GitHub">Complet</button>
+          </div>
+          <!-- Sélecteur de modèle à deux niveaux (fournisseur → modèle) -->
+          <button id="btnModele" class="declencheur-modele" title="Choisir le modèle (Ctrl+M)">
+            <span class="modele-pastille" id="modelePastille"></span>
+            <span class="modele-libelle" id="modeleLibelle">Aucun modèle</span>
+            <span class="modele-effort" id="modeleEffort" hidden></span>
+            <span class="modele-chevron">⌄</span>
+          </button>
+
+          <div id="menuModele" class="menu-modele" hidden>
+            <div class="menu-modele-entete">
+              <input type="text" id="rechercheModele" class="menu-modele-recherche"
+                     placeholder="Rechercher un fournisseur ou un modèle…" autocomplete="off" spellcheck="false" />
+            </div>
+            <div id="menuModeleCorps" class="menu-modele-corps"></div>
+            <div class="menu-modele-pied">
+              <span><kbd>↑</kbd><kbd>↓</kbd> naviguer</span>
+              <span><kbd>←</kbd><kbd>→</kbd> changer de niveau</span>
+              <span><kbd>Entrée</kbd> choisir</span>
+            </div>
+          </div>
+          <button id="btnPalette" class="btn-icone" title="Palette de commandes (Ctrl+K)">⌘</button>
+          <button id="btnExporter" class="btn-icone" title="Exporter la conversation">⭳</button>
+          <button id="btnBasculerObsidian" class="btn-icone" title="Panneau latéral (Ctrl+Maj+B)">▤</button>
+        </div>
+      </header>
+
+      <div class="conversation" id="conversation">
+        <div class="accueil" id="accueil">
+          <div class="accueil-logo" id="accueilLogo">🐵</div>
+          <h2 id="accueilTitre">Bonjour. Que faisons-nous aujourd'hui ?</h2>
+          <p class="accueil-texte" id="accueilTexte">
+            Je peux lire, créer et organiser les notes de votre coffre Obsidian,
+            ou travailler directement sur le code de votre espace de travail.
+          </p>
+          <div class="suggestions" id="suggestions">
+            <button class="suggestion" data-mode="notes" data-prompt="Fais-moi un résumé de l'état du coffre : nombre de notes, dossiers, tags et sujets principaux.">
+              <strong>Faire le point sur mon coffre</strong>
+              <span>Inventaire, tags et sujets principaux</span>
+            </button>
+            <button class="suggestion" data-mode="notes" data-prompt="Crée une note de journal pour aujourd'hui avec une structure claire : humeur, ce que j'ai fait, idées, demain.">
+              <strong>Créer mon journal du jour</strong>
+              <span>Une note datée, structurée et prête à remplir</span>
+            </button>
+            <button class="suggestion" data-mode="code" data-prompt="Explore l'espace de travail : montre-moi la structure du projet, la stack utilisée et l'état de santé (tests, dépendances).">
+              <strong>Explorer mon projet</strong>
+              <span>Structure, stack et état de santé</span>
+            </button>
+            <button class="suggestion" data-mode="code" data-prompt="Lance les tests du projet et corrige ce qui échoue. Explique-moi chaque correction apportée.">
+              <strong>Corriger les tests</strong>
+              <span>Lancer, diagnostiquer, réparer</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="messages" id="messages" hidden></div>
+      </div>
+
+      <div class="zone-saisie">
+        <div id="zoneDepot" class="zone-depot-indic" hidden>Déposez vos fichiers ici</div>
+        <div id="listePieces" class="liste-pieces" hidden></div>
+        <div class="saisie-conteneur">
+          <textarea id="saisie" rows="1" placeholder="Écrivez un message…  (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)"
+                    aria-label="Message"></textarea>
+          <div class="saisie-actions">
+            <button id="btnJoindre" class="btn-icone-complet" title="Insérer une note du coffre">
+              <span>🗎</span>
+            </button>
+            <button id="btnEnvoyer" class="btn-envoyer" title="Envoyer (Entrée)">Envoyer</button>
+            <button id="btnArreter" class="btn-arreter" hidden title="Arrêter la génération">■</button>
+          </div>
+        </div>
+        <div class="pied-saisie">
+          <span id="infoContexte"></span>
+          <span class="raccourci">Ctrl+N nouvelle discussion · Ctrl+B barre latérale</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- ══════════════ PANNEAU OBSIDIAN ══════════════ -->
+    <aside id="panneauObsidian" class="panneau-obsidian">
+      <div class="panneau-entete">
+        <div class="onglets-panneau">
+          <button class="onglet-panneau actif" data-panneau="note">Note</button>
+          <button class="onglet-panneau" data-panneau="depot">Dépôt</button>
+          <button class="onglet-panneau" data-panneau="travail">Travail</button>
+          <button class="onglet-panneau" data-panneau="recherche">Rech.</button>
+          <button class="onglet-panneau" data-panneau="tags">Tags</button>
+          <button class="onglet-panneau" data-panneau="graphe">Liens</button>
+        </div>
+        <button id="btnFermerPanneau" class="btn-icone" title="Fermer">✕</button>
+      </div>
+
+      <div class="panneau-corps">
+        <!-- Volet Dépôt GitHub -->
+        <div class="volet-panneau" id="panneau-depot">
+          <div id="ghNonConnecte" class="gh-vide" hidden>
+            <p class="vide">Connecte-toi à GitHub pour cloner et travailler sur tes dépôts.</p>
+            <button id="btnGhConnecter" class="btn-principal">Se connecter à GitHub</button>
+          </div>
+
+          <div id="ghConnecte" hidden>
+            <div class="gh-compte">
+              <span class="gh-avatar" id="ghAvatar">G</span>
+              <div class="gh-compte-infos">
+                <div class="gh-compte-nom" id="ghCompteNom">—</div>
+                <div class="gh-compte-version" id="ghVersion">—</div>
+              </div>
+              <button id="btnGhDeconnecter" class="btn-mini" title="Se déconnecter">⎋</button>
+            </div>
+
+            <div class="gh-actions">
+              <button id="btnGhCloner" class="btn-principal petit">Cloner</button>
+              <button id="btnGhCreer" class="btn-secondaire petit">Nouveau</button>
+              <button id="btnGhRafraichir" class="btn-mini" title="Rafraîchir">⟳</button>
+            </div>
+
+            <div id="ghDepots" class="gh-liste"></div>
+          </div>
+        </div>
+
+        <!-- Volet Travail : espace de travail + plan de tâches -->
+        <div class="volet-panneau" id="panneau-travail">
+          <div class="carte-workspace" id="carteWorkspace">
+            <div class="ws-entete">
+              <span class="ws-titre">Espace de travail</span>
+              <button id="btnChoisirWorkspace" class="btn-mini">Choisir…</button>
+            </div>
+            <div id="wsInfos" class="ws-infos">
+              <p class="vide">Aucun dossier ouvert.</p>
+            </div>
+          </div>
+
+          <div id="gitPanel" class="git-panel" hidden>
+            <div class="git-ligne">
+              <span class="git-branche" id="gitBranche">—</span>
+              <span id="gitSync" class="git-sync"></span>
+            </div>
+            <div class="git-actions">
+              <button id="btnGitPull" class="btn-mini" title="Récupérer les changements">↓ Tirer</button>
+              <button id="btnGitDiff" class="btn-mini" title="Voir les modifications">◧ Diff</button>
+              <button id="btnGitCommit" class="btn-mini" title="Valider et pousser">↑ Commit</button>
+              <button id="btnGitPR" class="btn-mini" title="Ouvrir une pull request">⇡ PR</button>
+            </div>
+            <div id="gitFichiers" class="git-fichiers"></div>
+          </div>
+
+          <div class="terminal-section">
+            <div class="terminal-entete">
+              <span class="section-titre" style="margin:0">Terminal</span>
+              <button id="btnTerminalEffacer" class="btn-mini" title="Effacer">⌫</button>
+            </div>
+            <div id="terminalSortie" class="terminal-sortie"></div>
+            <div class="terminal-saisie">
+              <span class="terminal-prompt">$</span>
+              <input type="text" id="terminalCommande" placeholder="ls -la" autocomplete="off" spellcheck="false" />
+              <button id="btnTerminalExec" class="btn-mini">↩</button>
+            </div>
+          </div>
+
+          <div class="plan-section">
+            <div class="section-titre">Plan de tâches</div>
+            <div id="planTaches" class="plan-taches">
+              <p class="vide">Aucune tâche en cours.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="volet-panneau actif" id="panneau-note">
+          <div class="note-entete">
+            <input id="noteChemin" class="note-chemin" placeholder="Chemin de la note…" readonly />
+            <div class="note-actions">
+              <button id="btnNoteEditer" class="btn-mini" title="Modifier">✎</button>
+              <button id="btnNoteEnregistrer" class="btn-mini" hidden title="Enregistrer">💾</button>
+              <button id="btnNoteObsidian" class="btn-mini" title="Ouvrir dans Obsidian">↗</button>
+            </div>
+          </div>
+          <div id="noteRendu" class="note-rendu markdown-corps">
+            <p class="vide">Sélectionnez une note dans le coffre.</p>
+          </div>
+          <textarea id="noteEditeur" class="note-editeur" hidden spellcheck="true"></textarea>
+        </div>
+
+        <div class="volet-panneau" id="panneau-recherche">
+          <input type="search" id="recherchePanneau" class="champ-plein" placeholder="Rechercher (texte ou regex)…" />
+          <div id="resultatsRecherche" class="resultats-recherche"></div>
+        </div>
+
+        <div class="volet-panneau" id="panneau-tags">
+          <div id="tagsPananeau" class="nuage-tags"></div>
+          <div id="notesDuTag" class="notes-du-tag"></div>
+        </div>
+
+        <div class="volet-panneau" id="panneau-graphe">
+          <div id="liensNote" class="liens-note">
+            <p class="vide">Ouvrez une note pour voir ses liens.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ══════════════ MODALE RÉGLAGES ══════════════ -->
+  <div id="modaleReglages" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu" role="dialog" aria-modal="true" aria-labelledby="titreReglages">
+      <div class="modale-entete">
+        <h2 id="titreReglages">Réglages</h2>
+        <button id="btnFermerReglages" class="btn-icone">✕</button>
+      </div>
+
+      <div class="reglages-corps">
+        <nav class="reglages-nav" aria-label="Sections des réglages">
+          <div class="reglages-nav-groupe">Application</div>
+          <button class="nav-reglage actif" data-reglage="general">
+            <span class="nav-reglage-icone">◈</span>
+            <span class="nav-reglage-texte">Général</span>
+          </button>
+          <button class="nav-reglage" data-reglage="apparence">
+            <span class="nav-reglage-icone">◑</span>
+            <span class="nav-reglage-texte">Apparence</span>
+          </button>
+          <button class="nav-reglage" data-reglage="comportement">
+            <span class="nav-reglage-icone">✦</span>
+            <span class="nav-reglage-texte">Comportement</span>
+          </button>
+
+          <div class="reglages-nav-groupe">Modèles</div>
+          <button class="nav-reglage" data-reglage="fournisseurs">
+            <span class="nav-reglage-icone">⚙</span>
+            <span class="nav-reglage-texte">Fournisseurs</span>
+          </button>
+          <button class="nav-reglage" data-reglage="agents">
+            <span class="nav-reglage-icone">◇</span>
+            <span class="nav-reglage-texte">Agent et outils</span>
+          </button>
+          <button class="nav-reglage" data-reglage="plugins">
+            <span class="nav-reglage-icone">⬡</span>
+            <span class="nav-reglage-texte">Plugins et web</span>
+          </button>
+
+          <div class="reglages-nav-groupe">Espaces</div>
+          <button class="nav-reglage" data-reglage="workspace">
+            <span class="nav-reglage-icone">▤</span>
+            <span class="nav-reglage-texte">Espace de travail</span>
+          </button>
+          <button class="nav-reglage" data-reglage="coffres">
+            <span class="nav-reglage-icone">▦</span>
+            <span class="nav-reglage-texte">Coffres Obsidian</span>
+          </button>
+
+          <div class="reglages-nav-groupe">Sécurité</div>
+          <button class="nav-reglage" data-reglage="permissions">
+            <span class="nav-reglage-icone">⚿</span>
+            <span class="nav-reglage-texte">Permissions</span>
+          </button>
+
+          <div class="reglages-nav-groupe">Système</div>
+          <button class="nav-reglage" data-reglage="apropos">
+            <span class="nav-reglage-icone">ⓘ</span>
+            <span class="nav-reglage-texte">À propos</span>
+          </button>
+        </nav>
+
+        <div class="modale-corps reglages-contenu">
+        <!-- Général -->
+        <div class="volet-reglage actif" id="reglage-general">
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Application</h3>
+            <p class="section-reglage-desc">Comportement général de Cerveau au démarrage.</p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageModeDemarrage">Mode au démarrage</label>
+                <p class="champ-reglage-aide">Le mode actif à l'ouverture d'une nouvelle conversation.</p>
+              </div>
+              <select id="reglageModeDemarrage" class="champ-reglage-controle">
+                <option value="notes">Notes</option>
+                <option value="code">Code</option>
+                <option value="complet">Complet</option>
+              </select>
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglagePanneauDemarrage">Panneau latéral ouvert</label>
+                <p class="champ-reglage-aide">Afficher le panneau de droite à l'ouverture.</p>
+              </div>
+              <input type="checkbox" id="reglagePanneauDemarrage" class="champ-reglage-controle bascule" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageRestaurer">Restaurer la dernière conversation</label>
+                <p class="champ-reglage-aide">Rouvrir la conversation précédente au lancement.</p>
+              </div>
+              <input type="checkbox" id="reglageRestaurer" class="champ-reglage-controle bascule" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageHistorique">Conversations conservées</label>
+                <p class="champ-reglage-aide">Nombre maximum de conversations gardées en mémoire.</p>
+              </div>
+              <input type="number" id="reglageHistorique" min="10" max="1000" step="10"
+                     class="champ-reglage-controle champ-nombre" placeholder="200" />
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Données</h3>
+            <p class="section-reglage-desc">Rien ne quitte votre machine en dehors des appels à votre fournisseur d'IA.</p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label>Dossier de configuration</label>
+                <p class="champ-reglage-aide mono" id="reglageCheminConfig">—</p>
+              </div>
+              <button id="btnOuvrirConfig" class="btn-secondaire petit">Ouvrir</button>
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label>Réinitialisation</label>
+                <p class="champ-reglage-aide">Efface les clés, les coffres et tous les réglages. Les fichiers ne sont pas touchés.</p>
+              </div>
+              <button id="btnReinitialiser2" class="btn-danger petit">Réinitialiser</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- Agent et outils -->
+        <div class="volet-reglage" id="reglage-agents">
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Boucle de l'agent</h3>
+            <p class="section-reglage-desc">Contrôle la façon dont l'IA enchaîne les appels d'outils.</p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageMaxTours">Tours d'outils maximum</label>
+                <p class="champ-reglage-aide">Nombre d'allers-retours autorisés avant l'arrêt de la boucle.</p>
+              </div>
+              <input type="number" id="reglageMaxTours" min="1" max="60" step="1"
+                     class="champ-reglage-controle champ-nombre" placeholder="25" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageAppelsParalleles">Appels d'outils en parallèle</label>
+                <p class="champ-reglage-aide">Exécuter plusieurs outils simultanément quand c'est possible.</p>
+              </div>
+              <input type="checkbox" id="reglageAppelsParalleles" class="champ-reglage-controle bascule" />
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Terminal</h3>
+            <p class="section-reglage-desc">Limites appliquées aux commandes exécutées par l'agent et par le terminal intégré.</p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageDelaiCommande">Délai d'une commande (secondes)</label>
+                <p class="champ-reglage-aide">Au-delà, la commande est interrompue.</p>
+              </div>
+              <input type="number" id="reglageDelaiCommande" min="5" max="600" step="5"
+                     class="champ-reglage-controle champ-nombre" placeholder="120" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageCapSortie">Plafond de sortie (Ko)</label>
+                <p class="champ-reglage-aide">Quantité maximale de sortie conservée par flux.</p>
+              </div>
+              <input type="number" id="reglageCapSortie" min="1" max="1024" step="1"
+                     class="champ-reglage-controle champ-nombre" placeholder="60" />
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Outils disponibles</h3>
+            <p class="section-reglage-desc">Désactivez ce que l'IA ne doit pas utiliser, quel que soit le mode.</p>
+            <div id="reglageOutils" class="liste-outils-reglage"></div>
+          </section>
+        </div>
+
+        <!-- Plugins et web -->
+        <div class="volet-reglage" id="reglage-plugins">
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Recherche web</h3>
+            <p class="section-reglage-desc">
+              Donne à l'IA la capacité de chercher sur internet et de lire des pages.
+              DuckDuckGo fonctionne sans configuration ni clé.
+            </p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageMoteurWeb">Moteur de recherche</label>
+                <p class="champ-reglage-aide">DuckDuckGo ne demande aucune clé. Le fournisseur externe attend une API compatible Tavily.</p>
+              </div>
+              <select id="reglageMoteurWeb" class="champ-reglage-controle">
+                <option value="duckduckgo">DuckDuckGo (sans clé)</option>
+                <option value="fournisseur">Fournisseur externe</option>
+              </select>
+            </div>
+
+            <div class="champ-reglage" id="ligneUrlRecherche" hidden>
+              <div class="champ-reglage-texte">
+                <label for="reglageUrlRecherche">URL de l'API de recherche</label>
+                <p class="champ-reglage-aide">Endpoint qui accepte <code>{ query, max_results }</code> et renvoie <code>results[]</code>.</p>
+              </div>
+              <input type="text" id="reglageUrlRecherche" class="champ-reglage-controle large"
+                     placeholder="https://api.tavily.com/search" />
+            </div>
+
+            <div class="champ-reglage" id="ligneCleRecherche" hidden>
+              <div class="champ-reglage-texte">
+                <label for="reglageCleRecherche">Clé du fournisseur</label>
+                <p class="champ-reglage-aide">Stockée chiffrée, comme les clés de modèles.</p>
+              </div>
+              <input type="password" id="reglageCleRecherche" class="champ-reglage-controle large"
+                     placeholder="sk-…" autocomplete="off" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label>Tester la recherche</label>
+                <p class="champ-reglage-aide" id="resultatTestRecherche">Lance une requête réelle pour vérifier la configuration.</p>
+              </div>
+              <button id="btnTesterRecherche" class="btn-secondaire petit">Tester</button>
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Serveurs MCP</h3>
+            <p class="section-reglage-desc">
+              Branchez des outils externes : accès fichiers, git avancé, bases de données,
+              navigateur, services web. Chaque serveur est un processus lancé par Cerveau,
+              piloté en JSON-RPC sur son entrée/sortie standard.
+            </p>
+
+            <div id="listeServeursMCP" class="liste-mcp"></div>
+
+            <div class="ajout-mcp">
+              <input type="text" id="mcpNom" class="champ-ajout-modele" placeholder="nom du serveur" />
+              <input type="text" id="mcpCommande" class="champ-ajout-modele large" placeholder="commande (ex. npx)" />
+              <input type="text" id="mcpArguments" class="champ-ajout-modele large" placeholder="arguments (ex. -y @modelcontextprotocol/server-filesystem /home)" />
+              <button id="btnAjouterMCP" class="btn-mini">+ Ajouter</button>
+            </div>
+
+            <div class="exemples-mcp">
+              <div class="section-titre">Exemples prêts à l'emploi</div>
+              <div id="exemplesMCP" class="presets-comportement"></div>
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">État des serveurs</h3>
+            <p class="section-reglage-desc">Les serveurs démarrent à la première utilisation par l'IA.</p>
+            <div id="etatsMCP" class="etats-mcp"></div>
+          </section>
+        </div>
+
+        <!-- Fournisseurs -->
+        <div class="volet-reglage" id="reglage-fournisseurs">
+          <p class="aide">Les clés sont chiffrées sur le disque et ne quittent jamais votre machine, sauf vers l'API du fournisseur choisi.</p>
+          <div id="listeFournisseurs" class="liste-fournisseurs"></div>
+          <label class="champ">
+            <span>Fournisseur par défaut</span>
+            <select id="fournisseurDefaut"></select>
+          </label>
+        </div>
+
+        <!-- Espace de travail -->
+        <div class="volet-reglage" id="reglage-workspace">
+          <p class="aide">
+            Le mode Code donne à l'IA accès à un terminal et aux fichiers de ce dossier.
+            Toutes ses actions restent confinées à cet espace de travail.
+          </p>
+          <div id="wsActuel" class="carte-workspace-large"></div>
+          <button id="btnChoisirWorkspace2" class="btn-principal">Choisir un dossier…</button>
+          <div class="champ-manuel">
+            <input type="text" id="cheminWorkspaceManuel" placeholder="/chemin/vers/le/projet" />
+            <button id="btnDefinirWorkspace" class="btn-secondaire">Utiliser ce chemin</button>
+          </div>
+          <div class="section-titre" style="margin-top:20px">Dossiers récents</div>
+          <div id="wsRecents" class="ws-recents"></div>
+        </div>
+
+        <!-- Coffres -->
+        <div class="volet-reglage" id="reglage-coffres">
+          <p class="aide">Cerveau écrit directement dans les fichiers Markdown du coffre. Obsidian les recharge instantanément.</p>
+          <div id="listeCoffres" class="liste-coffres"></div>
+          <button id="btnAjouterCoffre" class="btn-principal">Ajouter un coffre…</button>
+          <div class="champ-manuel">
+            <input type="text" id="cheminCoffreManuel" placeholder="/chemin/vers/le/coffre" />
+            <button id="btnAjouterChemin" class="btn-secondaire">Ajouter ce chemin</button>
+          </div>
+        </div>
+
+        <!-- Comportement -->
+        <div class="volet-reglage" id="reglage-comportement">
+          <p class="aide">
+            Ces instructions sont ajoutées au système, en plus des règles internes de Cerveau.
+            Elles s'appliquent à toutes les conversations.
+          </p>
+
+          <div class="section-titre">Style de réponse</div>
+          <div id="presetsComportement" class="presets-comportement"></div>
+
+          <label class="champ">
+            <span>Instructions personnalisées</span>
+            <textarea id="promptSysteme" rows="7" class="champ-texte"
+              placeholder="Ex. : Réponds toujours en tutoyant. Cite tes sources. Évite les listes à puces quand une phrase suffit."></textarea>
+          </label>
+
+          <div class="compteur-prompt">
+            <span id="compteurPrompt">0 caractère</span>
+            <button id="btnReinitialiserPrompt" class="btn-mini">Effacer</button>
+          </div>
+
+          <label class="champ">
+            <span>Température par défaut</span>
+            <input type="range" id="temperature" min="0" max="20" step="1" value="7" />
+            <output id="valeurTemperature">0,7</output>
+          </label>
+          <p class="aide petit">
+            Basse (0–0,3) : factuel et déterministe. Haute (0,8–1,0) : créatif et varié.
+          </p>
+        </div>
+
+        <!-- Permissions -->
+        <div class="volet-reglage" id="reglage-permissions">
+          <label class="champ">
+            <span>Comportement pour les actions d'écriture</span>
+            <select id="modePermissions">
+              <option value="demander">Me demander avant chaque écriture</option>
+              <option value="auto">Autoriser automatiquement</option>
+              <option value="lecture">Lecture seule (aucune modification)</option>
+            </select>
+          </label>
+          <label class="champ-inline">
+            <input type="checkbox" id="autoriserSuppression" />
+            <span>Autoriser la suppression de notes (vers la corbeille du coffre)</span>
+          </label>
+          <label class="champ-inline">
+            <input type="checkbox" id="autoCommandes" checked />
+            <span>En mode automatique, exécuter aussi les commandes terminal sans demander</span>
+          </label>
+          <label class="champ-inline">
+            <input type="checkbox" id="autoPush" />
+            <span>En mode automatique, autoriser <strong>git push</strong> sans demander</span>
+          </label>
+          <label class="champ-inline">
+            <input type="checkbox" id="autoGithub" />
+            <span>En mode automatique, autoriser la création de PR et issues sans demander</span>
+          </label>
+          <p class="aide">
+            Les lectures sont toujours autorisées. En mode « me demander », une fenêtre
+            affiche la commande exacte ou le contenu du fichier avant toute action.
+            Les commandes destructrices (<code>rm -rf /</code>, <code>mkfs</code>, <code>dd</code>…) sont bloquées quoi qu'il arrive.
+            Le push et les actions GitHub demandent une confirmation même en mode automatique,
+            sauf si tu coches les cases ci-dessus.
+          </p>
+        </div>
+
+        <!-- Apparence -->
+        <div class="volet-reglage" id="reglage-apparence">
+          <label class="champ">
+            <span>Thème</span>
+            <select id="choixTheme">
+              <option value="sombre">Sombre</option>
+              <option value="clair">Clair</option>
+            </select>
+          </label>
+          <label class="champ">
+            <span>Taille du texte : <output id="valeurEchelle">100 %</output></span>
+            <input type="range" id="echellePolice" min="85" max="130" step="5" value="100" />
+          </label>
+        </div>
+
+        <!-- À propos -->
+        <div class="volet-reglage" id="reglage-apropos">
+          <div class="apropos">
+            <div class="accueil-logo petit">🐵</div>
+            <h3>Cerveau</h3>
+            <p class="aide">Assistant de bureau francophone avec coffre Obsidian intégré.</p>
+            <table class="table-infos">
+              <tr><td>Version</td><td id="infoVersion">—</td></tr>
+              <tr><td>Electron</td><td id="infoElectron">—</td></tr>
+              <tr><td>Node</td><td id="infoNode">—</td></tr>
+              <tr><td>Chrome</td><td id="infoChrome">—</td></tr>
+              <tr><td>Configuration</td><td id="infoConfig">—</td></tr>
+            </table>
+            <div class="apropos-actions">
+              <button id="btnDossierConfig" class="btn-secondaire">Ouvrir le dossier de configuration</button>
+              <button id="btnReinitialiser" class="btn-danger">Réinitialiser les réglages</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        </div>
+      </div>
+
+      <div class="modale-pied">
+        <span id="retourReglages" class="retour-reglages"></span>
+        <button id="btnFermerReglages2" class="btn-principal">Terminé</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE CONFIRMATION D'OUTIL ══════════════ -->
+  <div id="modaleConfirmation" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu petite" role="dialog" aria-modal="true" aria-labelledby="titreConfirmation">
+      <div class="modale-entete">
+        <h2 id="titreConfirmation">Autoriser cette action ?</h2>
+      </div>
+      <div class="modale-corps">
+        <p id="texteConfirmation"></p>
+        <pre id="argumentsConfirmation" class="arguments"></pre>
+      </div>
+      <div class="modale-pied">
+        <button id="btnRefuserAction" class="btn-secondaire">Refuser</button>
+        <button id="btnAutoriserAction" class="btn-principal">Autoriser</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE CHOIX DE NOTE ══════════════ -->
+  <div id="modaleNotes" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu petite" role="dialog" aria-modal="true" aria-labelledby="titreNotes">
+      <div class="modale-entete">
+        <h2 id="titreNotes">Insérer une note</h2>
+        <button id="btnFermerNotes" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps">
+        <input type="search" id="rechercheNoteInsert" class="champ-plein" placeholder="Filtrer les notes…" autofocus />
+        <div id="listeNotesInsert" class="liste-notes-insert"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE CONNEXION GITHUB ══════════════ -->
+  <div id="modaleGithub" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu petite" role="dialog" aria-modal="true" aria-labelledby="titreGithub">
+      <div class="modale-entete">
+        <h2 id="titreGithub">Se connecter à GitHub</h2>
+        <button id="btnFermerGithub" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps">
+        <p class="aide">
+          Colle un <strong>jeton personnel</strong> (Personal Access Token). Le CLI <code>gh</code>
+          le stocke dans son propre coffre sécurisé — Cerveau ne le conserve pas.
+        </p>
+
+        <label class="champ">
+          <span>Jeton GitHub</span>
+          <input type="password" id="ghToken" placeholder="ghp_… ou github_pat_…" autocomplete="off" spellcheck="false" />
+        </label>
+
+        <label class="champ">
+          <span>Protocole git</span>
+          <select id="ghProtocole">
+            <option value="https">HTTPS (recommandé, utilise gh comme helper)</option>
+            <option value="ssh">SSH (nécessite une clé configurée)</option>
+          </select>
+        </label>
+
+        <div class="gh-etapes">
+          <div class="section-titre">Créer un jeton en 30 secondes</div>
+          <ol>
+            <li>Ouvre <a href="https://github.com/settings/tokens/new?scopes=repo,read:org,workflow&description=Cerveau" id="lienToken">github.com/settings/tokens/new</a></li>
+            <li>Coche les portées <code>repo</code>, <code>read:org</code> et <code>workflow</code></li>
+            <li>Génère, copie, puis colle le jeton ci-dessus</li>
+          </ol>
+        </div>
+
+        <div id="ghErreur" class="message-test erreur" hidden></div>
+      </div>
+      <div class="modale-pied">
+        <button id="btnAnnulerGithub" class="btn-secondaire">Annuler</button>
+        <button id="btnValiderGithub" class="btn-principal">Se connecter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE NOUVEAU DÉPÔT ══════════════ -->
+  <div id="modaleCreer" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu petite" role="dialog" aria-modal="true" aria-labelledby="titreCreer">
+      <div class="modale-entete">
+        <h2 id="titreCreer">Créer un dépôt GitHub</h2>
+        <button id="btnFermerCreer" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps">
+        <label class="champ">
+          <span>Nom du dépôt</span>
+          <input type="text" id="creerNom" placeholder="mon-super-projet" spellcheck="false" />
+        </label>
+        <label class="champ">
+          <span>Description (optionnel)</span>
+          <input type="text" id="creerDescription" placeholder="À quoi sert ce projet ?" />
+        </label>
+        <label class="champ-inline">
+          <input type="checkbox" id="creerPrive" checked />
+          <span>Dépôt privé</span>
+        </label>
+        <label class="champ-inline">
+          <input type="checkbox" id="creerDepuisWorkspace" />
+          <span>Envoyer le contenu de l'espace de travail actuel</span>
+        </label>
+        <p class="aide" id="creerAideWorkspace" hidden>
+          Le dossier ouvert devra être un dépôt git et aura les commits en attente poussés.
+        </p>
+        <div id="creerErreur" class="message-test erreur" hidden></div>
+      </div>
+      <div class="modale-pied">
+        <button id="btnAnnulerCreer" class="btn-secondaire">Annuler</button>
+        <button id="btnValiderCreer" class="btn-principal">Créer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE CLONE ══════════════ -->
+  <div id="modaleClone" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu petite" role="dialog" aria-modal="true" aria-labelledby="titreClone">
+      <div class="modale-entete">
+        <h2 id="titreClone">Cloner un dépôt</h2>
+        <button id="btnFermerClone" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps">
+        <label class="champ">
+          <span>Dépôt</span>
+          <input type="search" id="cloneRecherche" placeholder="Filtrer…" />
+        </label>
+        <div id="cloneListe" class="gh-liste petite"></div>
+
+        <label class="champ" style="margin-top:14px">
+          <span>Dossier parent</span>
+          <div class="champ-manuel" style="margin-top:0">
+            <input type="text" id="cloneDossier" placeholder="~/Documents/projets" />
+            <button id="btnCloneChoisirDossier" class="btn-secondaire">Parcourir…</button>
+          </div>
+        </label>
+
+        <div id="cloneErreur" class="message-test erreur" hidden></div>
+      </div>
+      <div class="modale-pied">
+        <button id="btnAnnulerClone" class="btn-secondaire">Annuler</button>
+        <button id="btnValiderClone" class="btn-principal" disabled>Cloner</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE COMMIT ══════════════ -->
+  <div id="modaleCommit" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu petite" role="dialog" aria-modal="true" aria-labelledby="titreCommit">
+      <div class="modale-entete">
+        <h2 id="titreCommit">Valider et envoyer</h2>
+        <button id="btnFermerCommit" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps">
+        <div id="commitFichiers" class="git-fichiers apercu"></div>
+        <label class="champ">
+          <span>Message de commit</span>
+          <input type="text" id="commitMessage" placeholder="feat: décris ce que tu changes" />
+        </label>
+        <div class="suggestions-commit" id="suggestionsCommit">
+          <button class="btn-mini" data-msg="feat: ">feat</button>
+          <button class="btn-mini" data-msg="fix: ">fix</button>
+          <button class="btn-mini" data-msg="docs: ">docs</button>
+          <button class="btn-mini" data-msg="refactor: ">refactor</button>
+          <button class="btn-mini" data-msg="test: ">test</button>
+          <button class="btn-mini" data-msg="chore: ">chore</button>
+        </div>
+        <p class="aide" style="margin-top:12px">
+          Le commit sera créé puis <strong>poussé sur GitHub</strong>. Vérifie le diff avant de valider.
+        </p>
+        <div id="commitErreur" class="message-test erreur" hidden></div>
+      </div>
+      <div class="modale-pied">
+        <button id="btnAnnulerCommit" class="btn-secondaire">Annuler</button>
+        <button id="btnValiderCommit" class="btn-principal">Commiter et pousser</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE PULL REQUEST ══════════════ -->
+  <div id="modalePR" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu" role="dialog" aria-modal="true" aria-labelledby="titrePR">
+      <div class="modale-entete">
+        <h2 id="titrePR">Ouvrir une pull request</h2>
+        <button id="btnFermerPR" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps">
+        <div class="grille-fournisseur">
+          <label class="champ">
+            <span>Branche source</span>
+            <input type="text" id="prSource" readonly />
+          </label>
+          <label class="champ">
+            <span>Branche cible</span>
+            <input type="text" id="prCible" placeholder="main" />
+          </label>
+        </div>
+        <label class="champ">
+          <span>Titre</span>
+          <input type="text" id="prTitre" placeholder="Résumé de la pull request" />
+        </label>
+        <label class="champ">
+          <span>Description</span>
+          <textarea id="prCorps" rows="8" placeholder="## Résumé&#10;&#10;## Tests effectués"></textarea>
+        </label>
+        <label class="champ-inline">
+          <input type="checkbox" id="prBrouillon" />
+          <span>Créer comme brouillon</span>
+        </label>
+        <div id="prErreur" class="message-test erreur" hidden></div>
+      </div>
+      <div class="modale-pied">
+        <button id="btnAnnulerPR" class="btn-secondaire">Annuler</button>
+        <button id="btnValiderPR" class="btn-principal">Créer la pull request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE DIFF ══════════════ -->
+  <div id="modaleDiff" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu" role="dialog" aria-modal="true" aria-labelledby="titreDiff">
+      <div class="modale-entete">
+        <h2 id="titreDiff">Modifications non validées</h2>
+        <button id="btnFermerDiff" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps">
+        <pre id="diffContenu" class="arguments diff-contenu"></pre>
+      </div>
+      <div class="modale-pied">
+        <button id="btnFermerDiff2" class="btn-principal">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PALETTE DE COMMANDES ══════════════ -->
+  <div id="modalePalette" class="modale palette" hidden>
+    <div class="modale-fond"></div>
+    <div class="palette-contenu" role="dialog" aria-modal="true" aria-label="Palette de commandes">
+      <input type="text" id="paletteRecherche" class="palette-entree"
+             placeholder="Tapez une commande ou cherchez une note…" autocomplete="off" spellcheck="false" />
+      <div id="paletteResultats" class="palette-resultats"></div>
+      <div class="palette-pied">
+        <span><kbd>↑</kbd><kbd>↓</kbd> naviguer</span>
+        <span><kbd>Entrée</kbd> exécuter</span>
+        <span><kbd>Échap</kbd> fermer</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="notifications" class="notifications"></div>
+
+  <script src="vendor/marked.min.js"></script>
+  <script src="vendor/purify.min.js"></script>
+  <script src="vendor/highlight.min.js"></script>
+  <script src="app.js"></script>
+  <script src="model-selector.js"></script>
+  <script src="github-ui.js"></script>
+</body>
+</html>

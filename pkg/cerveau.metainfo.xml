@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>cerveau.desktop</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Cerveau</name>
+  <summary>Assistant IA francophone avec coffre Obsidian et agent de code</summary>
+  <summary xml:lang="en">French AI assistant with Obsidian vault and code agent</summary>
+
+  <description>
+    <p>
+      Cerveau réunit trois usages dans une seule application de bureau :
+    </p>
+    <ul>
+      <li>Un assistant conversationnel connecté à Claude, DeepSeek, OpenAI ou tout service compatible OpenAI, avec gestion de plusieurs modèles par fournisseur.</li>
+      <li>Un coffre Obsidian intégré : l'IA lit, crée, modifie, déplace et relie directement les notes Markdown, sans plugin ni synchronisation.</li>
+      <li>Un agent de développement disposant d'un terminal et des fichiers du projet, capable de lancer les tests, diagnostiquer et corriger.</li>
+      <li>Une intégration GitHub complète : clonage, branches, commits, push et pull requests.</li>
+    </ul>
+    <p>
+      Toutes les actions sensibles sont soumises à confirmation, les clés d'API sont
+      chiffrées localement, et les opérations restent confinées au coffre et au dossier
+      de travail choisis.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">cerveau.desktop</launchable>
+
+  <url type="homepage">https://github.com/chimprookie-group/cerveau</url>
+  <url type="bugtracker">https://github.com/chimprookie-group/cerveau/issues</url>
+  <url type="vcs-browser">https://github.com/chimprookie-group/cerveau</url>
+
+  <developer_name>Cerveau</developer_name>
+
+  <categories>
+    <category>Office</category>
+    <category>Utility</category>
+    <category>Development</category>
+  </categories>
+
+  <keywords>
+    <keyword>IA</keyword>
+    <keyword>assistant</keyword>
+    <keyword>Obsidian</keyword>
+    <keyword>notes</keyword>
+    <keyword>Markdown</keyword>
+    <keyword>Claude</keyword>
+    <keyword>DeepSeek</keyword>
+    <keyword>GitHub</keyword>
+  </keywords>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Conversation avec le coffre Obsidian ouvert</caption>
+      <image type="source">https://raw.githubusercontent.com/chimprookie-group/cerveau/main/docs/capture-conversation.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Agent de code avec plan de tâches</caption>
+      <image type="source">https://raw.githubusercontent.com/chimprookie-group/cerveau/main/docs/capture-code.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Gestion des fournisseurs et des modèles</caption>
+      <image type="source">https://raw.githubusercontent.com/chimprookie-group/cerveau/main/docs/capture-modeles.png</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="2.3.0" date="2026-11-02">
+      <description>
+        <p>Audit complet : corrections sur les serveurs MCP, l'historique et les limites.</p>
+      </description>
+    </release>
+    <release version="2.2.0" date="2026-11-02">
+      <description>
+        <p>Recherche web et serveurs MCP : branchez des outils externes à l'IA.</p>
+      </description>
+    </release>
+    <release version="2.1.0" date="2026-11-02">
+      <description>
+        <p>Nouveau panneau de réglages à navigation verticale, avec sections Général
+        et Agent et outils, et outils désactivables un par un.</p>
+      </description>
+    </release>
+    <release version="2.0.0" date="2026-11-02">
+      <description>
+        <p>Sélecteur de modèle à deux niveaux, niveaux de raisonnement, presets de
+        comportement, prompt système, terminal intégré et pièces jointes.</p>
+      </description>
+    </release>
+    <release version="1.4.2" date="2026-11-02">
+      <description>
+        <p>Correction des permissions de fichiers empêchant le démarrage (EACCES).</p>
+      </description>
+    </release>
+    <release version="1.4.1" date="2026-11-02">
+      <description>
+        <p>Correction critique : l'application ne démarrait pas après installation.</p>
+      </description>
+    </release>
+    <release version="1.4.0" date="2026-11-02">
+      <description>
+        <p>Palette de commandes, régénération de réponse, paquet Arch officiel via PKGBUILD.</p>
+      </description>
+    </release>
+    <release version="1.3.1" date="2026-11-02">
+      <description>
+        <p>Correction : le fournisseur compatible OpenAI reste visible même sans URL de base.</p>
+      </description>
+    </release>
+    <release version="1.3.0" date="2026-11-02">
+      <description>
+        <p>Gestion de plusieurs modèles par fournisseur et découverte automatique via /v1/models.</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1" />
+
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+</component>

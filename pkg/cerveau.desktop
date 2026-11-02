@@ -1,0 +1,29 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Cerveau
+GenericName=AI Assistant
+GenericName[fr]=Assistant IA
+Comment=Assistant IA francophone : coffre Obsidian, agent de code et GitHub
+Comment[fr]=Assistant IA francophone : coffre Obsidian, agent de code et GitHub
+Comment[en]=French AI assistant with Obsidian vault, code agent and GitHub
+Exec=/usr/bin/cerveau %U
+Icon=cerveau
+Terminal=false
+Categories=Office;
+Keywords=ia;ai;assistant;obsidian;notes;markdown;claude;deepseek;openai;github;code;
+Keywords[fr]=ia;assistant;obsidian;notes;markdown;claude;deepseek;github;code;
+StartupWMClass=Cerveau
+StartupNotify=true
+MimeType=x-scheme-handler/cerveau;
+Actions=new-conversation;settings;
+
+[Desktop Action new-conversation]
+Name=Nouvelle conversation
+Name[fr]=Nouvelle conversation
+Exec=/usr/bin/cerveau --new
+
+[Desktop Action settings]
+Name=Réglages
+Name[fr]=Réglages
+Exec=/usr/bin/cerveau --settings

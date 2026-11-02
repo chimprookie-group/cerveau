@@ -1,0 +1,24 @@
+{
+  "name": "cerveau",
+  "productName": "Cerveau",
+  "version": "2.3.2",
+  "description": "Assistant IA de bureau en français avec coffre Obsidian intégré",
+  "main": "electron/main.js",
+  "author": "chimp",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "vendor": "node scripts/copy-vendor.mjs",
+    "package": "bash scripts/package.sh",
+    "dist": "bash scripts/dist.sh",
+    "pkg": "bash scripts/dist.sh && cd pkg && makepkg -sf"
+  },
+  "dependencies": {
+    "@highlightjs/cdn-assets": "^11.11.1",
+    "dompurify": "^3.2.6",
+    "marked": "^15.0.12"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1"
+  }
+}

@@ -1,0 +1,33 @@
+# Dépendances
+node_modules/
+
+# Artefacts de construction
+dist/
+pkg/src/
+pkg/pkg/
+pkg/*.tar.gz
+pkg/*.pkg.tar.zst
+*.pkg.tar.zst
+*.pkg.tar.xz
+*.tar.gz
+
+# Configuration locale et secrets
+config.json
+.env
+.env.*
+*.key
+*.pem
+
+# Éditeurs et OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Journaux et temporaires
+*.log
+npm-debug.log*
+.cache/
+tmp/

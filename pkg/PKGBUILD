@@ -1,0 +1,90 @@
+# Maintainer: Cerveau <cerveau@localhost>
+pkgname=cerveau
+pkgver=2.3.2
+pkgrel=1
+pkgdesc="Assistant IA francophone : coffre Obsidian, agent de code et intégration GitHub"
+arch=('x86_64' 'aarch64')
+url="https://github.com/chimprookie-group/cerveau"
+license=('MIT')
+depends=(
+  'gtk3' 'nss' 'libxss' 'libnotify' 'libsecret' 'alsa-lib'
+  'libcups' 'libdrm' 'mesa' 'libxkbcommon' 'libglvnd' 'libxcomposite'
+  'libxdamage' 'libxrandr' 'at-spi2-core' 'pango' 'cairo'
+)
+optdepends=(
+  'obsidian: ouverture directe des notes dans l’application Obsidian'
+  'github-cli: intégration GitHub (clone, commits, pull requests)'
+  'git: gestion de version des projets'
+)
+provides=('cerveau')
+conflicts=('cerveau-bin' 'cerveau-git')
+options=('!strip' '!debug')
+
+# L'archive est produite par `npm run dist` dans le dépôt source.
+# Elle contient Electron précompilé + le code de l'application.
+source=("${pkgname}-${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "${srcdir}"
+  # Rien à préparer : l'archive contient déjà une application complète.
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # --- moteur Electron ---
+  install -d "${pkgdir}/opt/${pkgname}"
+  cp -a electron "${pkgdir}/opt/${pkgname}/electron"
+
+  # --- application ---
+  install -d "${pkgdir}/opt/${pkgname}/app"
+  cp -a app/. "${pkgdir}/opt/${pkgname}/app/"
+
+  # Normalisation des permissions : l'archive source peut contenir des fichiers
+  # en 600 (créés en espace de travail personnel). Sans cela, l'application
+  # installée ne peut pas lire son propre code et échoue avec EACCES.
+  find "${pkgdir}/opt/${pkgname}/app" -type d -exec chmod 755 {} +
+  find "${pkgdir}/opt/${pkgname}/app" -type f -exec chmod 644 {} +
+  find "${pkgdir}/opt/${pkgname}/electron" -type d -exec chmod 755 {} +
+  find "${pkgdir}/opt/${pkgname}/electron" -type f -name 'electron' -exec chmod 755 {} +
+  find "${pkgdir}/opt/${pkgname}/electron" -type f ! -name 'electron' -exec chmod 644 {} +
+
+  # EN DERNIER : le bac à sable de Chrome exige le bit setuid root.
+  # Ce chmod doit rester après les normalisations, sinon il est écrasé.
+  chmod 4755 "${pkgdir}/opt/${pkgname}/electron/chrome-sandbox"
+
+  # --- lanceur ---
+  install -d "${pkgdir}/usr/bin"
+  cat > "${pkgdir}/usr/bin/${pkgname}" <<'LAUNCHER'
+#!/bin/sh
+# Cerveau — assistant IA avec coffre Obsidian intégré
+# --ozone-platform-hint=auto choisit Wayland ou X11 selon la session.
+exec /opt/cerveau/electron/electron \
+  --ozone-platform-hint=auto \
+  --enable-features=WaylandWindowDecorations \
+  --enable-wayland-ime \
+  /opt/cerveau/app "$@"
+LAUNCHER
+  chmod 755 "${pkgdir}/usr/bin/${pkgname}"
+
+  # --- raccourci bureau ---
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/cerveau.desktop" \
+    "${pkgdir}/usr/share/applications/${pkgname}.desktop"
+
+  # --- icônes ---
+  for taille in 16 32 48 64 128 256 512; do
+    install -Dm644 "${srcdir}/${pkgname}-${pkgver}/icons/${pkgname}-${taille}.png" \
+      "${pkgdir}/usr/share/icons/hicolor/${taille}x${taille}/apps/${pkgname}.png"
+  done
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/icons/scalable/${pkgname}.svg" \
+    "${pkgdir}/usr/share/icons/hicolor/scalable/apps/${pkgname}.svg"
+
+  # --- métadonnée AppStream (visible dans les logithèques) ---
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/cerveau.metainfo.xml" \
+    "${pkgdir}/usr/share/metainfo/${pkgname}.metainfo.xml"
+
+  # --- licence ---
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
