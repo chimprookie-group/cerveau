@@ -698,9 +698,9 @@ const EXEMPLES_MCP = [
   {
     nom: 'git',
     titre: 'Git avancé',
-    desc: 'Historique, branches, diffs détaillés',
+    desc: '28 outils : blame, changelog, branches, diffs',
     commande: 'npx',
-    arguments: ['-y', '@modelcontextprotocol/server-git', '--repository', '$HOME/Projects']
+    arguments: ['-y', '@cyanheads/git-mcp-server']
   },
   {
     nom: 'memory',
@@ -712,9 +712,16 @@ const EXEMPLES_MCP = [
   {
     nom: 'sqlite',
     titre: 'Base SQLite',
-    desc: 'Interroger une base de données',
+    desc: 'Requêtes et tables d\'une base .db',
     commande: 'npx',
-    arguments: ['-y', '@modelcontextprotocol/server-sqlite', '/chemin/vers/base.db']
+    arguments: ['-y', 'mcp-server-sqlite', '--db', '$HOME/base.db']
+  },
+  {
+    nom: 'everything',
+    titre: 'Serveur de démonstration',
+    desc: 'Référence du protocole, pour tester',
+    commande: 'npx',
+    arguments: ['-y', '@modelcontextprotocol/server-everything']
   }
 ];
 
@@ -747,11 +754,30 @@ function rendreServeursMCP() {
         el('div', { class: 'mcp-commande', text: `${srv.commande} ${(srv.arguments || []).join(' ')}` })
       ),
       el('button', {
+        class: 'btn-modele', text: 'Tester', title: 'Démarrer et lister les outils',
+        onclick: async (e) => {
+          const b = e.currentTarget;
+          b.disabled = true;
+          b.textContent = '…';
+          const r = await API.mcp.tester(srv.nom);
+          b.disabled = false;
+          b.textContent = 'Tester';
+          await rafraichirEtatsMCP();
+          if (r.ok && r.outils > 0) {
+            notifier(`« ${srv.nom} » : ${r.outils} outil(s) chargé(s).`, 'succes', 4000);
+          } else {
+            const etatSrv = r.etats?.[srv.nom];
+            notifier(`« ${srv.nom} » n'a pas démarré : ${etatSrv?.erreur || 'raison inconnue'}`, 'erreur', 9000);
+          }
+        }
+      }),
+      el('button', {
         class: 'btn-modele danger', text: '✕', title: 'Retirer',
         onclick: async () => {
           const liste = (etat.config.serveursMCP || []).filter((_, i) => i !== index);
           await enregistrerConfig({ serveursMCP: liste });
           rendreServeursMCP();
+          rendreExemplesMCP();
           notifier(`Serveur « ${srv.nom} » retiré.`, 'info', 2000);
         }
       })
@@ -797,6 +823,7 @@ async function ajouterServeurMCP() {
   const nom = $('#mcpNom')?.value.trim();
   const commande = $('#mcpCommande')?.value.trim();
   const argsBruts = $('#mcpArguments')?.value.trim() || '';
+  const envBrut = $('#mcpEnv')?.value.trim() || '';
 
   if (!nom || !commande) return notifier('Renseignez un nom et une commande.', 'erreur', 3000);
   if ((etat.config.serveursMCP || []).some((s) => s.nom === nom)) {
@@ -806,14 +833,22 @@ async function ajouterServeurMCP() {
   // découpe grossière respectant les guillemets
   const args = argsBruts.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((a) => a.replace(/^"|"$/g, '')) || [];
 
+  // variables d'environnement : « CLE=valeur » séparées par des espaces
+  const variablesEnv = {};
+  for (const morceau of envBrut.match(/(?:[^\s"]+|"[^"]*")+/g) || []) {
+    const m = morceau.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (m) variablesEnv[m[1]] = m[2].replace(/^"|"$/g, '');
+  }
+
   const liste = [...(etat.config.serveursMCP || []), {
-    nom, commande, arguments: args, variablesEnv: {}, actif: true
+    nom, commande, arguments: args, variablesEnv, actif: true
   }];
   await enregistrerConfig({ serveursMCP: liste });
 
   if ($('#mcpNom')) $('#mcpNom').value = '';
   if ($('#mcpCommande')) $('#mcpCommande').value = '';
   if ($('#mcpArguments')) $('#mcpArguments').value = '';
+  if ($('#mcpEnv')) $('#mcpEnv').value = '';
   rendreServeursMCP();
   rendreExemplesMCP();
   notifier(`Serveur « ${nom} » ajouté.`, 'succes', 3000);
@@ -835,10 +870,13 @@ async function rafraichirEtatsMCP() {
     zone.append(el('div', { class: 'mcp-etat' },
       el('span', { class: 'menu-item-pastille ' + (ok ? 'ok' : 'absent') }),
       el('span', { class: 'mcp-etat-nom', text: srv.nom }),
-      el('span', { class: 'mcp-etat-detail', text:
-        ok ? `${e.outils} outil(s) chargé(s)`
-           : e?.erreur ? e.erreur.slice(0, 90)
-           : srv.actif === false ? 'désactivé' : 'pas encore démarré' })
+      el('span', {
+        class: 'mcp-etat-detail',
+        title: e?.erreur || '',
+        text: ok ? `${e.outils} outil(s) chargé(s)`
+          : e?.erreur ? e.erreur.slice(0, 110)
+          : srv.actif === false ? 'désactivé' : 'pas encore démarré — cliquez sur Tester'
+      })
     ));
   }
 }

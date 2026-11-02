@@ -4,6 +4,30 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.4.0] — 2026-11-03
+
+### Corrigé
+- **Deux exemples de serveurs MCP pointaient vers des paquets inexistants.**
+  `@modelcontextprotocol/server-git` et `@modelcontextprotocol/server-sqlite` renvoient
+  une erreur 404 sur npm. Remplacés par des serveurs vérifiés : `@cyanheads/git-mcp-server`
+  (28 outils) et `mcp-server-sqlite` (10 outils).
+- **Les échecs de démarrage étaient muets.** Le message se limitait à « arrêté (code 1) »,
+  sans indiquer la cause. La sortie d'erreur du processus est désormais jointe, avec une
+  piste explicite quand le paquet est introuvable.
+
+### Ajouté
+- **Variables d'environnement par serveur** : beaucoup de serveurs MCP exigent une clé
+  (`BRAVE_API_KEY`, `GITHUB_TOKEN`…). Saisie `CLE=valeur` à l'ajout, plusieurs séparées
+  par des espaces.
+- **Bouton « Tester » par serveur** : démarre uniquement le serveur visé, affiche le
+  nombre d'outils chargés ou l'erreur exacte, sans être bloqué par un voisin défaillant.
+- Un 5e exemple vérifié : `@modelcontextprotocol/server-everything`.
+
+### Vérifié
+- `@cyanheads/git-mcp-server` : 28 outils en 1,0 s
+- `mcp-server-sqlite` : 10 outils en 1,0 s
+- Message d'erreur d'un paquet absent : 404 npm cité, piste actionnable affichée
+
 ## [2.3.4] — 2026-11-03
 
 ### Corrigé

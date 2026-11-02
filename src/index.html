@@ -523,8 +523,15 @@
               <input type="text" id="mcpNom" class="champ-ajout-modele" placeholder="nom du serveur" />
               <input type="text" id="mcpCommande" class="champ-ajout-modele large" placeholder="commande (ex. npx)" />
               <input type="text" id="mcpArguments" class="champ-ajout-modele large" placeholder="arguments (ex. -y @modelcontextprotocol/server-filesystem /home)" />
+              <input type="text" id="mcpEnv" class="champ-ajout-modele large"
+                     placeholder="variables d'environnement (ex. BRAVE_API_KEY=xxx GITHUB_TOKEN=yyy)" />
               <button id="btnAjouterMCP" class="btn-mini">+ Ajouter</button>
             </div>
+            <p class="champ-reglage-aide" style="margin-top:-10px">
+              Certains serveurs exigent une clé, passée en variable d'environnement :
+              <code>BRAVE_API_KEY</code> pour la recherche, <code>GITHUB_TOKEN</code> pour GitHub.
+              Séparez plusieurs variables par une espace.
+            </p>
 
             <div class="exemples-mcp">
               <div class="section-titre">Exemples prêts à l'emploi</div>

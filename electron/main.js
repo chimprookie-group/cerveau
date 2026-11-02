@@ -382,8 +382,32 @@ ipcMain.handle('mcp:etats', async () => {
 ipcMain.handle('mcp:tester', async (_e, nom) => {
   try {
     const cfg = config.getConfig();
-    const liste = (cfg.serveursMCP || []).filter((x) => !nom || x.nom === nom);
-    const outils = await mcpGestionnaire.charger(liste);
+    const serveurs = cfg.serveursMCP || [];
+
+    // On ne teste que le serveur demandé : charger les autres au passage
+    // ferait échouer le test à cause d'un voisin mal configuré.
+    if (nom) {
+      const cible = serveurs.find((x) => x.nom === nom);
+      if (!cible) return { ok: false, message: `Serveur « ${nom} » introuvable.` };
+
+      // on force un redémarrage propre pour repartir d'un état sain
+      const ancien = mcpGestionnaire.serveurs.get(nom);
+      if (ancien) {
+        ancien.arreter();
+        mcpGestionnaire.serveurs.delete(nom);
+      }
+      mcpGestionnaire.etats.delete(nom);
+
+      const outils = await mcpGestionnaire.charger([cible]);
+      const etat = mcpGestionnaire.etatsServeurs()[nom];
+      return {
+        ok: Boolean(etat?.ok) && outils.length > 0,
+        outils: outils.length,
+        etats: mcpGestionnaire.etatsServeurs()
+      };
+    }
+
+    const outils = await mcpGestionnaire.charger(serveurs);
     return { ok: true, outils: outils.length, etats: mcpGestionnaire.etatsServeurs() };
   } catch (err) {
     return { ok: false, message: String(err.message || err) };

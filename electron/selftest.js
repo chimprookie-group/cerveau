@@ -908,6 +908,37 @@ async function run(mainWindow, deps) {
     /^\d+px$/.test(boutonPanneau.largeurs[0]?.hauteurEntete || ''),
     boutonPanneau.largeurs[0]?.hauteurEntete || 'absente');
 
+  // 6septdecies. Serveurs MCP : diagnostic et réglages
+  // a. un paquet inexistant doit produire un message exploitable
+  const mcpDiag = require('./mcp');
+  await mcpDiag.gestionnaire.charger([{ nom: 'inexistant', commande: 'npx',
+    arguments: ['-y', '@modelcontextprotocol/server-git'], actif: true }]);
+  const etatInexistant = mcpDiag.gestionnaire.etatsServeurs().inexistant;
+  verifier('MCP : échec de paquet expliqué',
+    /introuvable|npm|404/i.test(etatInexistant?.erreur || ''),
+    (etatInexistant?.erreur || 'aucun message').slice(0, 80));
+  verifier('MCP : sortie d\'erreur conservée',
+    typeof etatInexistant?.stderr === 'string',
+    `${(etatInexistant?.stderr || '').length} caractères`);
+  mcpDiag.gestionnaire.arreterTout();
+
+  // b. les exemples utilisent des paquets réels
+  const appSrcMCP = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
+  verifier('Exemples MCP : plus de paquet fantôme',
+    !appSrcMCP.includes('@modelcontextprotocol/server-git') &&
+    !appSrcMCP.includes('@modelcontextprotocol/server-sqlite'));
+  verifier('Exemples MCP : serveurs vérifiés présents',
+    appSrcMCP.includes('@cyanheads/git-mcp-server') && appSrcMCP.includes('mcp-server-sqlite'));
+
+  // c. variables d'environnement saisissables
+  verifier('Réglage des variables d\'environnement', /id="mcpEnv"/.test(
+    fs2.readFileSync(path.join(racine, 'src', 'index.html'), 'utf8')));
+  verifier('Analyse CLE=valeur des variables',
+    /variablesEnv\[m\[1\]\]/.test(appSrcMCP));
+
+  // d. bouton de test par serveur
+  verifier('Bouton Tester par serveur', /Tester/.test(appSrcMCP) && /API\.mcp\.tester/.test(appSrcMCP));
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 

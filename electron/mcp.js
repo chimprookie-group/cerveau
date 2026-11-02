@@ -65,7 +65,16 @@ class ServeurMCP {
       this._rejeterTout(echec);
     });
     this.proc.on('exit', (code) => {
-      const echec = new Error(`Serveur « ${this.nom} » arrêté (code ${code}).`);
+      // Un code de sortie seul n'aide personne : on joint la sortie d'erreur
+      // du serveur et, si le paquet est absent, une piste concrète.
+      const detail = this.stderr.trim().split('\n').filter(Boolean).slice(-4).join(' | ');
+      const piste = /404|not found|ENOENT|command not found/i.test(this.stderr)
+        ? ' — le paquet ou la commande est introuvable (vérifiez le nom sur npm)'
+        : '';
+      const echec = new Error(
+        `Serveur « ${this.nom} » arrêté (code ${code})${piste}`
+        + (detail ? ` : ${detail.slice(0, 300)}` : '')
+      );
       if (!this.initialise && !this.echecDemarrage) this.echecDemarrage = echec;
       this._rejeterTout(echec);
       this.proc = null;
@@ -271,10 +280,22 @@ class GestionnaireMCP {
   /** État de chaque serveur, pour l'interface. */
   etatsServeurs() {
     const sortie = {};
-    for (const [nom, etat] of this.etats) sortie[nom] = etat;
+    for (const [nom, etat] of this.etats) {
+      const serveur = this.serveurs.get(nom);
+      sortie[nom] = {
+        ...etat,
+        // sortie d'erreur du processus, utile au diagnostic
+        stderr: serveur ? serveur.stderr.trim().split('\n').filter(Boolean).slice(-5).join(' | ') : ''
+      };
+    }
     for (const [nom, serveur] of this.serveurs) {
       if (sortie[nom]) continue;
-      sortie[nom] = { ok: serveur.initialise, outils: serveur.outils.length, erreur: serveur.erreur };
+      sortie[nom] = {
+        ok: serveur.initialise,
+        outils: serveur.outils.length,
+        erreur: serveur.erreur,
+        stderr: serveur.stderr.trim().split('\n').filter(Boolean).slice(-5).join(' | ')
+      };
     }
     return sortie;
   }
