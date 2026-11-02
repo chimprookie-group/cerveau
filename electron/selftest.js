@@ -366,7 +366,7 @@ async function run(mainWindow, deps) {
   await mainWindow.webContents.executeJavaScript(`window.cerveauUI.rafraichirFournisseurs()`);
 
   // 6quater. Palette de commandes et régénération
-  const palette = await mainWindow.webContents.executeJavaScript(`(async () => {
+  const navPalette = await mainWindow.webContents.executeJavaScript(`(async () => {
     const ui = window.cerveauUI;
     ui.ouvrirPalette();
     await new Promise(r => setTimeout(r, 300));
@@ -397,14 +397,14 @@ async function run(mainWindow, deps) {
              aRegenerer: ui.COMMANDES.some(c => c.id === 'regenerer') };
   })()`);
 
-  verifier('Palette de commandes s\'ouvre', palette.ouvert === true);
-  verifier('Palette se ferme', palette.ferme === true);
-  verifier('Palette contient des commandes', palette.nbCommandes >= 15, `${palette.nbCommandes} commandes`);
-  verifier('Filtre accent-insensible', palette.filtre.some(t => t.includes('thème')), palette.filtre.join(' | '));
-  verifier('Filtre sans accent fonctionne', palette.sansAccent.some(t => t.includes('réglages')), palette.sansAccent.join(' | '));
-  verifier('Navigation clavier dans la palette', palette.aChange === true,
-    `${palette.avantNav || '?'} → ${palette.apresNav || '?'}`);
-  verifier('Commande « régénérer » disponible', palette.aRegenerer === true);
+  verifier('Palette de commandes s\'ouvre', navPalette.ouvert === true);
+  verifier('Palette se ferme', navPalette.ferme === true);
+  verifier('Palette contient des commandes', navPalette.nbCommandes >= 15, `${navPalette.nbCommandes} commandes`);
+  verifier('Filtre accent-insensible', navPalette.filtre.some(t => t.includes('thème')), navPalette.filtre.join(' | '));
+  verifier('Filtre sans accent fonctionne', navPalette.sansAccent.some(t => t.includes('réglages')), navPalette.sansAccent.join(' | '));
+  verifier('Navigation clavier dans la palette', navPalette.aChange === true,
+    `${navPalette.avantNav || '?'} → ${navPalette.apresNav || '?'}`);
+  verifier('Commande « régénérer » disponible', navPalette.aRegenerer === true);
 
   // 6quinquies. Métadonnées de distribution
   const fs2 = require('node:fs');
@@ -813,6 +813,59 @@ async function run(mainWindow, deps) {
   })()`);
   verifier('Arbre du coffre affiché', coffre.noeuds > 0, `${coffre.noeuds} entrées`);
   verifier('Tags affichés dans la barre', coffre.tags > 0, `${coffre.tags} tags`);
+
+  // 6quindecies. Palette de commandes : navigation clavier stable
+  const navStable = await mainWindow.webContents.executeJavaScript(`(async () => {
+    document.querySelector('#modalePalette').hidden = false;
+    window.cerveauUI.filtrerPalette('');
+    await new Promise(r => setTimeout(r, 900));
+
+    const champ = document.querySelector('#paletteRecherche');
+    champ.focus();
+    const items = () => [...document.querySelectorAll('.palette-item')];
+    const idx = () => items().findIndex((x) => x.classList.contains('actif'));
+    const out = { total: items().length, clavier: [], survol: [], circ: null };
+
+    // A. les flèches avancent d'exactement 1
+    for (let i = 0; i < 5; i++) {
+      champ.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      await new Promise((r) => setTimeout(r, 80));
+      out.clavier.push(idx());
+    }
+
+    // B. un mouseenter parasite (défilement) ne déplace pas la sélection
+    const avantParasite = idx();
+    items()[Math.min(15, items().length - 1)].dispatchEvent(new MouseEvent('mouseenter'));
+    await new Promise((r) => setTimeout(r, 80));
+    out.parasiteIgnore = idx() === avantParasite;
+
+    // C. un vrai déplacement de souris reprend la main
+    items()[Math.min(15, items().length - 1)].dispatchEvent(new MouseEvent('mousemove'));
+    await new Promise((r) => setTimeout(r, 80));
+    out.survolFonctionne = idx() === Math.min(15, items().length - 1);
+
+    // D. le clavier reprend après le survol
+    const apresSurvol = idx();
+    champ.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await new Promise((r) => setTimeout(r, 80));
+    out.clavierReprend = idx() === apresSurvol - 1;
+
+    // E. navigation circulaire
+    window.cerveauUI.filtrerPalette('');
+    await new Promise((r) => setTimeout(r, 700));
+    champ.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await new Promise((r) => setTimeout(r, 80));
+    out.circ = idx() === items().length - 1;
+
+    document.querySelector('#modalePalette').hidden = true;
+    return out;
+  })()`);
+  verifier('Palette : flèches avancent de 1',
+    navStable.clavier.join(',') === '1,2,3,4,5', navStable.clavier.join(','));
+  verifier('Palette : mouseenter parasite ignoré', navStable.parasiteIgnore === true);
+  verifier('Palette : survol réel fonctionne', navStable.survolFonctionne === true);
+  verifier('Palette : clavier reprend après survol', navStable.clavierReprend === true);
+  verifier('Palette : navigation circulaire', navStable.circ === true);
 
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));

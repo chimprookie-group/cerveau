@@ -4,6 +4,20 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.3.3] — 2026-11-02
+
+### Corrigé
+- **Palette de commandes : les flèches sautaient.** Quand la souris survolait la
+  palette, le défilement provoquait des `mouseenter` parasites qui déplaçaient la
+  sélection sous le curseur : chaque `↓` avançait alors de plusieurs lignes, et la
+  navigation devenait imprévisible. Le survol ne reprend désormais la main que sur un
+  vrai déplacement de souris (`mousemove`), le clavier reste maître tant que la souris
+  ne bouge pas.
+- **Le survol ne sélectionnait pas le bon élément** : l'index était lu au moment de
+  l'événement au lieu d'être capturé à la création. Survoler la 11e ligne renvoyait 0.
+- **Cinq tests de la palette ne s'exécutaient pas** : ils référençaient une variable
+  `palette` inexistante et passaient par erreur sans rien vérifier. Réparés.
+
 ## [2.3.2] — 2026-11-02
 
 Première publication publique.

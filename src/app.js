@@ -2219,6 +2219,9 @@ const COMMANDES = [
 
 let paletteIndex = 0;
 let paletteResultats = [];
+// vrai quand la dernière sélection vient des flèches : le survol ne doit
+// alors plus la déplacer tant que la souris n'a pas bougé volontairement.
+let paletteSelectionClavier = false;
 
 /** Normalise pour une recherche insensible à la casse ET aux accents. */
 function normaliserRecherche(texte) {
@@ -2250,6 +2253,7 @@ async function filtrerPalette(requete) {
   conteneur.innerHTML = '';
   paletteResultats = [];
   paletteIndex = 0;
+  paletteSelectionClavier = false;
 
   // 1. commandes
   const cmds = COMMANDES.filter((c) => !q || normaliserRecherche(c.titre).includes(q));
@@ -2276,8 +2280,15 @@ async function filtrerPalette(requete) {
         el('span', { class: 'palette-item-titre', text: c.titre }),
         c.raccourci ? el('kbd', { text: c.raccourci }) : null
       );
+      const index = paletteResultats.length;
       item.addEventListener('click', () => executerPalette());
-      item.addEventListener('mouseenter', () => surlignerPalette(paletteResultats.length));
+      item.addEventListener('mousemove', () => {
+        // seul un vrai déplacement de souris reprend la sélection
+        if (paletteSelectionClavier || paletteIndex !== index) {
+          paletteSelectionClavier = false;
+          surlignerPalette(index);
+        }
+      });
       paletteResultats.push({ type: 'commande', item, executer: c.action, titre: c.titre });
       conteneur.append(item);
     }
@@ -2291,8 +2302,14 @@ async function filtrerPalette(requete) {
         el('span', { class: 'palette-item-chemin', text: n.path })
       );
       const executer = async () => { fermerPalette(); await ouvrirNote(n.path); };
+      const index = paletteResultats.length;
       item.addEventListener('click', executer);
-      item.addEventListener('mouseenter', () => surlignerPalette(paletteResultats.length));
+      item.addEventListener('mousemove', () => {
+        if (paletteSelectionClavier || paletteIndex !== index) {
+          paletteSelectionClavier = false;
+          surlignerPalette(index);
+        }
+      });
       paletteResultats.push({ type: 'note', item, executer, titre: n.path });
       conteneur.append(item);
     }
@@ -2561,8 +2578,15 @@ function brancherEvenements() {
   $('#modalePalette .modale-fond')?.addEventListener('click', fermerPalette);
   $('#paletteRecherche')?.addEventListener('input', (e) => filtrerPalette(e.target.value));
   $('#paletteRecherche')?.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); surlignerPalette(paletteIndex + 1); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); surlignerPalette(paletteIndex - 1); }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      paletteSelectionClavier = true;
+      surlignerPalette(paletteIndex + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      paletteSelectionClavier = true;
+      surlignerPalette(paletteIndex - 1);
+    }
     else if (e.key === 'Enter') { e.preventDefault(); executerPalette(); }
     else if (e.key === 'Escape') { e.preventDefault(); fermerPalette(); }
   });
