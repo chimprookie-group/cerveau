@@ -27,6 +27,7 @@
   --police-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
   --largeur-sidebar: 268px;
   --largeur-panneau: 400px;
+  --hauteur-entete: 55px;
 }
 
 body[data-theme="clair"] {
@@ -89,6 +90,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   display: flex;
   height: 100vh;
   overflow: hidden;
+  position: relative;
 }
 
 /* ══════════════════ BARRE LATÉRALE ══════════════════ */
@@ -2909,7 +2911,25 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 /* Responsive */
 @media (max-width: 1180px) {
-  .panneau-obsidian { position: absolute; right: 0; top: 0; bottom: 0; z-index: 100; box-shadow: var(--ombre); }
+  /* Le panneau se superpose au contenu, mais il ne doit jamais recouvrir
+     l'en-tête : il masquerait le bouton qui sert à le refermer. */
+  .panneau-obsidian {
+    position: absolute;
+    right: 0;
+    top: var(--hauteur-entete);
+    bottom: 0;
+    z-index: 90;
+    box-shadow: var(--ombre);
+  }
+
+  /* l'en-tête reste au-dessus, ses boutons accessibles */
+  .entete {
+    position: relative;
+    z-index: 95;
+  }
+
+  /* le panneau replié ne doit pas laisser de marge résiduelle */
+  .panneau-obsidian.replie { margin-right: 0; right: calc(-1 * var(--largeur-panneau)); }
 }
 
 @media (max-width: 900px) {

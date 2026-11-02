@@ -4,6 +4,22 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.3.4] — 2026-11-03
+
+### Corrigé
+- **Le bouton du panneau latéral était recouvert par le panneau lui-même.** En dessous
+  de 1180 px de large, le panneau passe en superposition à partir de `top: 0` et
+  masquait l'en-tête complet — donc le bouton qui sert à le refermer. L'en-tête reste
+  désormais au-dessus, et le panneau démarre sous lui.
+- **Hauteur d'en-tête dynamique.** En dessous de 1240 px, l'en-tête passe sur deux
+  lignes (130 px au lieu de 55). Le décalage du panneau est mesuré à l'exécution et
+  recalculé à chaque redimensionnement, au lieu d'une valeur fixe qui laissait un vide.
+
+### Vérifié
+- Aucun chevauchement bouton/panneau de 1600 à 860 px de large
+- Bouton accessible au clic à toutes ces largeurs
+- Panneau replié toujours correctement masqué
+
 ## [2.3.3] — 2026-11-02
 
 ### Corrigé

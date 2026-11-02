@@ -241,6 +241,8 @@ async function demarrer() {
   if (etat.config.ui?.obsidianPanelOpen === false) $('#panneauObsidian').classList.add('replie');
 
   brancherEvenements();
+  synchroniserHauteurEntete();
+  window.addEventListener('resize', synchroniserHauteurEntete);
   initialiserTerminal();
   initialiserPieces();
   await rafraichirFournisseurs();
@@ -249,6 +251,8 @@ async function demarrer() {
   definirMode(etat.config.mode || 'complet');
   afficherConversations();
   nouvelleConversation({ silencieux: true });
+
+  synchroniserHauteurEntete();
 
   API.agent.surEvenement(traiterEvenementAgent);
   API.menu.surAction(traiterActionMenu);
@@ -888,6 +892,20 @@ function initialiserPlugins() {
   rendreServeursMCP();
   rendreExemplesMCP();
   rafraichirEtatsMCP();
+}
+
+/**
+ * Reporte la hauteur réelle de l'en-tête dans une variable CSS.
+ *
+ * En dessous de 1240 px, l'en-tête passe sur deux lignes. Le panneau superposé
+ * doit démarrer exactement sous lui, sinon il recouvre le bouton qui sert à le
+ * refermer. La hauteur est donc mesurée, jamais supposée.
+ */
+function synchroniserHauteurEntete() {
+  const entete = $('.entete');
+  if (!entete) return;
+  const h = Math.round(entete.getBoundingClientRect().height);
+  if (h > 0) document.documentElement.style.setProperty('--hauteur-entete', `${h}px`);
 }
 
 /* ═══════════════════════════ RÉGLAGES AVANCÉS ═══════════════════════════ */

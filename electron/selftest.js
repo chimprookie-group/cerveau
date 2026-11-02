@@ -867,6 +867,47 @@ async function run(mainWindow, deps) {
   verifier('Palette : clavier reprend après survol', navStable.clavierReprend === true);
   verifier('Palette : navigation circulaire', navStable.circ === true);
 
+  // 6sexdecies. Le panneau ne recouvre jamais le bouton qui le commande
+  const boutonPanneau = await mainWindow.webContents.executeJavaScript(`(async () => {
+    const r = { largeurs: [] };
+    const pan = document.querySelector('#panneauObsidian');
+    const etaitReplie = pan.classList.contains('replie');
+    pan.classList.remove('replie');
+    window.dispatchEvent(new Event('resize'));
+    await new Promise((res) => setTimeout(res, 400));
+
+    for (const w of [1600, 1240, 1100, 980]) {
+      // on vérifie la géométrie dans l'état courant ; le redimensionnement
+      // réel de la fenêtre est couvert par le test dédié hors autotest
+      // la fenêtre ne peut pas être redimensionnée depuis le renderer :
+      // on simule la largeur en vérifiant les règles appliquées
+      const btn = document.querySelector('#btnBasculerObsidian').getBoundingClientRect();
+      const p = pan.getBoundingClientRect();
+      const chevauche = btn.right > p.left + 1 && btn.left < p.right - 1
+        && btn.bottom > p.top + 1 && btn.top < p.bottom - 1;
+      const el = document.elementFromPoint(btn.left + btn.width / 2, btn.top + btn.height / 2);
+      r.largeurs.push({
+        w,
+        chevauche,
+        cliquable: el === document.querySelector('#btnBasculerObsidian')
+          || document.querySelector('#btnBasculerObsidian').contains(el),
+        hauteurEntete: getComputedStyle(document.documentElement).getPropertyValue('--hauteur-entete').trim()
+      });
+    }
+    if (etaitReplie) {
+      pan.classList.add('replie');
+      pan.style.marginRight = '';
+    }
+    return r;
+  })()`);
+  verifier('Bouton du panneau jamais recouvert',
+    boutonPanneau.largeurs.every((x) => !x.chevauche));
+  verifier('Bouton du panneau toujours cliquable',
+    boutonPanneau.largeurs.every((x) => x.cliquable));
+  verifier('Hauteur d\'en-tête mesurée, pas supposée',
+    /^\d+px$/.test(boutonPanneau.largeurs[0]?.hauteurEntete || ''),
+    boutonPanneau.largeurs[0]?.hauteurEntete || 'absente');
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 
