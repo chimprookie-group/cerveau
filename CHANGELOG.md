@@ -4,6 +4,30 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.8.0] — 2026-11-03
+
+### Ajouté
+- **Branche de travail par ticket.** Avant d'exécuter, le Superviseur crée une branche
+  `préfixe/issue-N` dans le dépôt local et l'indique explicitement à l'agent, avec la
+  commande de commit et de push à utiliser. La pull request est ensuite ouverte depuis
+  cette branche.
+- Réglages **Préparer une branche par ticket** et **Préfixe des branches**.
+- La branche préparée réutilise une branche existante du même nom au lieu d'échouer,
+  de sorte qu'un ticket rejoué ne crée pas de doublon.
+
+### Corrigé
+- **L'agent ignorait la branche préparée.** Il créait souvent la sienne : la détection
+  regarde désormais d'abord la branche courante, puis celle qui avait été préparée.
+- **Une pull request déjà existante était signalée comme un échec.** Elle est maintenant
+  retrouvée et rattachée au ticket, marquée `dejaExistante`.
+- Un dépôt local absent produit un avertissement explicite au lieu d'une erreur muette.
+
+### Vérifié de bout en bout
+Une issue demandant une modification du README a été créée. Le Superviseur l'a détectée,
+l'agent a modifié le fichier, commité, poussé sur `test/cycle-complet-readme`, et la
+**pull request #4 a été ouverte avec exactement le changement demandé** (+2 lignes).
+Issue et PR ont ensuite été fermées et la branche supprimée.
+
 ## [2.7.1] — 2026-11-03
 
 ### Ajouté

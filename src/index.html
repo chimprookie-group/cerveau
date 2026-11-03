@@ -564,6 +564,33 @@
           </section>
 
           <section class="section-reglage">
+            <h3 class="section-reglage-titre">Branche de travail</h3>
+            <p class="section-reglage-desc">
+              Laissez l'agent commiter et pousser sur une branche dédiée à chaque ticket,
+              pour que la pull request soit ouverte automatiquement.
+            </p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supPousser">Préparer une branche par ticket</label>
+                <p class="champ-reglage-aide">
+                  Une branche <code>préfixe/issue-N</code> est créée avant le travail et
+                  l'agent est invité à y pousser ses commits.
+                </p>
+              </div>
+              <input type="checkbox" id="supPousser" class="champ-reglage-controle bascule" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supPrefixe">Préfixe des branches</label>
+                <p class="champ-reglage-aide">Donne <code>cerveau/issue-12</code> par exemple.</p>
+              </div>
+              <input type="text" id="supPrefixe" class="champ-reglage-controle" placeholder="cerveau" />
+            </div>
+          </section>
+
+          <section class="section-reglage">
             <h3 class="section-reglage-titre">État</h3>
             <p class="section-reglage-desc" id="supEtatTexte">Arrêté.</p>
             <div class="rangee-boutons">

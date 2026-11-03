@@ -1257,6 +1257,52 @@ async function run(mainWindow, deps) {
   }
   verifier('Publication : API commenter exposée', typeof require('./github').commenter === 'function');
 
+  // 6tervicies. Superviseur : branche de travail
+  verifier('Branche : nom déterministe',
+    sup.nomBrancheTicket({ origine: { numero: 7, genre: 'issue' } }, {}) === 'cerveau/issue-7');
+  verifier('Branche : pull request nommée à part',
+    sup.nomBrancheTicket({ origine: { numero: 3, genre: 'pull_request' } }, { prefixeBranche: 'bot' }) === 'bot/pr-3');
+  verifier('Branche : préfixe vide remplacé',
+    sup.nomBrancheTicket({ origine: { numero: 1 } }, { prefixeBranche: '  ' }) === 'cerveau/issue-1');
+
+  const consigneBranche = sup.construireConsigne(
+    { origine: { numero: 5, titre: 'T', genre: 'issue', consigne: 'corrige' }, branche: 'cerveau/issue-5' },
+    { depot: 'a/b', pousserBranche: true });
+  verifier('Consigne nomme la branche', consigneBranche.includes('cerveau/issue-5'));
+  verifier('Consigne donne la commande de push', /git push -u origin cerveau\/issue-5/.test(consigneBranche));
+  verifier('Consigne interdit la PR manuelle', /N'ouvre pas de pull request/i.test(consigneBranche));
+
+  // préparation avec espions
+  const origEtatLocal = ghMod.etatLocal;
+  const origChanger = ghMod.changerBranche;
+  try {
+    let creation = null;
+    ghMod.etatLocal = async () => ({ depot: true, branche: 'main', branches: ['main'] });
+    ghMod.changerBranche = async (ws, nom, opts) => { creation = { nom, opts }; return { ok: true }; };
+
+    const tb = { origine: { numero: 9, genre: 'issue' } };
+    const nomB = await sup.preparerBranche(tb, { pousserBranche: true, prefixeBranche: 'cerveau' }, os.tmpdir());
+    verifier('Branche préparée', nomB === 'cerveau/issue-9', String(nomB));
+    verifier('Branche créée', creation?.opts?.creer === true);
+
+    ghMod.etatLocal = async () => ({ depot: true, branche: 'main', branches: ['main', 'cerveau/issue-9'] });
+    creation = null;
+    await sup.preparerBranche({ origine: { numero: 9 } }, { pousserBranche: true }, os.tmpdir());
+    verifier('Branche existante réutilisée', creation?.opts?.creer === false);
+
+    const offB = await sup.preparerBranche({ origine: { numero: 9 } }, { pousserBranche: false }, os.tmpdir());
+    verifier('Branche désactivable', offB === null);
+
+    ghMod.etatLocal = async () => ({ depot: false });
+    const tb2 = { origine: { numero: 10 } };
+    const horsB = await sup.preparerBranche(tb2, { pousserBranche: true }, os.tmpdir());
+    verifier('Hors dépôt : pas de branche', horsB === null);
+    verifier('Hors dépôt : avertissement', /pas un dépôt git/.test(tb2.avertissement || ''));
+  } finally {
+    ghMod.etatLocal = origEtatLocal;
+    ghMod.changerBranche = origChanger;
+  }
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 

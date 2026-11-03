@@ -65,7 +65,10 @@ const DEFAULTS = {
     surveillerNouvellesIssues: false,
     workspace: '',
     publierResultats: true,
-    brancheCible: ''
+    brancheCible: '',
+    // l'agent pousse-t-il lui-même sur une branche dédiée ?
+    pousserBranche: true,
+    prefixeBranche: 'cerveau'
   },
   // réglages avancés
   general: {

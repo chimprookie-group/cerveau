@@ -267,10 +267,26 @@ function dejaTraite(tickets, decl) {
  * Détecte si l'agent a poussé une branche pendant son travail.
  * Sert à décider s'il faut ouvrir une pull request.
  */
-async function branchePoussee(workspace, depot, avant) {
+async function branchePoussee(workspace, depot, avant, attendue = null) {
   try {
     const local = await github.etatLocal(workspace);
     if (!local?.depot) return null;
+
+    // cas 1 : une branche précise a été préparée pour ce ticket
+    if (attendue) {
+      const existe = (local.branches || []).includes(attendue);
+      if (!existe) return null;
+      // la branche doit porter au moins un commit de plus que la base
+      try {
+        const r = await github.git(
+          ['rev-list', '--count', `${avant || 'main'}..${attendue}`], workspace);
+        const nb = Number(String(r.stdout || '0').trim());
+        if (Number.isFinite(nb) && nb === 0) return null;
+      } catch { /* comparaison impossible : on accepte la branche */ }
+      return attendue;
+    }
+
+    // cas 2 : on retombe sur la branche courante
     const branche = local.branche;
     if (!branche || branche === avant) return null;
     if (/^(main|master)$/i.test(branche)) return null;
@@ -348,14 +364,38 @@ async function publierResultat(ticket, config) {
       publication.statut = 'pull_request';
       publication.url = pr?.url || null;
     } catch (err) {
-      publication.erreurPr = String(err.message || err);
+      const msg = String(err.message || err);
+      if (/existe déjà/i.test(msg)) {
+        // une pull request couvre déjà cette branche : ce n'est pas un échec
+        try {
+          const prs = await github.ghJson([
+            'pr', 'list', '--repo', config.depot, '--head', ticket.nouvelleBranche,
+            '--state', 'all', '--limit', '1', '--json', 'number,url,state'
+          ]);
+          const trouvee = (prs || [])[0];
+          if (trouvee) {
+            ticket.pullRequest = trouvee.url;
+            publication.statut = 'pull_request';
+            publication.url = trouvee.url;
+            publication.dejaExistante = true;
+          } else {
+            publication.erreurPr = msg;
+          }
+        } catch {
+          publication.erreurPr = msg;
+        }
+      } else {
+        publication.erreurPr = msg;
+      }
     }
   }
 
   // 2. commentaire de réponse
   try {
     const r = await github.commenter(config.depot, numero, composerReponse(ticket, config));
-    publication.statut = publication.erreurPr ? 'commentaire_seul' : (publication.statut === 'pull_request' ? 'complet' : 'commentaire');
+    if (publication.statut === 'pull_request') publication.statut = 'complet';
+    else if (!publication.statut || publication.statut === 'aucune') publication.statut = 'commentaire';
+    if (publication.erreurPr && publication.statut !== 'complet') publication.statut = 'commentaire_seul';
     publication.commentaire = r?.url || null;
   } catch (err) {
     publication.erreur = String(err.message || err);
@@ -365,8 +405,42 @@ async function publierResultat(ticket, config) {
   return ticket;
 }
 
+/**
+ * Nom de branche dédié à un ticket. Déterministe : deux exécutions du même
+ * ticket visent la même branche, ce qui évite d'en créer une à chaque essai.
+ */
+function nomBrancheTicket(ticket, config) {
+  const prefixe = String(config.prefixeBranche || 'cerveau').trim() || 'cerveau';
+  const numero = ticket.origine?.numero ?? '0';
+  const genre = ticket.origine?.genre === 'pull_request' ? 'pr' : 'issue';
+  return `${prefixe}/${genre}-${numero}`;
+}
+
+/**
+ * Prépare une branche de travail pour le ticket, si l'option est active.
+ * Renvoie le nom de la branche, ou null si la préparation a échoué.
+ */
+async function preparerBranche(ticket, config, workspace) {
+  if (!config.pousserBranche) return null;
+  const nom = nomBrancheTicket(ticket, config);
+  try {
+    const local = await github.etatLocal(workspace);
+    if (!local?.depot) {
+      ticket.avertissement = "Le dossier de travail n'est pas un dépôt git : impossible de préparer une branche.";
+      return null;
+    }
+    // si la branche existe déjà, on y retourne simplement
+    const existantes = local.branches || [];
+    await github.changerBranche(workspace, nom, { creer: !existantes.includes(nom) });
+    return nom;
+  } catch (err) {
+    ticket.avertissement = `Branche non préparée : ${err.message}`;
+    return null;
+  }
+}
+
 /** Construit la consigne complète remise à l'agent. */
-function construireConsigne(ticket, config) {
+function construireConsigne(ticket, config = {}) {
   const entete = [
     `Tu interviens sur le dépôt GitHub ${config.depot}.`,
     `Demande reçue de ${ticket.origine.auteur || 'un inconnu'} dans ${ticket.origine.genre} #${ticket.origine.numero} : « ${ticket.origine.titre} ».`,
@@ -376,10 +450,23 @@ function construireConsigne(ticket, config) {
     '',
     'Règles :',
     '- Travaille dans l\'espace de travail indiqué. Ne touche à rien hors du dépôt.',
-    '- Si le travail aboutit, pousse une branche et ouvre une pull request.',
     '- Termine par un résumé de ce que tu as fait, en français, sans jargon.',
-    '- Si tu ne peux pas faire le travail, dis-le clairement et explique pourquoi.'
+    '- Si tu ne peux pas faire le travail, dis-le clairement et explique pourquoi.',
+    '- N\'ouvre pas de pull request toi-même : Cerveau s\'en charge après ton travail.'
   ];
+
+  if (ticket.branche) {
+    entete.push(
+      '',
+      `Une branche de travail « ${ticket.branche} » a été préparée pour toi.`,
+      'Si tu modifies des fichiers, commite-les et pousse-les sur cette branche :',
+      `  git add -A && git commit -m "…" && git push -u origin ${ticket.branche}`,
+      'La pull request sera ouverte automatiquement à partir de cette branche.'
+    );
+  } else if (config.pousserBranche === false) {
+    entete.push('', 'Ne pousse rien sur le dépôt distant : le travail reste local.');
+  }
+
   return entete.join('\n');
 }
 
@@ -401,6 +488,10 @@ async function executerTicket(ticket, contexte) {
   } catch { /* dépôt local absent : le push sera simplement impossible */ }
 
   emettre('ticket:debut', { ticket });
+
+  // branche de travail dédiée, si l'option est active
+  const espace = config.workspace || contexte.workspace;
+  ticket.branche = await preparerBranche(ticket, config, espace);
 
   const consigne = construireConsigne(ticket, config);
   const messages = [];
@@ -435,9 +526,16 @@ async function executerTicket(ticket, contexte) {
   ticket.finExecution = maintenant();
   ticket.duree = ticket.finExecution - ticket.debutExecution;
 
-  // a-t-on une nouvelle branche à proposer en pull request ?
+  // a-t-on une branche à proposer en pull request ?
   if (ticket.etat === 'termine') {
-    ticket.nouvelleBranche = await branchePoussee(config.workspace || contexte.workspace, config.depot, brancheAvant);
+    // L'agent crée souvent sa propre branche au lieu d'utiliser celle préparée :
+    // on regarde d'abord la branche courante, puis celle qu'on avait préparée.
+    const courante = await branchePoussee(espace, config.depot, brancheAvant);
+    if (courante) {
+      ticket.nouvelleBranche = courante;
+    } else if (ticket.branche) {
+      ticket.nouvelleBranche = await branchePoussee(espace, config.depot, brancheAvant, ticket.branche);
+    }
   }
 
   // publication sur GitHub : commentaire et éventuelle pull request
@@ -585,6 +683,8 @@ class Superviseur {
 
 module.exports = {
   Superviseur,
+  nomBrancheTicket,
+  preparerBranche,
   composerReponse,
   publierResultat,
   branchePoussee,

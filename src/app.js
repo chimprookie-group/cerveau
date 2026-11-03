@@ -740,6 +740,8 @@ function rendreTickets(snap) {
       el('div', { class: 'ticket-titre', text: t.origine?.titre || t.resume || '' }),
       t.resume && t.etat !== 'en_attente' ? el('div', { class: 'ticket-resume', text: t.resume }) : null,
       t.erreur ? el('div', { class: 'ticket-erreur', text: t.erreur }) : null,
+      t.branche ? el('div', { class: 'ticket-branche', text: `branche ${t.branche}` }) : null,
+      t.avertissement ? el('div', { class: 'ticket-avert', text: t.avertissement }) : null,
       t.publication?.statut && t.publication.statut !== 'aucune'
         ? el('div', { class: 'ticket-publication' },
             el('span', { text: etiqueterPublication(t.publication) })
@@ -850,6 +852,24 @@ async function initialiserSuperviseur() {
     cible.value = cfg.brancheCible || '';
     cible.addEventListener('change', async () => {
       await enregistrerConfig({ superviseur: { brancheCible: cible.value.trim() } });
+    });
+  }
+
+  const pousser = $('#supPousser');
+  if (pousser) {
+    pousser.checked = cfg.pousserBranche !== false;
+    pousser.addEventListener('change', async () => {
+      await enregistrerConfig({ superviseur: { pousserBranche: pousser.checked } });
+    });
+  }
+
+  const prefixe = $('#supPrefixe');
+  if (prefixe) {
+    prefixe.value = cfg.prefixeBranche || 'cerveau';
+    prefixe.addEventListener('change', async () => {
+      const v = (prefixe.value.trim() || 'cerveau').replace(/\s+/g, '-');
+      prefixe.value = v;
+      await enregistrerConfig({ superviseur: { prefixeBranche: v } });
     });
   }
 
