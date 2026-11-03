@@ -318,6 +318,10 @@
             <span class="nav-reglage-icone">⬡</span>
             <span class="nav-reglage-texte">Plugins et web</span>
           </button>
+          <button class="nav-reglage" data-reglage="superviseur">
+            <span class="nav-reglage-icone">◎</span>
+            <span class="nav-reglage-texte">Superviseur</span>
+          </button>
 
           <div class="reglages-nav-groupe">Espaces</div>
           <button class="nav-reglage" data-reglage="workspace">
@@ -460,6 +464,94 @@
             <h3 class="section-reglage-titre">Outils disponibles</h3>
             <p class="section-reglage-desc">Désactivez ce que l'IA ne doit pas utiliser, quel que soit le mode.</p>
             <div id="reglageOutils" class="liste-outils-reglage"></div>
+          </section>
+        </div>
+
+        <!-- Superviseur -->
+        <div class="volet-reglage" id="reglage-superviseur">
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Agent superviseur</h3>
+            <p class="section-reglage-desc">
+              Cerveau surveille un dépôt GitHub et transforme les demandes autorisées en
+              tickets qu'il exécute lui-même. Il n'agit que si on le lui demande
+              explicitement, ou qu'une règle que vous avez écrite l'y autorise.
+            </p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supDepot">Dépôt surveillé</label>
+                <p class="champ-reglage-aide">Au format propriétaire/nom, par exemple chimprookie-group/cerveau.</p>
+              </div>
+              <input type="text" id="supDepot" class="champ-reglage-controle large" placeholder="proprietaire/depot" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supAuteurs">Auteurs autorisés</label>
+                <p class="champ-reglage-aide">
+                  Pseudos GitHub séparés par des virgules. Sans cette liste, personne n'est autorisé.
+                </p>
+              </div>
+              <input type="text" id="supAuteurs" class="champ-reglage-controle large" placeholder="chimp, collaborateur" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supMotif">Motif d'invocation</label>
+                <p class="champ-reglage-aide">Le mot que l'on écrit dans une issue pour appeler l'agent.</p>
+              </div>
+              <input type="text" id="supMotif" class="champ-reglage-controle" placeholder="@cerveau" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supIntervalle">Intervalle de vérification (secondes)</label>
+                <p class="champ-reglage-aide">Minimum 60 s. Chaque passage interroge l'API GitHub.</p>
+              </div>
+              <input type="number" id="supIntervalle" min="60" max="3600" step="30"
+                     class="champ-reglage-controle champ-nombre" placeholder="300" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supExigerInvocation">Exiger le motif d'invocation</label>
+                <p class="champ-reglage-aide">Si désactivé, toute issue d'un auteur autorisé est traitée.</p>
+              </div>
+              <input type="checkbox" id="supExigerInvocation" class="champ-reglage-controle bascule" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supPR">Surveiller les pull requests</label>
+                <p class="champ-reglage-aide">Prendre aussi en compte les commentaires sur les pull requests.</p>
+              </div>
+              <input type="checkbox" id="supPR" class="champ-reglage-controle bascule" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supWorkspace">Dossier de travail</label>
+                <p class="champ-reglage-aide">Vide = l'espace de travail courant. Chaque ticket y travaille.</p>
+              </div>
+              <input type="text" id="supWorkspace" class="champ-reglage-controle large" placeholder="(espace de travail courant)" />
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">État</h3>
+            <p class="section-reglage-desc" id="supEtatTexte">Arrêté.</p>
+            <div class="rangee-boutons">
+              <button id="supDemarrer" class="btn-principal">Démarrer</button>
+              <button id="supArreter" class="btn-secondaire">Arrêter</button>
+              <button id="supPasser" class="btn-secondaire">Vérifier maintenant</button>
+              <button id="supReinit" class="btn-danger">Effacer l'historique</button>
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Tickets</h3>
+            <p class="section-reglage-desc">Les demandes reçues et leur état d'exécution.</p>
+            <div id="supTickets" class="liste-tickets"></div>
           </section>
         </div>
 

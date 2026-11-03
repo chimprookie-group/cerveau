@@ -4,6 +4,32 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.7.0] — 2026-11-03
+
+### Ajouté
+- **Superviseur** : Cerveau surveille un dépôt GitHub et transforme les demandes
+  autorisées en tickets qu'il exécute lui-même. Inspiré de l'idée de `dsh-superagent`
+  (DeepSeek) — « prendre le moins d'attention humaine possible, apporter le plus de
+  valeur possible » — mais implémenté nativement, sans hôte cordis ni sessions DSH.
+
+  - Surveillance des issues, commentaires et pull requests du dépôt choisi
+  - **Liste d'auteurs autorisés** : sans elle, personne n'est autorisé
+  - **Motif d'invocation** configurable (`@cerveau` par défaut)
+  - Exécution par la boucle agentique existante, dans l'espace de travail
+  - Cycle de vie complet : en attente → en cours → terminé / échoué
+  - Historique persistant des tickets, résumés, durée et outils utilisés
+  - Intervalle réglable (60 s minimum), démarrage et vérification à la demande
+  - Reprise automatique au lancement si le superviseur était actif
+
+### Vérifié de bout en bout
+Une issue réelle a été créée sur le dépôt, détectée par le superviseur, transformée en
+ticket et exécutée par l'agent en 7 secondes, puis l'issue a été fermée.
+
+### Pourquoi pas le bundle d'origine
+`dsh-superagent` est un bundle DSH privé qui exige 23 paquets internes et un hôte
+cordis avec serveur web. Cerveau n'a aucune de ces briques : l'intégrer tel quel aurait
+demandé de réécrire 17 600 lignes de TypeScript ou d'embarquer un second moteur.
+
 ## [2.6.0] — 2026-11-03
 
 ### Modifié

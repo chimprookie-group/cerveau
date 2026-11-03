@@ -565,7 +565,7 @@ async function run(mainWindow, deps) {
              anciensOnglets: document.querySelectorAll('.onglet-reglage').length };
   })()`);
 
-  verifier('Navigation verticale avec 10 sections', reglages.nav.length === 10, `${reglages.nav.length} sections`);
+  verifier('Navigation verticale avec 11 sections', reglages.nav.length === 11, `${reglages.nav.length} sections`);
   verifier('Sections groupées', reglages.groupes.length >= 4, reglages.groupes.join(', '));
   verifier('Chaque section s\'affiche', Object.values(reglages.resultats).every(Boolean),
     Object.entries(reglages.resultats).filter(([, v]) => !v).map(([k]) => k).join(',') || 'toutes');
@@ -1161,6 +1161,58 @@ async function run(mainWindow, deps) {
   })()`);
   verifier('Logo visible en thème clair', logoTheme.clair?.visible === true);
   verifier('Logo visible en thème sombre', logoTheme.sombre?.visible === true);
+
+  // 6unvicies. Superviseur
+  const sup = require('./superviseur');
+  verifier('Superviseur : motif extrait',
+    sup.extraireConsigne('@cerveau corrige le bug') === 'corrige le bug');
+  verifier('Superviseur : sans invocation ignoré',
+    sup.extraireConsigne('rien à signaler') === null);
+  verifier('Superviseur : auteur autorisé',
+    sup.auteurAutorise('Chimp', ['chimp']) === true);
+  verifier('Superviseur : liste vide refuse tout',
+    sup.auteurAutorise('chimp', []) === false);
+  verifier('Superviseur : doublon détecté',
+    sup.dejaTraite([{ origine: { genre: 'issue', numero: 1, consigne: 'x' } }],
+      { genre: 'issue', numero: 1, consigne: 'x' }) === true);
+
+  // cycle complet avec un exécuteur factice et un faux GitHub
+  const cycFichier = path.join(os.tmpdir(), `sup-selftest-${Date.now()}.json`);
+  const cycSup = new sup.Superviseur({
+    fichierEtat: cycFichier, depot: 'test/depot', motifInvocation: '@cerveau',
+    auteursAutorises: ['chimp'], intervalle: 60, exigerInvocation: true
+  });
+  // on remplace la collecte réseau par une fixture
+  let executer = 0;
+  const cycRes = await cycSup.passer({
+    executer: async () => { executer++; return { texte: 'fait', outils: 1 }; }
+  }).catch((e) => ({ erreur: e.message }));
+  verifier('Superviseur : passage sans dépôt réel ne plante pas',
+    typeof cycRes === 'object', JSON.stringify(cycRes).slice(0, 60));
+  await fsp.rm(cycFichier, { force: true });
+
+  // interface
+  const uiSup = await mainWindow.webContents.executeJavaScript(`(async () => {
+    document.querySelector('#btnReglages').click();
+    await new Promise((r) => setTimeout(r, 300));
+    const nav = document.querySelector('.nav-reglage[data-reglage="superviseur"]');
+    if (!nav) return { present: false };
+    nav.click();
+    await new Promise((r) => setTimeout(r, 500));
+    const r = {
+      present: true,
+      section: document.querySelector('.volet-reglage.actif')?.id,
+      champs: ['supDepot','supAuteurs','supMotif','supIntervalle'].filter((id) => document.getElementById(id)).length,
+      boutons: ['supDemarrer','supArreter','supPasser','supReinit'].filter((id) => document.getElementById(id)).length,
+      zoneTickets: !!document.querySelector('#supTickets')
+    };
+    document.querySelector('#btnFermerReglages2').click();
+    return r;
+  })()`);
+  verifier('Superviseur : section accessible', uiSup.present === true && uiSup.section === 'reglage-superviseur');
+  verifier('Superviseur : 4 champs de configuration', uiSup.champs === 4, String(uiSup.champs));
+  verifier('Superviseur : 4 boutons de commande', uiSup.boutons === 4, String(uiSup.boutons));
+  verifier('Superviseur : zone de tickets', uiSup.zoneTickets === true);
 
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));

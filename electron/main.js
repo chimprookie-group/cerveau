@@ -15,6 +15,7 @@ const github = require('./github');
 const models = require('./models');
 const webtools = require('./webtools');
 const { gestionnaire: mcpGestionnaire } = require('./mcp');
+const { Superviseur } = require('./superviseur');
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -347,6 +348,120 @@ ipcMain.handle('workspace:infos', async () => {
     git,
     entrees
   };
+});
+
+/* ---------------------------- IPC : superviseur ------------------------- */
+
+let superviseur = null;
+function obtenirSuperviseur() {
+  const cfg = config.getConfig();
+  const sc = { ...config.DEFAULTS.superviseur, ...(cfg.superviseur || {}) };
+  const fichierEtat = path.join(app.getPath('userData'), 'superviseur.json');
+
+  if (!superviseur) {
+    superviseur = new Superviseur({ ...sc, fichierEtat });
+    // les événements du superviseur sont poussés au renderer
+    superviseur.surEvenement((evt) => {
+      try { mainWindow?.webContents.send('superviseur:evenement', evt); } catch { /* ignore */ }
+    });
+  } else {
+    superviseur.config = { ...sc, fichierEtat };
+  }
+  return superviseur;
+}
+
+/** Contexte d'exécution d'un ticket : mêmes crédences que l'agent normal. */
+function contexteSuperviseur(cfg) {
+  const providerId = cfg.activeProvider;
+  const creds = config.getProviderCredentials(providerId);
+  return {
+    providerId,
+    credentials: creds,
+    workspace: cfg.superviseur?.workspace || cfg.workspace,
+    permissions: { ...cfg.permissions, mode: 'auto' },
+    confirmer: async () => ({ autorise: true }),
+    executeur: async (params) => agent.run({
+      providerId: params.providerId,
+      credentials: params.credentials,
+      historique: [{ role: 'user', contenu: params.consigne }],
+      ctx: {
+        mode: 'code',
+        vaultPath: null,
+        coffre: null,
+        workspace: params.workspace,
+        permissions: params.permissions,
+        confirmer: params.confirmer,
+        outilsDesactives: cfg.outilsDesactives || [],
+        agentMaxTours: cfg.agent?.maxTours,
+        agentCapSortie: cfg.agent?.capSortie
+      },
+      emit: params.emit
+    })
+  };
+}
+
+ipcMain.handle('superviseur:etat', async () => {
+  try {
+    const sup = obtenirSuperviseur();
+    return { ok: true, ...(await sup.instantane()) };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('superviseur:demarrer', async () => {
+  try {
+    const cfg = config.getConfig();
+    const sc = cfg.superviseur || {};
+    if (!sc.depot) return { ok: false, message: 'Choisissez un dépôt à surveiller.' };
+    if (!Array.isArray(sc.auteursAutorises) || !sc.auteursAutorises.length) {
+      return { ok: false, message: 'Ajoutez au moins un auteur autorisé.' };
+    }
+    const sup = obtenirSuperviseur();
+    sup.demarrer(contexteSuperviseur(cfg));
+    await config.mettreAJour({ superviseur: { actif: true } });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('superviseur:arreter', async () => {
+  try {
+    const sup = obtenirSuperviseur();
+    sup.arreter();
+    await config.mettreAJour({ superviseur: { actif: false } });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('superviseur:passer', async () => {
+  try {
+    const cfg = config.getConfig();
+    const sc = cfg.superviseur || {};
+    if (!sc.depot) return { ok: false, message: 'Choisissez un dépôt à surveiller.' };
+    const sup = obtenirSuperviseur();
+    const r = await sup.passer(contexteSuperviseur(cfg));
+    const snap = await sup.instantane();
+    return { ok: true, ...r, ...snap };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('superviseur:reinitialiser', async () => {
+  try {
+    const sup = obtenirSuperviseur();
+    sup.arreter();
+    sup.etat.donnees = { tickets: [], dernierPassage: null, erreurs: [] };
+    sup.etat.charge = true;
+    await sup.etat.enregistrer();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
 });
 
 /* ----------------------------- IPC : web + MCP -------------------------- */
@@ -873,6 +988,7 @@ app.on('web-contents-created', (_e, contents) => {
 // à la fermeture de Cerveau.
 app.on('before-quit', () => {
   try { mcpGestionnaire.arreterTout(); } catch { /* ignore */ }
+  try { superviseur?.arreter(); } catch { /* ignore */ }
 });
 
 app.on('will-quit', () => {

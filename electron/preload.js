@@ -31,6 +31,19 @@ contextBridge.exposeInMainWorld('cerveau', {
     tester: () => ipcRenderer.invoke('web:tester')
   },
 
+  superviseur: {
+    etat: () => ipcRenderer.invoke('superviseur:etat'),
+    demarrer: () => ipcRenderer.invoke('superviseur:demarrer'),
+    arreter: () => ipcRenderer.invoke('superviseur:arreter'),
+    passer: () => ipcRenderer.invoke('superviseur:passer'),
+    reinitialiser: () => ipcRenderer.invoke('superviseur:reinitialiser'),
+    surEvenement: (cb) => {
+      const h = (_e, data) => cb(data);
+      ipcRenderer.on('superviseur:evenement', h);
+      return () => ipcRenderer.removeListener('superviseur:evenement', h);
+    }
+  },
+
   mcp: {
     etats: () => ipcRenderer.invoke('mcp:etats'),
     tester: (nom) => ipcRenderer.invoke('mcp:tester', nom),

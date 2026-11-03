@@ -53,6 +53,18 @@ const DEFAULTS = {
   temperature: 0.7,
   // disposition du panneau latéral : « cote » (pousse) ou « superpose »
   panneau: { style: 'cote', largeur: 400 },
+  // Superviseur : agent qui traite les demandes d'un dépôt GitHub
+  superviseur: {
+    actif: false,
+    depot: '',
+    motifInvocation: '@cerveau',
+    auteursAutorises: [],
+    intervalle: 300,
+    exigerInvocation: true,
+    surveillerPullRequests: true,
+    surveillerNouvellesIssues: false,
+    workspace: ''
+  },
   // réglages avancés
   general: {
     modeDemarrage: 'complet',

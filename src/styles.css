@@ -2906,6 +2906,72 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   text-overflow: ellipsis;
 }
 
+
+/* ══════════════════════ SUPERVISEUR ══════════════════════ */
+
+.rangee-boutons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.liste-tickets { display: flex; flex-direction: column; gap: 8px; }
+
+.ticket {
+  background: var(--fond-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  padding: 10px 12px;
+}
+
+.ticket-tete { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+
+.ticket-etat {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--fond);
+  color: var(--texte-2);
+  flex-shrink: 0;
+}
+
+.ticket-etat.attente { color: var(--texte-3); }
+.ticket-etat.encours { color: var(--accent-clair); background: rgba(217, 139, 95, 0.16); }
+.ticket-etat.ok { color: var(--succes); background: rgba(90, 170, 110, 0.16); }
+.ticket-etat.echec { color: var(--danger); background: rgba(200, 80, 70, 0.16); }
+
+.ticket-origine { font-family: var(--police-mono); font-size: 10.5px; color: var(--texte-2); }
+.ticket-auteur { font-size: 10.5px; color: var(--texte-3); margin-left: auto; }
+
+.ticket-titre {
+  font-size: 12px;
+  font-weight: 550;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+
+.ticket-resume {
+  font-size: 11px;
+  color: var(--texte-2);
+  line-height: 1.5;
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
+}
+
+.ticket-erreur {
+  font-size: 10.5px;
+  color: var(--danger);
+  font-family: var(--police-mono);
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
+}
+
+.ticket-pied {
+  display: flex;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--texte-3);
+}
+
 /* Responsive */
 /* ══════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════
    Deux styles, réglables dans Apparence :

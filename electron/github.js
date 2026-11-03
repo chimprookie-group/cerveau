@@ -718,5 +718,7 @@ module.exports = {
   extraireNomComplet,
   executer,
   git,
+  gh,
+  ghJson,
   __testResumerAuth: resumerAuth
 };

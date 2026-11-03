@@ -690,6 +690,196 @@ function initialiserTerminal() {
   });
 }
 
+/* ═══════════════════════════ SUPERVISEUR ═══════════════════════════ */
+
+const ETATS_TICKET = {
+  en_attente: { texte: 'En attente', classe: 'attente' },
+  en_cours: { texte: 'En cours', classe: 'encours' },
+  termine: { texte: 'Terminé', classe: 'ok' },
+  echoue: { texte: 'Échec', classe: 'echec' }
+};
+
+function formaterDuree(ms) {
+  if (!ms || ms < 0) return '';
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60}`;
+}
+
+function rendreTickets(snap) {
+  const zone = $('#supTickets');
+  if (!zone) return;
+  zone.innerHTML = '';
+
+  const tickets = snap?.tickets || [];
+  if (!tickets.length) {
+    zone.append(el('p', { class: 'vide petit', text: 'Aucun ticket pour le moment.' }));
+    return;
+  }
+
+  for (const t of tickets) {
+    const etat = ETATS_TICKET[t.etat] || { texte: t.etat, classe: '' };
+    const ligne = el('div', { class: 'ticket' },
+      el('div', { class: 'ticket-tete' },
+        el('span', { class: `ticket-etat ${etat.classe}`, text: etat.texte }),
+        el('span', { class: 'ticket-origine', text: `${t.origine?.genre || ''} #${t.origine?.numero ?? '?'}` }),
+        el('span', { class: 'ticket-auteur', text: t.origine?.auteur ? `par ${t.origine.auteur}` : '' })
+      ),
+      el('div', { class: 'ticket-titre', text: t.origine?.titre || t.resume || '' }),
+      t.resume && t.etat !== 'en_attente' ? el('div', { class: 'ticket-resume', text: t.resume }) : null,
+      t.erreur ? el('div', { class: 'ticket-erreur', text: t.erreur }) : null,
+      el('div', { class: 'ticket-pied' },
+        el('span', { text: t.creeLe ? formaterDate(t.creeLe) : '' }),
+        t.duree ? el('span', { text: `· ${formaterDuree(t.duree)}` }) : null,
+        t.outils ? el('span', { text: `· ${t.outils} outil(s)` }) : null
+      )
+    );
+    zone.append(ligne);
+  }
+}
+
+function majEtatSuperviseur(snap) {
+  const texte = $('#supEtatTexte');
+  if (texte) {
+    if (snap?.actif) {
+      const quand = snap.dernierPassage ? `Dernière vérification : ${formaterDate(snap.dernierPassage)}.` : 'Première vérification en cours…';
+      texte.textContent = `En marche sur ${snap.config?.depot || '—'}, toutes les ${snap.config?.intervalle || 300} s. ${quand}`;
+      texte.style.color = 'var(--succes)';
+    } else {
+      texte.textContent = snap?.depot ? 'Arrêté.' : 'Arrêté. Renseignez un dépôt puis démarrez.';
+      texte.style.color = '';
+    }
+    if (snap?.derniereErreur) {
+      texte.textContent += ` Dernière erreur : ${snap.derniereErreur}`;
+      texte.style.color = 'var(--danger)';
+    }
+  }
+  rendreTickets(snap);
+}
+
+async function initialiserSuperviseur() {
+  const cfg = etat.config.superviseur || {};
+
+  const depot = $('#supDepot');
+  if (depot) {
+    depot.value = cfg.depot || '';
+    depot.addEventListener('change', async () => {
+      await enregistrerConfig({ superviseur: { depot: depot.value.trim() } });
+    });
+  }
+
+  const auteurs = $('#supAuteurs');
+  if (auteurs) {
+    auteurs.value = (cfg.auteursAutorises || []).join(', ');
+    auteurs.addEventListener('change', async () => {
+      const liste = auteurs.value.split(',').map((x) => x.trim()).filter(Boolean);
+      auteurs.value = liste.join(', ');
+      await enregistrerConfig({ superviseur: { auteursAutorises: liste } });
+    });
+  }
+
+  const motif = $('#supMotif');
+  if (motif) {
+    motif.value = cfg.motifInvocation || '@cerveau';
+    motif.addEventListener('change', async () => {
+      await enregistrerConfig({ superviseur: { motifInvocation: motif.value.trim() || '@cerveau' } });
+    });
+  }
+
+  const intervalle = $('#supIntervalle');
+  if (intervalle) {
+    intervalle.value = cfg.intervalle || 300;
+    intervalle.addEventListener('change', async () => {
+      const v = Math.min(Math.max(Number(intervalle.value) || 300, 60), 3600);
+      intervalle.value = v;
+      await enregistrerConfig({ superviseur: { intervalle: v } });
+    });
+  }
+
+  const exiger = $('#supExigerInvocation');
+  if (exiger) {
+    exiger.checked = cfg.exigerInvocation !== false;
+    exiger.addEventListener('change', async () => {
+      await enregistrerConfig({ superviseur: { exigerInvocation: exiger.checked } });
+    });
+  }
+
+  const pr = $('#supPR');
+  if (pr) {
+    pr.checked = cfg.surveillerPullRequests !== false;
+    pr.addEventListener('change', async () => {
+      await enregistrerConfig({ superviseur: { surveillerPullRequests: pr.checked } });
+    });
+  }
+
+  const ws = $('#supWorkspace');
+  if (ws) {
+    ws.value = cfg.workspace || '';
+    ws.addEventListener('change', async () => {
+      await enregistrerConfig({ superviseur: { workspace: ws.value.trim() } });
+    });
+  }
+
+  const rafraichir = async () => {
+    const r = await API.superviseur.etat();
+    if (r.ok) majEtatSuperviseur(r);
+    else notifier(r.message || 'Superviseur indisponible.', 'erreur', 4000);
+  };
+
+  $('#supDemarrer')?.addEventListener('click', async (e) => {
+    const b = e.currentTarget;
+    b.disabled = true;
+    const r = await API.superviseur.demarrer();
+    b.disabled = false;
+    if (r.ok) { notifier('Superviseur démarré.', 'succes'); await rafraichir(); }
+    else notifier(r.message || 'Démarrage impossible.', 'erreur', 5000);
+  });
+
+  $('#supArreter')?.addEventListener('click', async () => {
+    await API.superviseur.arreter();
+    notifier('Superviseur arrêté.', 'info');
+    await rafraichir();
+  });
+
+  $('#supPasser')?.addEventListener('click', async (e) => {
+    const b = e.currentTarget;
+    b.disabled = true;
+    b.textContent = 'Vérification…';
+    const r = await API.superviseur.passer();
+    b.disabled = false;
+    b.textContent = 'Vérifier maintenant';
+    if (r.ok) {
+      notifier(`Vérification terminée : ${r.crees || 0} nouveau(x) ticket(s), ${r.executes || 0} exécuté(s).`, 'succes', 4000);
+      majEtatSuperviseur(r);
+    } else {
+      notifier(r.message || 'Vérification impossible.', 'erreur', 5000);
+    }
+  });
+
+  $('#supReinit')?.addEventListener('click', async () => {
+    if (!confirm("Effacer tout l'historique des tickets ?")) return;
+    await API.superviseur.reinitialiser();
+    notifier('Historique effacé.', 'info');
+    await rafraichir();
+  });
+
+  // les événements du superviseur mettent l'interface à jour en direct
+  API.superviseur.surEvenement((evt) => {
+    if (evt.type === 'ticket:cree') {
+      notifier(`Nouveau ticket : ${evt.ticket?.origine?.titre || evt.ticket?.resume || ''}`, 'info', 4000);
+    }
+    if (evt.type === 'ticket:fin') {
+      const t = evt.ticket;
+      notifier(`Ticket #${t?.origine?.numero} ${t?.etat === 'termine' ? 'terminé' : 'échoué'}.`,
+        t?.etat === 'termine' ? 'succes' : 'erreur', 5000);
+    }
+    rafraichir();
+  });
+
+  await rafraichir();
+}
+
 /* ══════════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════════ */
 
 const AIDES_PANNEAU = {
@@ -2954,6 +3144,7 @@ function ouvrirReglages(onglet = null) {
   initialiserReglagesAvances();
   initialiserPlugins();
   initialiserDispositionPanneau();
+  initialiserSuperviseur();
 
   $('#modePermissions').value = etat.config.permissions?.mode || 'demander';
   $('#autoriserSuppression').checked = Boolean(etat.config.permissions?.allowDelete);
