@@ -4,6 +4,23 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.8.3] — 2026-11-03
+
+### Corrigé
+- **Le Superviseur ne reprenait pas au démarrage.** L'arrêt à la fermeture était codé,
+  mais pas la reprise : après un redémarrage de Cerveau, l'utilisateur croyait que son
+  dépôt était encore surveillé alors que rien ne tournait. La reprise est restaurée,
+  conditionnée à la présence d'un dépôt et d'au moins un auteur autorisé.
+- **L'installateur ne vérifiait pas Node.js.** Il contrôlait `git` et `github-cli` via
+  pacman, mais ignorait `node` et `npm` dont dépendent tous les serveurs MCP : un
+  utilisateur découvrait que ses serveurs ne démarraient pas, sans explication.
+
+### Modifié
+- L'installateur cherche `gh`, `node` et `npm` **dans le PATH** plutôt que via pacman,
+  car ils peuvent venir de `mise`, `nvm` ou `asdf`.
+- Quand des outils manquent, il propose de les installer ; en mode non interactif
+  (`curl | bash`), il affiche la commande à lancer.
+
 ## [2.8.2] — 2026-11-03
 
 ### Corrigé

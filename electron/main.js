@@ -1040,6 +1040,16 @@ if (!instanceUnique) {
     buildMenu();
     createWindow();
 
+    // Reprise du Superviseur s'il était en marche avant la fermeture.
+    // Sans cela, l'utilisateur croit qu'il surveille toujours son dépôt.
+    if (cfg.superviseur?.actif && cfg.superviseur?.depot
+        && Array.isArray(cfg.superviseur.auteursAutorises)
+        && cfg.superviseur.auteursAutorises.length) {
+      try {
+        obtenirSuperviseur().demarrer(contexteSuperviseur(cfg));
+      } catch { /* le diagnostic reste visible dans les réglages */ }
+    }
+
     // Actions du raccourci bureau : --new, --settings
     const args = process.argv.slice(1);
     const action = args.includes('--settings') ? 'reglages'

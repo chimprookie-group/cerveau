@@ -1351,6 +1351,24 @@ async function run(mainWindow, deps) {
   verifier('Diagnostic : zone d\'outils présente', uiDiag.zone === true);
   verifier('Diagnostic : lignes affichées', uiDiag.lignes >= 5, `${uiDiag.lignes} lignes`);
 
+  // 6sexvicies. Reprise du Superviseur au démarrage
+  const mainSrcReprise = fs2.readFileSync(path.join(racine, 'electron', 'main.js'), 'utf8');
+  verifier('Superviseur : reprise au démarrage codée',
+    /Reprise du Superviseur s'il était en marche/.test(mainSrcReprise));
+  verifier('Superviseur : arrêt à la fermeture codé',
+    /before-quit[\s\S]{0,200}superviseur\?\.arreter/.test(mainSrcReprise));
+
+  // installateur : vérifie les outils externes
+  const instSrc = fs2.readFileSync(path.join(racine, 'install.sh'), 'utf8');
+  verifier('Installateur : cherche gh dans le PATH',
+    /verifier_binaire gh/.test(instSrc));
+  verifier('Installateur : cherche node et npm',
+    /verifier_binaire node/.test(instSrc) && /verifier_binaire npm/.test(instSrc));
+  verifier('Installateur : propose l\'installation',
+    /Les installer maintenant/.test(instSrc));
+  verifier('Installateur : non interactif géré',
+    /if \[ -t 0 \]/.test(instSrc));
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 
