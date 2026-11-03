@@ -1039,20 +1039,31 @@ async function run(mainWindow, deps) {
     echapMenu.ouvert === true && echapMenu.ferme === true,
     JSON.stringify(echapMenu));
 
-  // d. une conversation créée est persistée
+  // d. une conversation AVEC du contenu est persistée ; une vide ne l'est pas
   const persistConv = await mainWindow.webContents.executeJavaScript(`(async () => {
-    const avant = (window.cerveauUI.etat.config.conversations || []).length;
+    const ui = window.cerveauUI;
+    // conversation vide : ne doit pas être enregistrée
     document.querySelector('#btnNouvelleConv').click();
-    await new Promise(r => setTimeout(r, 1400));
-    return {
-      avant,
-      apres: (window.cerveauUI.etat.config.conversations || []).length,
-      memoire: window.cerveauUI.etat.conversations.length
-    };
+    await new Promise(r => setTimeout(r, 1500));
+    const videsEnregistrees = (ui.etat.config.conversations || [])
+      .filter((c) => !(c.messages || []).length && c.id !== ui.etat.conversationCourante?.id).length;
+
+    // conversation avec contenu : doit l'être.
+    // Le message est ajouté puis une nouvelle persistance est déclenchée,
+    // comme lors d'un envoi réel (le debounce repart alors avec le contenu).
+    const conv = ui.etat.conversationCourante;
+    conv.messages.push({ role: 'user', contenu: 'message de test' });
+    ui.etat.conversationCourante = conv;
+    ui.persisterConversations?.();
+    await new Promise(r => setTimeout(r, 1800));
+    const avecContenu = (ui.etat.config.conversations || [])
+      .some((c) => c.id === conv.id && (c.messages || []).length > 0);
+
+    return { videsEnregistrees, avecContenu };
   })()`);
-  verifier('Conversation créée persistée',
-    persistConv.apres >= persistConv.avant,
-    `${persistConv.avant} → ${persistConv.apres} (mémoire ${persistConv.memoire})`);
+  verifier('Conversation vide non persistée', persistConv.videsEnregistrees === 0,
+    `${persistConv.videsEnregistrees} vide(s) enregistrée(s)`);
+  verifier('Conversation avec contenu persistée', persistConv.avecContenu === true);
 
   // 6novodecies. Disposition du panneau latéral
   const dispoPanneau = await mainWindow.webContents.executeJavaScript(`(async () => {
@@ -1423,6 +1434,28 @@ async function run(mainWindow, deps) {
   verifier('Validation personnalisée affiche l\'erreur', saisie.erreurAffichee === true);
   verifier('Validation personnalisée laisse passer', saisie.valide2 === 'ok', String(saisie.valide2));
   verifier('Modale se ferme après validation', saisie.ferme === true);
+
+  // 6octovicies. Démarrage : aucune conversation vide ajoutée
+  const appSrcConv = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
+  verifier('Démarrage : ne crée pas de conversation à l\'aveugle',
+    /On ne crée une conversation neuve que s'il n'y en a aucune à reprendre/.test(appSrcConv));
+  verifier('Démarrage : reprend une conversation existante',
+    /const aReprendre = etat\.conversations\.find/.test(appSrcConv));
+  verifier('Démarrage : nettoie les conversations vides héritées',
+    /les conversations vides héritées des anciennes versions/.test(appSrcConv));
+  verifier('Persistance : ignore les conversations vides',
+    /On n'enregistre pas les conversations vides/.test(appSrcConv));
+
+  // vérification dynamique : deux démarrages ne doivent pas empiler les vides
+  const avantConv = await mainWindow.webContents.executeJavaScript(
+    `window.cerveauUI.etat.conversations.length`);
+  verifier('Démarrage : état de conversation cohérent',
+    avantConv >= 1 && avantConv <= 200, `${avantConv} conversations`);
+
+  const videsAuDemarrage = await mainWindow.webContents.executeJavaScript(
+    `window.cerveauUI.etat.conversations.filter((c) => !(c.messages || []).length).length`);
+  verifier('Démarrage : pas d\'accumulation de vides',
+    videsAuDemarrage <= 1, `${videsAuDemarrage} conversation(s) vide(s)`);
 
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));

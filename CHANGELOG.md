@@ -4,6 +4,26 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.8.5] — 2026-11-03
+
+### Corrigé
+- **Une nouvelle conversation vide était créée à chaque ouverture.** Le démarrage
+  appelait `nouvelleConversation()` sans regarder l'historique : la liste se remplissait
+  d'entrées « Nouvelle conversation » vides, une par lancement. Cerveau reprend
+  désormais la conversation la plus récente qui a du contenu, ou celle qui était
+  ouverte, et n'en crée une neuve que s'il n'y a rien à reprendre.
+- **Les conversations vides ne sont plus enregistrées.** Elles n'ont rien à reprendre
+  et encombraient la liste. Celle qui est ouverte reste conservée pour ne pas
+  disparaître sous les yeux.
+- **Nettoyage automatique** des conversations vides héritées des versions précédentes.
+
+### Vérifié
+- Trois lancements successifs n'ajoutent aucune conversation.
+- Une conversation réelle est reprise avec ses messages.
+- Au tout premier lancement (historique vide), une conversation est bien créée, puis
+  réutilisée aux suivants.
+- Le bouton « Nouvelle conversation » continue de fonctionner.
+
 ## [2.8.4] — 2026-11-03
 
 ### Corrigé

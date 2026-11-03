@@ -253,8 +253,27 @@ async function demarrer() {
   await rafraichirCoffre();
   await rafraichirWorkspace();
   definirMode(etat.config.mode || 'complet');
+  // Nettoyage : les conversations vides héritées des anciennes versions
+  // (une par lancement) sont retirées de la liste. On garde celle qui est
+  // ouverte s'il n'y a rien d'autre, pour ne pas laisser l'écran vide.
+  const nonVides = etat.conversations.filter((c) => Array.isArray(c.messages) && c.messages.length);
+  if (nonVides.length) {
+    etat.conversations = nonVides;
+  } else if (etat.conversations.length > 1) {
+    etat.conversations = [etat.conversations[0]];
+  }
+
+  // On ne crée une conversation neuve que s'il n'y en a aucune à reprendre.
+  // Sinon chaque lancement ajoutait une conversation vide à la liste.
+  const aReprendre = etat.conversations.find((c) => Array.isArray(c.messages) && c.messages.length);
+  if (aReprendre) {
+    chargerConversation(aReprendre.id);
+  } else if (etat.conversations.length) {
+    chargerConversation(etat.conversations[0].id);
+  } else {
+    nouvelleConversation({ silencieux: true });
+  }
   afficherConversations();
-  nouvelleConversation({ silencieux: true });
   ajusterHauteurSaisie();
 
   synchroniserHauteurEntete();
@@ -1869,11 +1888,18 @@ let timerPersistance = null;
 function persisterConversations() {
   clearTimeout(timerPersistance);
   timerPersistance = setTimeout(async () => {
-    // on garde un historique borné pour ne pas gonfler la config
-    const borne = etat.conversations
+    // On n'enregistre pas les conversations vides : elles n'ont aucun contenu
+    // à reprendre et ne feraient qu'encombrer la liste. Celle qui est ouverte
+    // est conservée, pour ne pas la faire disparaître sous les yeux.
+    const utiles = etat.conversations.filter((c) =>
+      (Array.isArray(c.messages) && c.messages.length)
+      || c.id === etat.conversationCourante?.id
+    );
+
+    const borne = utiles
       .sort((a, b) => b.date - a.date)
       .slice(0, 200)
-      .map((c) => ({ ...c, messages: c.messages.slice(-80) }));
+      .map((c) => ({ ...c, messages: (c.messages || []).slice(-80) }));
     etat.config = await API.config.mettreAJour({ conversations: borne });
   }, 600);
 }
@@ -3451,6 +3477,7 @@ window.cerveauUI = {
   notifier,
   ajouterMessageDOM,
   afficherConversation,
+  persisterConversations,
   demanderTexte,
   exporterVersCoffre,
   NOMS_FOURNISSEURS,
