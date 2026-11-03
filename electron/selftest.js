@@ -1369,6 +1369,61 @@ async function run(mainWindow, deps) {
   verifier('Installateur : non interactif géré',
     /if \[ -t 0 \]/.test(instSrc));
 
+  // 6septvicies. Saisie de texte : prompt() est interdit dans Electron
+  const appSrcPrompt = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
+  // on ignore les commentaires qui mentionnent prompt()
+  const appelsPrompt = appSrcPrompt.split('\n')
+    .filter((l) => /\bprompt\s*\(/.test(l) && !/^\s*(\*|\/\/)/.test(l));
+  verifier('Aucun appel à prompt() dans le code', appelsPrompt.length === 0,
+    appelsPrompt.slice(0, 2).join(' | '));
+  verifier('Modale de saisie présente',
+    /id="modaleSaisie"/.test(fs2.readFileSync(path.join(racine, 'src', 'index.html'), 'utf8')));
+  verifier('Fonction demanderTexte définie', /function demanderTexte/.test(appSrcPrompt));
+
+  // la modale s'ouvre et se valide pour de vrai
+  const saisie = await mainWindow.webContents.executeJavaScript(`(async () => {
+    const ui = window.cerveauUI;
+    if (typeof ui.demanderTexte !== 'function') return { erreur: 'demanderTexte non exposée' };
+
+    // ouvre, vérifie, annule
+    const promesse = ui.demanderTexte({ titre: 'Test saisie', valeur: 'defaut', aide: 'aide' });
+    await new Promise((r) => setTimeout(r, 400));
+    const ouvert = !document.querySelector('#modaleSaisie').hidden;
+    const titre = document.querySelector('#titreSaisie')?.textContent;
+    const defaut = document.querySelector('#champSaisie')?.value;
+    document.querySelector('#btnAnnulerSaisie').click();
+    const annule = await promesse;
+
+    // ouvre, saisit, valide
+    const p2 = ui.demanderTexte({ titre: 'Test 2', valeur: 'x' });
+    await new Promise((r) => setTimeout(r, 300));
+    document.querySelector('#champSaisie').value = 'chemin/saisi';
+    document.querySelector('#btnValiderSaisie').click();
+    const valide = await p2;
+
+    // validation personnalisée : rejette une valeur
+    const p3 = ui.demanderTexte({ titre: 'Test 3', valeur: '', valider: (v) => (v ? true : 'obligatoire') });
+    await new Promise((r) => setTimeout(r, 300));
+    document.querySelector('#champSaisie').value = '';
+    document.querySelector('#btnValiderSaisie').click();
+    await new Promise((r) => setTimeout(r, 200));
+    const erreurAffichee = !document.querySelector('#erreurSaisie')?.hidden;
+    document.querySelector('#champSaisie').value = 'ok';
+    document.querySelector('#btnValiderSaisie').click();
+    const valide2 = await p3;
+
+    return { ouvert, titre, defaut, annule, valide, erreurAffichee, valide2,
+             ferme: document.querySelector('#modaleSaisie').hidden };
+  })()`);
+  verifier('Modale de saisie s\'ouvre', saisie.ouvert === true && saisie.titre === 'Test saisie',
+    String(saisie.titre));
+  verifier('Modale préremplit la valeur', saisie.defaut === 'defaut', saisie.defaut);
+  verifier('Annuler renvoie null', saisie.annule === null, String(saisie.annule));
+  verifier('Valider renvoie le texte', saisie.valide === 'chemin/saisi', String(saisie.valide));
+  verifier('Validation personnalisée affiche l\'erreur', saisie.erreurAffichee === true);
+  verifier('Validation personnalisée laisse passer', saisie.valide2 === 'ok', String(saisie.valide2));
+  verifier('Modale se ferme après validation', saisie.ferme === true);
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 

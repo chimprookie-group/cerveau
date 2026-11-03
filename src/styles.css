@@ -3055,6 +3055,27 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   overflow-wrap: anywhere;
 }
 
+.champ-saisie-modale {
+  width: 100%;
+  background: var(--fond);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  padding: 9px 11px;
+  font-size: 13px;
+  color: var(--texte);
+  font-family: var(--police-mono);
+  outline: none;
+  margin-top: 6px;
+}
+
+.champ-saisie-modale:focus { border-color: var(--accent-sombre); }
+
+.erreur-saisie {
+  font-size: 11px;
+  color: var(--danger);
+  margin: 7px 0 0;
+}
+
 /* Responsive */
 /* ══════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════
    Deux styles, réglables dans Apparence :

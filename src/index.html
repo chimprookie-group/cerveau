@@ -882,6 +882,26 @@
   </div>
 
   <!-- ══════════════ MODALE CONFIRMATION D'OUTIL ══════════════ -->
+  <!-- Saisie de texte : remplace prompt(), non supporté par Electron -->
+  <div id="modaleSaisie" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu petite" role="dialog" aria-modal="true" aria-labelledby="titreSaisie">
+      <div class="modale-entete">
+        <h2 id="titreSaisie">Saisie</h2>
+      </div>
+      <div class="modale-corps">
+        <p id="aideSaisie" class="aide" hidden></p>
+        <input type="text" id="champSaisie" class="champ-saisie-modale"
+               autocomplete="off" spellcheck="false" />
+        <p id="erreurSaisie" class="erreur-saisie" hidden></p>
+      </div>
+      <div class="modale-pied">
+        <button id="btnAnnulerSaisie" class="btn-secondaire">Annuler</button>
+        <button id="btnValiderSaisie" class="btn-principal">Valider</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modaleConfirmation" class="modale" hidden>
     <div class="modale-fond"></div>
     <div class="modale-contenu petite" role="dialog" aria-modal="true" aria-labelledby="titreConfirmation">

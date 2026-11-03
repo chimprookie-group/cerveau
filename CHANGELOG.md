@@ -4,6 +4,28 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.8.4] — 2026-11-03
+
+### Corrigé
+- **Le bouton « Vers une note… » ne faisait rien.** Il appelait `prompt()`, que le
+  processus de rendu d'Electron **ne supporte pas** : l'appel lève
+  « prompt() is not supported » et renvoie `null`, donc l'export s'arrêtait
+  silencieusement. Une boîte de saisie interne le remplace.
+- **Trois autres fonctions étaient cassées pour la même raison** : créer une note,
+  créer un dossier, et déplacer une note. Aucune n'avait jamais fonctionné.
+
+### Ajouté
+- **Boîte de saisie interne** : titre, valeur préremplie, texte d'aide, validation
+  personnalisée avec message d'erreur, `Entrée` pour valider, `Échap` pour annuler.
+  Elle remplace `prompt()` partout dans l'application.
+- L'export vers une note affiche le nom du coffre et un chemin horodaté par défaut,
+  et refuse un chemin contenant `..`.
+
+### Vérifié de bout en bout
+Bouton « Vers une note… » → boîte de saisie → écriture réelle dans le coffre → note
+ouverte avec le bon contenu. Huit vérifications couvrent l'ouverture, l'annulation, la
+validation, le rejet d'une valeur invalide et la fermeture.
+
 ## [2.8.3] — 2026-11-03
 
 ### Corrigé

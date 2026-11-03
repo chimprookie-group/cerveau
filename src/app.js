@@ -2232,7 +2232,11 @@ function menuContextuelNote(e, chemin) {
       class: 'btn-pied', text: 'Déplacer / renommer…',
       onclick: async () => {
         menu.remove();
-        const nouveau = prompt('Nouveau chemin relatif :', chemin);
+        const nouveau = await demanderTexte({
+          titre: 'Déplacer la note',
+          valeur: chemin,
+          aide: 'Nouveau chemin relatif dans le coffre.'
+        });
         if (nouveau && nouveau !== chemin) {
           try {
             await API.obs.deplacer(chemin, nouveau);
@@ -3134,7 +3138,7 @@ async function creerNoteRapide() {
     notifier('Ouvre d\'abord un coffre dans les réglages.', 'erreur');
     return;
   }
-  const nom = prompt('Nom de la nouvelle note :', 'Nouvelle note');
+  const nom = await demanderTexte({ titre: 'Nouvelle note', valeur: 'Nouvelle note' });
   if (!nom) return;
   try {
     const r = await API.obs.ecrire(nom, `# ${nom}\n\n`);
@@ -3152,7 +3156,7 @@ async function creerDossierRapide() {
     notifier('Ouvre d\'abord un coffre dans les réglages.', 'erreur');
     return;
   }
-  const nom = prompt('Nom du nouveau dossier :', 'Nouveau dossier');
+  const nom = await demanderTexte({ titre: 'Nouveau dossier', valeur: 'Nouveau dossier' });
   if (!nom) return;
   try {
     await API.obs.creerDossier(nom);
@@ -3238,8 +3242,21 @@ async function exporterConversation() {
 
 async function exporterVersCoffre(contenu) {
   if (!etat.config.activeVaultId) return notifier('Aucun coffre ouvert.', 'erreur');
-  const defaut = `Depuis Cerveau/${new Date().toISOString().slice(0, 10)} — ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')}`;
-  const chemin = prompt('Chemin de la note à créer dans le coffre :', defaut);
+
+  const nomCoffre = etat.config.vaults?.find((v) => v.id === etat.config.activeVaultId)?.name || 'le coffre';
+  const horodatage = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h');
+  const defaut = `Depuis Cerveau/${new Date().toISOString().slice(0, 10)} — ${horodatage}`;
+
+  const chemin = await demanderTexte({
+    titre: 'Enregistrer dans une note',
+    valeur: defaut,
+    aide: `Chemin relatif dans « ${nomCoffre} ». Les dossiers manquants sont créés.`,
+    valider: (v) => {
+      if (!v) return 'Indiquez un chemin.';
+      if (/\.\./.test(v)) return 'Le chemin ne doit pas remonter hors du coffre.';
+      return true;
+    }
+  });
   if (!chemin) return;
   try {
     const r = await API.app.exporterVersCoffre({ chemin, markdown: contenu });
@@ -3249,6 +3266,72 @@ async function exporterVersCoffre(contenu) {
   } catch (err) {
     notifier(err.message, 'erreur');
   }
+}
+
+/* ═══════════════════════ SAISIE DE TEXTE ═══════════════════════ */
+
+/**
+ * Remplace `prompt()`, que le processus de rendu d'Electron ne supporte pas :
+ * il lève « prompt() is not supported » et renvoie toujours null.
+ *
+ * @returns {Promise<string|null>} le texte saisi, ou null si annulé
+ */
+function demanderTexte({ titre = 'Saisie', valeur = '', aide = '', valider = null } = {}) {
+  return new Promise((resolve) => {
+    const modale = $('#modaleSaisie');
+    const champ = $('#champSaisie');
+    const erreur = $('#erreurSaisie');
+    if (!modale || !champ) { resolve(null); return; }
+
+    $('#titreSaisie').textContent = titre;
+    const zoneAide = $('#aideSaisie');
+    if (zoneAide) {
+      zoneAide.textContent = aide || '';
+      zoneAide.hidden = !aide;
+    }
+    if (erreur) { erreur.hidden = true; erreur.textContent = ''; }
+
+    champ.value = valeur;
+    modale.hidden = false;
+    setTimeout(() => { champ.focus(); champ.select(); }, 30);
+
+    let termine = false;
+    const cloturer = (reponse) => {
+      if (termine) return;
+      termine = true;
+      modale.hidden = true;
+      document.removeEventListener('keydown', surTouche, true);
+      $('#btnValiderSaisie')?.removeEventListener('click', surValider);
+      $('#btnAnnulerSaisie')?.removeEventListener('click', surAnnuler);
+      modale.querySelector('.modale-fond')?.removeEventListener('click', surAnnuler);
+      resolve(reponse);
+    };
+
+    const surValider = () => {
+      const texte = champ.value.trim();
+      if (valider) {
+        const verdict = valider(texte);
+        if (verdict !== true) {
+          if (erreur) { erreur.textContent = verdict || 'Valeur invalide.'; erreur.hidden = false; }
+          champ.focus();
+          return;
+        }
+      }
+      cloturer(texte);
+    };
+    const surAnnuler = () => cloturer(null);
+
+    const surTouche = (ev) => {
+      if (modale.hidden) return;
+      if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); surValider(); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); surAnnuler(); }
+    };
+
+    $('#btnValiderSaisie')?.addEventListener('click', surValider);
+    $('#btnAnnulerSaisie')?.addEventListener('click', surAnnuler);
+    modale.querySelector('.modale-fond')?.addEventListener('click', surAnnuler);
+    document.addEventListener('keydown', surTouche, true);
+  });
 }
 
 /* ------------------------------ réglages ---------------------------- */
@@ -3366,6 +3449,10 @@ async function ajouterCoffreParChemin() {
 window.cerveauUI = {
   el,
   notifier,
+  ajouterMessageDOM,
+  afficherConversation,
+  demanderTexte,
+  exporterVersCoffre,
   NOMS_FOURNISSEURS,
   modelesDe,
   enregistrerConfig,
