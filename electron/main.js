@@ -350,6 +350,87 @@ ipcMain.handle('workspace:infos', async () => {
   };
 });
 
+/* --------------------------- IPC : diagnostic --------------------------- */
+
+/**
+ * Vérifie que les outils externes dont dépendent les fonctions intégrées sont
+ * présents. Un utilisateur qui installe le paquet doit savoir tout de suite ce
+ * qui manque, plutôt que de découvrir une erreur au moment d'utiliser l'onglet.
+ */
+ipcMain.handle('diag:outils', async () => {
+  const { executer } = require('./github');
+
+  const verifier = async (commande, args = ['--version']) => {
+    try {
+      const r = await executer(commande, args, { timeout: 15000 });
+      const brut = String(r.stdout || r.stderr || '').trim().split('\n')[0];
+      return { present: r.code === 0, version: r.code === 0 ? brut.slice(0, 60) : null };
+    } catch (err) {
+      return { present: false, version: null, erreur: String(err.message || err).slice(0, 120) };
+    }
+  };
+
+  const [git, gh, node, npm] = await Promise.all([
+    verifier('git', ['--version']),
+    verifier('gh', ['--version']),
+    verifier('node', ['--version']),
+    verifier('npm', ['--version'])
+  ]);
+
+  // authentification GitHub, via la même logique que l'onglet Dépôt
+  let auth = { connecte: false };
+  if (gh.present) {
+    try {
+      const resume = await require('./github').etatAuth();
+      auth = {
+        connecte: Boolean(resume.connecte),
+        detail: resume.utilisateur
+          ? `connecté comme ${resume.utilisateur}`
+          : (resume.message || null),
+        hint: resume.connecte
+          ? null
+          : "Si gh fonctionne dans un terminal, l'onglet Dépôt devrait fonctionner aussi. Sinon, connectez-vous depuis cet onglet."
+      };
+    } catch (err) {
+      auth = { connecte: false, detail: String(err.message || err).slice(0, 120) };
+    }
+  }
+
+  // ZIMREAPER, s'il est installé
+  const cheminsZim = [
+    path.join(os.homedir(), 'Applications', 'ZimReaper-0.1.0-x86_64.AppImage'),
+    path.join(os.homedir(), '.local', 'bin', 'zimreaper')
+  ];
+  const zim = cheminsZim.find((p) => { try { return require('node:fs').existsSync(p); } catch { return false; } });
+
+  const outils = [
+    { id: 'git', nom: 'Git', present: git.present, version: git.version,
+      requis: true, paquet: 'git', usage: 'Projets, commits, différences' },
+    { id: 'gh', nom: 'GitHub CLI', present: gh.present, version: gh.version,
+      requis: true, paquet: 'github-cli', usage: 'Onglet Dépôt, pull requests, Superviseur' },
+    { id: 'node', nom: 'Node.js', present: node.present, version: node.version,
+      requis: true, paquet: 'nodejs', usage: 'Serveurs MCP (git, sqlite, mémoire…)' },
+    { id: 'npm', nom: 'npm', present: npm.present, version: npm.version,
+      requis: true, paquet: 'npm', usage: 'Installation des serveurs MCP via npx' },
+    { id: 'zimreaper', nom: 'ZIMREAPER', present: Boolean(zim), version: zim ? 'installé' : null,
+      requis: false, paquet: null, chemin: zim || null,
+      usage: 'Navigateur piloté par l’agent (21 outils)' }
+  ];
+
+  const manquants = outils.filter((o) => o.requis && !o.present);
+
+  return {
+    ok: manquants.length === 0,
+    outils,
+    manquants: manquants.map((o) => o.paquet),
+    auth,
+    // commande exacte à donner à l'utilisateur
+    commande: manquants.length
+      ? `sudo pacman -S --needed ${manquants.map((o) => o.paquet).join(' ')}`
+      : null
+  };
+});
+
 /* ---------------------------- IPC : superviseur ------------------------- */
 
 let superviseur = null;

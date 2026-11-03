@@ -44,6 +44,33 @@ Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 
 ---
 
+## Ce que le paquet installe, et ce qu'il faut en plus
+
+Le paquet `cerveau` contient l'application et son interface. **`git`** est la seule
+dépendance système obligatoire.
+
+**Requis pour les fonctions GitHub et MCP** — à installer, ou à fournir via un
+gestionnaire de versions comme `mise`, `nvm` ou `asdf` (c'est pourquoi ils restent
+facultatifs dans le PKGBUILD : les déclarer en dur empêcherait l'installation sur ces
+systèmes) :
+
+| Outil | Pourquoi | Installation |
+|---|---|---|
+| `github-cli` | Onglet Dépôt, pull requests, Superviseur | `pacman -S github-cli` |
+| `nodejs` + `npm` | Serveurs MCP (`npx` les télécharge au premier usage) | `pacman -S nodejs npm` |
+
+**Réglages → Superviseur → Outils système** affiche leur état réel, avec la commande
+d'installation si quelque chose manque.
+
+Facultatifs, non inclus :
+
+| Outil | Pourquoi | Comment |
+|---|---|---|
+| `obsidian` | Ouvrir les notes dans Obsidian | `pacman -S obsidian` |
+| ZIMREAPER | Navigateur piloté par l'agent (21 outils MCP) | [à compiler](https://github.com/Mr-Destroyer/ZIMREAPER) — aucune release binaire n'est publiée |
+
+---
+
 ## Installation
 
 ### En une ligne (recommandé)
@@ -59,7 +86,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.8.1-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.8.2-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

@@ -31,6 +31,10 @@ contextBridge.exposeInMainWorld('cerveau', {
     tester: () => ipcRenderer.invoke('web:tester')
   },
 
+  diag: {
+    outils: () => ipcRenderer.invoke('diag:outils')
+  },
+
   superviseur: {
     etat: () => ipcRenderer.invoke('superviseur:etat'),
     demarrer: () => ipcRenderer.invoke('superviseur:demarrer'),

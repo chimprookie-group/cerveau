@@ -4,6 +4,24 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.8.2] — 2026-11-03
+
+### Corrigé
+- **Les dépendances système n'étaient pas déclarées.** `git`, `github-cli`, `nodejs` et
+  `npm` étaient absents ou seulement facultatifs, alors que l'onglet Dépôt, le Superviseur
+  et les serveurs MCP en dépendent : un nouvel utilisateur découvrait une erreur au moment
+  d'utiliser la fonction. Ils sont désormais en dépendances obligatoires.
+
+### Ajouté
+- **Réglages → Superviseur → Outils système** : état réel de Git, GitHub CLI, Node.js,
+  npm, ZIMREAPER et de la connexion GitHub, avec la commande `pacman` exacte à lancer
+  si quelque chose manque, et un bouton pour la copier.
+- Le README distingue ce que le paquet installe de ce qu'il faut ajouter.
+
+### Note
+ZIMREAPER reste facultatif et n'est pas embarqué : c'est un projet tiers de 97 Mo, sans
+release binaire, qui doit être compilé. Le diagnostic le signale comme tel.
+
 ## [2.8.1] — 2026-11-03
 
 ### Ajouté

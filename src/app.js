@@ -692,6 +692,58 @@ function initialiserTerminal() {
 
 /* ═══════════════════════════ SUPERVISEUR ═══════════════════════════ */
 
+/** Affiche l'état des outils externes dont dépendent les fonctions intégrées. */
+async function rendreOutilsSysteme() {
+  const zone = $('#outilsSysteme');
+  if (!zone) return;
+
+  const r = await API.diag.outils();
+  zone.innerHTML = '';
+
+  for (const o of r.outils || []) {
+    const etat = o.present ? 'ok' : (o.requis ? 'manquant' : 'optionnel');
+    const ligne = el('div', { class: 'outil-systeme' },
+      el('span', { class: `outil-systeme-pastille ${etat}` }),
+      el('div', { class: 'outil-systeme-corps' },
+        el('div', { class: 'outil-systeme-nom', text: o.nom }),
+        el('div', { class: 'outil-systeme-detail', text:
+          o.present
+            ? (o.version || 'présent')
+            : o.requis
+              ? `manquant — nécessaire pour : ${o.usage}`
+              : `facultatif — ${o.usage}` })
+      ),
+      el('span', { class: 'outil-systeme-etat', text: o.present ? '✓' : (o.requis ? '✗' : '–') })
+    );
+    zone.append(ligne);
+  }
+
+  // état de la connexion GitHub
+  const auth = r.auth || {};
+  zone.append(el('div', { class: 'outil-systeme' },
+    el('span', { class: `outil-systeme-pastille ${auth.connecte ? 'ok' : 'manquant'}` }),
+    el('div', { class: 'outil-systeme-corps' },
+      el('div', { class: 'outil-systeme-nom', text: 'Connexion GitHub' }),
+      el('div', { class: 'outil-systeme-detail', text:
+        auth.connecte
+          ? (auth.detail || 'connecté')
+          : 'non connecté — ouvrez l’onglet Dépôt pour vous connecter' })
+    ),
+    el('span', { class: 'outil-systeme-etat', text: auth.connecte ? '✓' : '✗' })
+  ));
+
+  // commande d'installation
+  const bloc = $('#commandeManquante');
+  if (bloc) {
+    if (r.commande) {
+      bloc.hidden = false;
+      if ($('#texteCommandeManquante')) $('#texteCommandeManquante').textContent = r.commande;
+    } else {
+      bloc.hidden = true;
+    }
+  }
+}
+
 const ETATS_TICKET = {
   en_attente: { texte: 'En attente', classe: 'attente' },
   en_cours: { texte: 'En cours', classe: 'encours' },
@@ -909,6 +961,13 @@ async function initialiserSuperviseur() {
     }
   });
 
+  $('#btnCopierCommande')?.addEventListener('click', async () => {
+    const texte = $('#texteCommandeManquante')?.textContent || '';
+    if (!texte) return;
+    await navigator.clipboard.writeText(texte);
+    notifier('Commande copiée.', 'succes', 2000);
+  });
+
   $('#supReinit')?.addEventListener('click', async () => {
     if (!confirm("Effacer tout l'historique des tickets ?")) return;
     await API.superviseur.reinitialiser();
@@ -930,6 +989,7 @@ async function initialiserSuperviseur() {
   });
 
   await rafraichir();
+  await rendreOutilsSysteme();
 }
 
 /* ══════════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════════ */

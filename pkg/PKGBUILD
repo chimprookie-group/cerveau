@@ -1,20 +1,30 @@
 # Maintainer: Cerveau <cerveau@localhost>
 pkgname=cerveau
-pkgver=2.8.1
+pkgver=2.8.2
 pkgrel=1
 pkgdesc="Assistant IA francophone : coffre Obsidian, agent de code et intégration GitHub"
 arch=('x86_64' 'aarch64')
 url="https://github.com/chimprookie-group/cerveau"
 license=('MIT')
 depends=(
+  # interface Electron
   'gtk3' 'nss' 'libxss' 'libnotify' 'libsecret' 'alsa-lib'
   'libcups' 'libdrm' 'mesa' 'libxkbcommon' 'libglvnd' 'libxcomposite'
   'libxdamage' 'libxrandr' 'at-spi2-core' 'pango' 'cairo'
+  # fonctions intégrées : sans elles, l'onglet Dépôt, le Superviseur
+  # et les serveurs MCP ne fonctionnent pas.
+  # git est ici ; gh et node restent facultatifs (voir optdepends) car ils
+  # peuvent venir d'un gestionnaire de versions (mise, nvm, asdf) et non
+  # de pacman : les déclarer en dur empêcherait l'installation.
+  'git'
 )
 optdepends=(
+  'github-cli: onglet Dépôt, pull requests et Superviseur (ou via mise/nvm/asdf)'
+  'nodejs: serveurs MCP lancés par npx (ou via mise/nvm/asdf)'
+  'npm: installation des serveurs MCP via npx (ou via mise/nvm/asdf)'
   'obsidian: ouverture directe des notes dans l’application Obsidian'
-  'github-cli: intégration GitHub (clone, commits, pull requests)'
-  'git: gestion de version des projets'
+  'zimreaper: navigateur piloté par l’agent, 21 outils MCP (à compiler, voir README)'
+  'tmux: sessions longues pour le terminal intégré'
 )
 provides=('cerveau')
 conflicts=('cerveau-bin' 'cerveau-git')

@@ -1314,6 +1314,43 @@ async function run(mainWindow, deps) {
   verifier('Les variables d\'exemple développent $HOME',
     /variablesEnv: Object\.fromEntries/.test(appSrcZim));
 
+  // 6quinvicies. Diagnostic des outils système
+  const diag = await mainWindow.webContents.executeJavaScript(
+    `window.cerveau.diag.outils()`);
+  verifier('Diagnostic : structure complète',
+    Array.isArray(diag.outils) && diag.outils.length >= 5, `${diag.outils?.length} outils`);
+  verifier('Diagnostic : git détecté',
+    diag.outils.some((o) => o.id === 'git' && o.present === true));
+  verifier('Diagnostic : gh détecté',
+    diag.outils.some((o) => o.id === 'gh' && o.present === true));
+  verifier('Diagnostic : node détecté',
+    diag.outils.some((o) => o.id === 'node' && o.present === true));
+  verifier('Diagnostic : état GitHub renseigné',
+    typeof diag.auth === 'object' && 'connecte' in diag.auth);
+  verifier('Diagnostic : commande d\'installation si manquant',
+    diag.ok === true || /pacman -S/.test(diag.commande || ''), diag.commande || 'rien à installer');
+
+  const pkgbuildSrc = fs2.readFileSync(path.join(racine, 'pkg', 'PKGBUILD'), 'utf8');
+  verifier('PKGBUILD : git en dépendance obligatoire', /^\s*'git'\s*$/m.test(pkgbuildSrc));
+  // gh et node restent facultatifs : ils peuvent venir de mise/nvm/asdf
+  verifier('PKGBUILD : github-cli en facultatif', /github-cli:/.test(pkgbuildSrc));
+  verifier('PKGBUILD : nodejs en facultatif', /nodejs:/.test(pkgbuildSrc));
+
+  // interface
+  const uiDiag = await mainWindow.webContents.executeJavaScript(`(async () => {
+    window.cerveauUI.ouvrirReglages('superviseur');
+    await new Promise((r) => setTimeout(r, 2600));
+    const r = {
+      zone: !!document.querySelector('#outilsSysteme'),
+      lignes: document.querySelectorAll('#outilSysteme .outil-systeme, #outilsSysteme .outil-systeme').length,
+      blocCommande: !!document.querySelector('#commandeManquante')
+    };
+    document.querySelector('#btnFermerReglages2').click();
+    return r;
+  })()`);
+  verifier('Diagnostic : zone d\'outils présente', uiDiag.zone === true);
+  verifier('Diagnostic : lignes affichées', uiDiag.lignes >= 5, `${uiDiag.lignes} lignes`);
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 
