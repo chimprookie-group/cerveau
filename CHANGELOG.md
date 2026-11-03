@@ -4,6 +4,31 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.5.0] — 2026-11-03
+
+### Corrigé
+- **Le bouton du panneau latéral passait sous le panneau.** L'en-tête avait
+  `flex-shrink: 0` : il ne pouvait pas rétrécir, débordait de la zone principale et ses
+  derniers boutons se retrouvaient recouverts par le panneau. Il rétrécit désormais, et
+  c'est le sélecteur de modèle qui cède en premier (libellé tronqué, jamais les boutons).
+
+### Ajouté
+- **Deux dispositions du panneau, au choix** dans *Réglages → Apparence* :
+  - **Côte à côte** — le panneau pousse le contenu. Rien ne se recouvre jamais.
+  - **Superposé** — le panneau flotte au-dessus du contenu, sous l'en-tête, ce qui
+    laisse toute la largeur au chat.
+- **Largeur du panneau réglable** de 300 à 560 px.
+- En dessous de 1280 px, la superposition est forcée : les trois colonnes ne tiennent
+  plus côte à côte sans masquer des boutons.
+
+### Modifié
+- L'en-tête ne passe plus sur deux lignes sous 1240 px : il reste sur une seule ligne de
+  55 px, avec un titre qui s'abrège et un sélecteur de modèle qui rétrécit.
+
+### Vérifié
+- Les deux dispositions, à 1600, 1280, 1100, 980 et 860 px : aucun chevauchement,
+  bouton toujours cliquable, en-tête jamais en débordement.
+
 ## [2.4.2] — 2026-11-03
 
 ### Corrigé

@@ -51,6 +51,8 @@ const DEFAULTS = {
   systemPrompt: '',
   presetsComportement: [],
   temperature: 0.7,
+  // disposition du panneau latéral : « cote » (pousse) ou « superpose »
+  panneau: { style: 'cote', largeur: 400 },
   // réglages avancés
   general: {
     modeDemarrage: 'complet',

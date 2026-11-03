@@ -1049,6 +1049,74 @@ async function run(mainWindow, deps) {
     persistConv.apres >= persistConv.avant,
     `${persistConv.avant} → ${persistConv.apres} (mémoire ${persistConv.memoire})`);
 
+  // 6novodecies. Disposition du panneau latéral
+  const dispoPanneau = await mainWindow.webContents.executeJavaScript(`(async () => {
+    const out = { styles: [] };
+    const pan = document.querySelector('#panneauObsidian');
+    const btn = document.querySelector('#btnBasculerObsidian');
+    const etaitReplie = pan.classList.contains('replie');
+    pan.classList.remove('replie');
+
+    for (const style of ['cote', 'superpose']) {
+      document.documentElement.dataset.panneau = style;
+      await new Promise((r) => setTimeout(r, 350));
+      const b = btn.getBoundingClientRect();
+      const p = pan.getBoundingClientRect();
+      const e = document.querySelector('.entete').getBoundingClientRect();
+      const el = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      out.styles.push({
+        style,
+        position: getComputedStyle(pan).position,
+        chevauche: b.right > p.left + 1 && b.left < p.right - 1 && b.bottom > p.top + 1 && b.top < p.bottom - 1,
+        cliquable: el === btn || btn.contains(el),
+        enteteDeborde: Math.round(e.right) > window.innerWidth + 1,
+        sousEntete: Math.round(p.top) >= Math.round(e.bottom) - 1 || getComputedStyle(pan).position === 'static'
+      });
+    }
+    if (etaitReplie) pan.classList.add('replie');
+    return out;
+  })()`);
+  verifier('Panneau côte à côte : bouton accessible',
+    dispoPanneau.styles[0]?.chevauche === false && dispoPanneau.styles[0]?.cliquable === true,
+    JSON.stringify(dispoPanneau.styles[0]));
+  verifier('Panneau superposé : bouton accessible',
+    dispoPanneau.styles[1]?.chevauche === false && dispoPanneau.styles[1]?.cliquable === true,
+    JSON.stringify(dispoPanneau.styles[1]));
+  verifier('Panneau superposé démarre sous l\'en-tête',
+    dispoPanneau.styles[1]?.sousEntete === true);
+  verifier('En-tête ne déborde jamais',
+    dispoPanneau.styles.every((x) => x.enteteDeborde === false));
+
+  // réglages de disposition présents et fonctionnels
+  const dispoReglage = await mainWindow.webContents.executeJavaScript(`(async () => {
+    window.cerveauUI.ouvrirReglages('apparence');
+    await new Promise((r) => setTimeout(r, 400));
+    const sel = document.querySelector('#reglageStylePanneau');
+    const largeur = document.querySelector('#reglageLargeurPanneau');
+    const avant = document.documentElement.dataset.panneau;
+    sel.value = 'superpose';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 700));
+    const applique = document.documentElement.dataset.panneau;
+    largeur.value = '340';
+    largeur.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 700));
+    const largeurAppliquee = getComputedStyle(document.documentElement).getPropertyValue('--largeur-panneau').trim();
+    const cfg = window.cerveauUI.etat.config.panneau || {};
+    document.querySelector('#btnFermerReglages2').click();
+    return { avant, applique, largeurAppliquee, cfgStyle: cfg.style, cfgLargeur: cfg.largeur,
+             options: [...document.querySelectorAll('#reglageStylePanneau option')].map(o => o.value) };
+  })()`);
+  verifier('Réglage de disposition présent',
+    dispoReglage.options.join(',') === 'cote,superpose', dispoReglage.options.join(','));
+  verifier('Changement de disposition appliqué',
+    dispoReglage.applique === 'superpose', `${dispoReglage.avant} → ${dispoReglage.applique}`);
+  verifier('Largeur du panneau appliquée',
+    dispoReglage.largeurAppliquee === '340px', dispoReglage.largeurAppliquee);
+  verifier('Disposition enregistrée en config',
+    dispoReglage.cfgStyle === 'superpose' && dispoReglage.cfgLargeur === 340,
+    JSON.stringify({ style: dispoReglage.cfgStyle, largeur: dispoReglage.cfgLargeur }));
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 

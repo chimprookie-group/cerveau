@@ -471,10 +471,15 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
+  /* doit pouvoir rétrécir : sinon l'en-tête déborde de la zone principale
+     et ses derniers boutons passent sous le panneau latéral */
+  flex: 0 1 auto;
   flex-wrap: nowrap;
   min-width: 0;
 }
+
+/* les boutons carrés gardent leur taille, c'est le sélecteur qui cède */
+.entete-actions .btn-icone { flex-shrink: 0; }
 
 @media (max-width: 1400px) {
   .entete-actions select#selectFournisseur { max-width: 110px; }
@@ -486,23 +491,14 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
    Ainsi le nom du modèle n'est jamais tronqué. */
 @media (max-width: 1240px) {
   .entete {
-    flex-wrap: wrap;
-    row-gap: 8px;
-    padding-bottom: 9px;
+    gap: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
   }
-  .entete-titre {
-    flex: 1 1 100%;
-    order: 1;
-  }
+  .entete-titre { flex: 0 1 auto; min-width: 0; }
   .entete-titre h1 { font-size: 13.5px; }
-  #btnBasculerSidebar { order: 0; }
-  .entete-actions {
-    order: 2;
-    flex: 1 1 100%;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    row-gap: 6px;
-  }
+  .entete-actions { gap: 5px; }
+  .selecteur-mode .mode-btn { padding-left: 8px; padding-right: 8px; }
   .entete-actions select#selectFournisseur { max-width: 150px; }
   .entete-actions select#selectModele { flex: 1 1 auto; max-width: none; min-width: 160px; }
 }
@@ -2161,7 +2157,8 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   color: var(--texte);
   cursor: pointer;
   max-width: 300px;
-  min-width: 0;
+  min-width: 88px;
+  flex: 0 1 auto;
   transition: border-color 0.15s, background 0.15s;
 }
 
@@ -2910,26 +2907,55 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 }
 
 /* Responsive */
-@media (max-width: 1180px) {
-  /* Le panneau se superpose au contenu, mais il ne doit jamais recouvrir
-     l'en-tête : il masquerait le bouton qui sert à le refermer. */
-  .panneau-obsidian {
+/* ══════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════
+   Deux styles, réglables dans Apparence :
+   - « cote »     : le panneau pousse le contenu. Rien ne se recouvre jamais.
+   - « superpose » : le panneau glisse au-dessus du contenu, sous l'en-tête.
+   Dans les deux cas l'en-tête reste accessible en entier. */
+
+/* côte à côte : comportement par défaut, rien à ajouter */
+
+html[data-panneau="superpose"] .panneau-obsidian {
+  position: absolute;
+  top: var(--hauteur-entete, 55px);
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  box-shadow: -8px 0 28px rgba(0, 0, 0, 0.28);
+  background: var(--fond-2);
+}
+
+html[data-panneau="superpose"] .panneau-obsidian.replie {
+  margin-right: 0;
+  right: calc(-1 * var(--largeur-panneau));
+}
+
+/* l'en-tête passe au-dessus du panneau superposé */
+html[data-panneau="superpose"] .entete {
+  position: relative;
+  z-index: 95;
+}
+
+html[data-panneau="superpose"] #principal { position: relative; }
+
+/* Sous 1280 px, la barre latérale + l'en-tête + le panneau ne tiennent plus
+   côte à côte : les derniers boutons de l'en-tête seraient masqués par le
+   panneau. On force alors la superposition, quel que soit le réglage. */
+@media (max-width: 1280px) {
+  html[data-panneau="cote"] .panneau-obsidian {
     position: absolute;
+    top: var(--hauteur-entete, 55px);
     right: 0;
-    top: var(--hauteur-entete);
     bottom: 0;
     z-index: 90;
-    box-shadow: var(--ombre);
+    box-shadow: -8px 0 28px rgba(0, 0, 0, 0.28);
   }
-
-  /* l'en-tête reste au-dessus, ses boutons accessibles */
-  .entete {
-    position: relative;
-    z-index: 95;
+  html[data-panneau="cote"] .panneau-obsidian.replie {
+    margin-right: 0;
+    right: calc(-1 * var(--largeur-panneau));
   }
-
-  /* le panneau replié ne doit pas laisser de marge résiduelle */
-  .panneau-obsidian.replie { margin-right: 0; right: calc(-1 * var(--largeur-panneau)); }
+  html[data-panneau="cote"] .entete { position: relative; z-index: 95; }
+  html[data-panneau="cote"] #principal { position: relative; }
 }
 
 @media (max-width: 900px) {

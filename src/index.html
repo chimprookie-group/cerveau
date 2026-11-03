@@ -662,6 +662,33 @@
             <span>Taille du texte : <output id="valeurEchelle">100 %</output></span>
             <input type="range" id="echellePolice" min="85" max="130" step="5" value="100" />
           </label>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Panneau latéral</h3>
+            <p class="section-reglage-desc">
+              Comment le panneau de notes se comporte quand il est ouvert.
+            </p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageStylePanneau">Disposition</label>
+                <p class="champ-reglage-aide" id="aideStylePanneau">—</p>
+              </div>
+              <select id="reglageStylePanneau" class="champ-reglage-controle">
+                <option value="cote">Côte à côte (défaut)</option>
+                <option value="superpose">Superposé</option>
+              </select>
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageLargeurPanneau">Largeur du panneau</label>
+                <p class="champ-reglage-aide">Entre 300 et 560 pixels.</p>
+              </div>
+              <input type="number" id="reglageLargeurPanneau" min="300" max="560" step="10"
+                     class="champ-reglage-controle champ-nombre" placeholder="400" />
+            </div>
+          </section>
         </div>
 
         <!-- À propos -->

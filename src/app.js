@@ -690,6 +690,62 @@ function initialiserTerminal() {
   });
 }
 
+/* ══════════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════════ */
+
+const AIDES_PANNEAU = {
+  cote: "Le panneau pousse le contenu vers la gauche : rien ne se recouvre jamais.",
+  superpose: "Le panneau flotte au-dessus du contenu, sous l'en-tête, pour garder de la place au chat."
+};
+
+/** Applique la disposition et la largeur du panneau depuis la configuration. */
+function appliquerDispositionPanneau(cfg = etat.config) {
+  const p = cfg.panneau || {};
+  const style = p.style === 'superpose' ? 'superpose' : 'cote';
+  const largeur = Math.min(Math.max(Number(p.largeur) || 400, 300), 560);
+
+  document.documentElement.dataset.panneau = style;
+  document.documentElement.style.setProperty('--largeur-panneau', `${largeur}px`);
+
+  const aide = $('#aideStylePanneau');
+  if (aide) aide.textContent = AIDES_PANNEAU[style];
+
+  // le sélecteur et le champ numérique doivent refléter l'état réel
+  const sel = $('#reglageStylePanneau');
+  if (sel && sel.value !== style) sel.value = style;
+  const champ = $('#reglageLargeurPanneau');
+  if (champ && document.activeElement !== champ && String(champ.value) !== String(largeur)) {
+    champ.value = largeur;
+  }
+
+  // la hauteur d'en-tête sert au positionnement du panneau superposé
+  synchroniserHauteurEntete();
+}
+
+function initialiserDispositionPanneau() {
+  const sel = $('#reglageStylePanneau');
+  if (sel) {
+    sel.addEventListener('change', async () => {
+      await enregistrerConfig({ panneau: { style: sel.value } });
+      appliquerDispositionPanneau();
+      notifier(sel.value === 'superpose'
+        ? 'Panneau superposé : il flotte au-dessus du contenu.'
+        : 'Panneau côte à côte : il pousse le contenu.', 'info', 2600);
+    });
+  }
+
+  const champ = $('#reglageLargeurPanneau');
+  if (champ) {
+    champ.addEventListener('change', async () => {
+      const v = Math.min(Math.max(Number(champ.value) || 400, 300), 560);
+      champ.value = v;
+      await enregistrerConfig({ panneau: { largeur: v } });
+      appliquerDispositionPanneau();
+    });
+  }
+
+  appliquerDispositionPanneau();
+}
+
 /* ═══════════════════════════ PLUGINS ET WEB ═══════════════════════════ */
 
 const EXEMPLES_MCP = [
@@ -2892,6 +2948,7 @@ function ouvrirReglages(onglet = null) {
   initialiserComportement();
   initialiserReglagesAvances();
   initialiserPlugins();
+  initialiserDispositionPanneau();
 
   $('#modePermissions').value = etat.config.permissions?.mode || 'demander';
   $('#autoriserSuppression').checked = Boolean(etat.config.permissions?.allowDelete);
