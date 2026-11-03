@@ -306,5 +306,3 @@ Merci d'indiquer ta version (`Réglages → À propos`) et les étapes de reprod
 ## Licence
 
 [MIT](LICENSE) — utilise librement, modifie, redistribue.
-
-Test du superviseur : cycle complet validé.
