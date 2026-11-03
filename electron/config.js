@@ -63,7 +63,9 @@ const DEFAULTS = {
     exigerInvocation: true,
     surveillerPullRequests: true,
     surveillerNouvellesIssues: false,
-    workspace: ''
+    workspace: '',
+    publierResultats: true,
+    brancheCible: ''
   },
   // réglages avancés
   general: {

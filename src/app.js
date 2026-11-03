@@ -707,6 +707,17 @@ function formaterDuree(ms) {
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60}`;
 }
 
+function etiqueterPublication(p) {
+  const parties = [];
+  if (p.commentaire) parties.push('commentaire publié');
+  else if (p.statut === 'commentaire' || p.statut === 'commentaire_seul' || p.statut === 'complet') parties.push('commentaire publié');
+  if (p.url) parties.push('pull request ouverte');
+  if (p.erreur) parties.push(`publication impossible : ${p.erreur}`);
+  if (p.erreurPr) parties.push(`PR impossible : ${p.erreurPr}`);
+  if (p.statut === 'desactivee') parties.push('publication désactivée');
+  return parties.join(' · ') || 'aucune publication';
+}
+
 function rendreTickets(snap) {
   const zone = $('#supTickets');
   if (!zone) return;
@@ -729,6 +740,11 @@ function rendreTickets(snap) {
       el('div', { class: 'ticket-titre', text: t.origine?.titre || t.resume || '' }),
       t.resume && t.etat !== 'en_attente' ? el('div', { class: 'ticket-resume', text: t.resume }) : null,
       t.erreur ? el('div', { class: 'ticket-erreur', text: t.erreur }) : null,
+      t.publication?.statut && t.publication.statut !== 'aucune'
+        ? el('div', { class: 'ticket-publication' },
+            el('span', { text: etiqueterPublication(t.publication) })
+          )
+        : null,
       el('div', { class: 'ticket-pied' },
         el('span', { text: t.creeLe ? formaterDate(t.creeLe) : '' }),
         t.duree ? el('span', { text: `· ${formaterDuree(t.duree)}` }) : null,
@@ -818,6 +834,22 @@ async function initialiserSuperviseur() {
     ws.value = cfg.workspace || '';
     ws.addEventListener('change', async () => {
       await enregistrerConfig({ superviseur: { workspace: ws.value.trim() } });
+    });
+  }
+
+  const publier = $('#supPublier');
+  if (publier) {
+    publier.checked = cfg.publierResultats !== false;
+    publier.addEventListener('change', async () => {
+      await enregistrerConfig({ superviseur: { publierResultats: publier.checked } });
+    });
+  }
+
+  const cible = $('#supBrancheCible');
+  if (cible) {
+    cible.value = cfg.brancheCible || '';
+    cible.addEventListener('change', async () => {
+      await enregistrerConfig({ superviseur: { brancheCible: cible.value.trim() } });
     });
   }
 

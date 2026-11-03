@@ -773,7 +773,12 @@ async function run(mainWindow, deps) {
     await new Promise(r => setTimeout(r, 450));
     out.sidebarRouverte = getComputedStyle(sb).visibility === 'visible';
 
-    // panneau droit
+    // panneau droit : on part d'un état connu, sinon un test précédent peut
+    // l'avoir laissé replié et le double basculement le laisserait fermé
+    pan.classList.remove('replie');
+    await new Promise(r => setTimeout(r, 300));
+    out.panneauOuvertAuDepart = getComputedStyle(pan).visibility === 'visible';
+
     document.querySelector('#btnBasculerObsidian').click();
     await new Promise(r => setTimeout(r, 450));
     const panFerme = getComputedStyle(pan);
@@ -1213,6 +1218,44 @@ async function run(mainWindow, deps) {
   verifier('Superviseur : 4 champs de configuration', uiSup.champs === 4, String(uiSup.champs));
   verifier('Superviseur : 4 boutons de commande', uiSup.boutons === 4, String(uiSup.boutons));
   verifier('Superviseur : zone de tickets', uiSup.zoneTickets === true);
+
+  // 6duovicies. Superviseur : publication sur GitHub
+  verifier('Publication : commentaire composé',
+    /Traité par Cerveau/.test(sup.composerReponse(
+      { etat: 'termine', resume: 'Fait.', duree: 4000, outils: 2, origine: { genre: 'issue', numero: 1 } },
+      { depot: 'a/b' })));
+  verifier('Publication : échec annoncé',
+    /n'ai pas pu terminer/i.test(sup.composerReponse(
+      { etat: 'echoue', resume: 'x', erreur: 'panne', duree: 1, outils: 0, origine: { numero: 1 } },
+      { depot: 'a/b' })));
+
+  // la publication réelle est testée avec des espions, sans appel réseau
+  const ghMod = require('./github');
+  const origCommenter = ghMod.commenter;
+  const origCreerPR = ghMod.creerPR;
+  const appelsPub = [];
+  ghMod.commenter = async (d, n, c) => { appelsPub.push({ type: 'c', n, c }); return { ok: true, url: 'u' }; };
+  ghMod.creerPR = async (d, o) => { appelsPub.push({ type: 'p', o }); return { url: 'pr' }; };
+  try {
+    const t1 = { etat: 'termine', resume: 'Fait.', duree: 1000, outils: 1, nouvelleBranche: 'b1',
+      origine: { numero: 5, titre: 'T', genre: 'issue' } };
+    await sup.publierResultat(t1, { depot: 'a/b', publierResultats: true });
+    verifier('Publication : PR et commentaire', appelsPub.some(a => a.type === 'p') && appelsPub.some(a => a.type === 'c'),
+      t1.publication.statut);
+
+    const t2 = { etat: 'termine', resume: 'Fait.', duree: 1000, outils: 1,
+      origine: { numero: 6, titre: 'T', genre: 'issue' } };
+    await sup.publierResultat(t2, { depot: 'a/b', publierResultats: true });
+    verifier('Publication : sans branche, commentaire seul', t2.publication.statut === 'commentaire');
+
+    const t3 = { etat: 'termine', resume: 'Fait.', duree: 1, outils: 0, origine: { numero: 7 } };
+    await sup.publierResultat(t3, { depot: 'a/b', publierResultats: false });
+    verifier('Publication : désactivable', t3.publication?.statut !== 'complet');
+  } finally {
+    ghMod.commenter = origCommenter;
+    ghMod.creerPR = origCreerPR;
+  }
+  verifier('Publication : API commenter exposée', typeof require('./github').commenter === 'function');
 
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));

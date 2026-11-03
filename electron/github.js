@@ -561,6 +561,34 @@ async function listerPR(nomComplet, { etat = 'open', limite = 30 } = {}) {
   }));
 }
 
+/**
+ * Publie un commentaire sur une issue ou une pull request.
+ * `numero` désigne indifféremment l'un ou l'autre : GitHub partage la numérotation.
+ */
+async function commenter(nomComplet, numero, corps) {
+  const texte = String(corps || '').trim();
+  if (!texte) throw new Error('Commentaire vide.');
+  if (!Number.isFinite(Number(numero))) throw new Error('Numéro de ticket invalide.');
+
+  const r = await executer('gh', [
+    'issue', 'comment', String(numero),
+    '--repo', nomComplet,
+    '--body', texte
+  ], { timeout: 60000 });
+
+  if (r.code !== 0) {
+    const msg = (r.stderr || r.stdout || '').trim();
+    if (/not found|could not resolve/i.test(msg)) {
+      throw new Error(`Le ticket #${numero} est introuvable sur ${nomComplet}.`);
+    }
+    if (/Resource not accessible|permission/i.test(msg)) {
+      throw new Error("Le compte GitHub connecté n'a pas le droit de commenter ce dépôt.");
+    }
+    throw new Error(msg || `Commentaire impossible (code ${r.code}).`);
+  }
+  return { ok: true, url: r.stdout.trim() };
+}
+
 async function creerPR(nomComplet, { titre, corps = '', source, cible = null, brouillon = false }) {
   if (!titre) throw new Error('Titre de PR manquant.');
   if (!source) throw new Error('Branche source manquante.');
@@ -710,6 +738,7 @@ module.exports = {
   difference,
   listerPR,
   creerPR,
+  commenter,
   infosPR,
   fusionnerPR,
   listerIssues,

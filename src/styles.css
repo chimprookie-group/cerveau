@@ -2965,6 +2965,13 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   overflow-wrap: anywhere;
 }
 
+.ticket-publication {
+  font-size: 10.5px;
+  color: var(--accent-clair);
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
+}
+
 .ticket-pied {
   display: flex;
   gap: 6px;

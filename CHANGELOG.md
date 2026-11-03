@@ -4,6 +4,31 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.7.1] — 2026-11-03
+
+### Ajouté
+- **Le Superviseur publie sa réponse sur GitHub.** À la fin d'un ticket, un commentaire
+  est ajouté à l'issue d'origine : ce qui a été fait, le résumé, la durée et le nombre
+  d'outils. Quand l'agent a poussé une branche, une **pull request** est ouverte et
+  référencée dans le commentaire.
+- Réglage **Publier la réponse**, activé par défaut, et **Branche cible** des pull
+  requests (vide = branche par défaut du dépôt).
+- Nouvelle fonction `commenter()` dans la couche GitHub, avec messages d'erreur explicites
+  (ticket introuvable, droits insuffisants).
+
+### Fiabilité
+- Un échec de création de pull request n'empêche pas le commentaire d'être publié.
+- Une publication impossible n'empêche jamais le ticket d'être enregistré.
+- L'état de publication est conservé par ticket et affiché dans le panneau.
+
+### Vérifié de bout en bout
+Une issue réelle a été créée, détectée, exécutée par l'agent, et **la réponse a été
+publiée automatiquement en commentaire sur GitHub** en 24 secondes (5 outils). L'issue
+a ensuite été fermée.
+
+### Corrigé
+- Un test du panneau latéral dépendait de l'état laissé par un test précédent.
+
 ## [2.7.0] — 2026-11-03
 
 ### Ajouté

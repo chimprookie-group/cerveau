@@ -538,6 +538,32 @@
           </section>
 
           <section class="section-reglage">
+            <h3 class="section-reglage-titre">Réponse sur GitHub</h3>
+            <p class="section-reglage-desc">
+              Ce que l'agent publie une fois le travail fait.
+            </p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supPublier">Publier la réponse</label>
+                <p class="champ-reglage-aide">
+                  Un commentaire de résultat est ajouté à l'issue, et une pull request est
+                  ouverte si l'agent a poussé une branche.
+                </p>
+              </div>
+              <input type="checkbox" id="supPublier" class="champ-reglage-controle bascule" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="supBrancheCible">Branche cible des pull requests</label>
+                <p class="champ-reglage-aide">Vide = la branche par défaut du dépôt.</p>
+              </div>
+              <input type="text" id="supBrancheCible" class="champ-reglage-controle" placeholder="main" />
+            </div>
+          </section>
+
+          <section class="section-reglage">
             <h3 class="section-reglage-titre">État</h3>
             <p class="section-reglage-desc" id="supEtatTexte">Arrêté.</p>
             <div class="rangee-boutons">

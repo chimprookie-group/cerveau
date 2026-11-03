@@ -263,6 +263,108 @@ function dejaTraite(tickets, decl) {
 
 /* ------------------------------ exécution ------------------------------- */
 
+/**
+ * Détecte si l'agent a poussé une branche pendant son travail.
+ * Sert à décider s'il faut ouvrir une pull request.
+ */
+async function branchePoussee(workspace, depot, avant) {
+  try {
+    const local = await github.etatLocal(workspace);
+    if (!local?.depot) return null;
+    const branche = local.branche;
+    if (!branche || branche === avant) return null;
+    if (/^(main|master)$/i.test(branche)) return null;
+    return branche;
+  } catch {
+    return null;
+  }
+}
+
+/** Compose le commentaire publié sur GitHub à la fin d'un ticket. */
+function composerReponse(ticket, config) {
+  const t = ticket.origine;
+  const lignes = [];
+
+  if (ticket.etat === 'termine') {
+    lignes.push(`J'ai traité cette demande.`);
+    lignes.push('');
+    lignes.push(ticket.resume || 'Travail terminé.');
+  } else {
+    lignes.push(`Je n'ai pas pu terminer cette demande.`);
+    lignes.push('');
+    lignes.push(ticket.resume || 'Aucun détail disponible.');
+  }
+
+  if (ticket.erreur && ticket.etat !== 'termine') {
+    lignes.push('');
+    lignes.push(`Erreur : \`${String(ticket.erreur).slice(0, 300)}\``);
+  }
+
+  if (ticket.pullRequest) {
+    lignes.push('');
+    lignes.push(`Pull request ouverte : ${ticket.pullRequest}`);
+  }
+
+  lignes.push('');
+  lignes.push('---');
+  lignes.push(`*Traité par Cerveau (superviseur) en ${Math.round((ticket.duree || 0) / 1000)} s, `
+    + `${ticket.outils || 0} outil(s) utilisé(s).*`);
+
+  return lignes.join('\n');
+}
+
+/**
+ * Publie le résultat sur GitHub : commentaire, et pull request si une branche
+ * a été poussée. Ne bloque jamais le ticket en cas d'échec de publication.
+ */
+async function publierResultat(ticket, config) {
+  if (config.publierResultats === false) {
+    ticket.publication = { statut: 'desactivee' };
+    return ticket;
+  }
+
+  const numero = ticket.origine?.numero;
+  if (!numero) {
+    ticket.publication = { statut: 'sans_numero' };
+    return ticket;
+  }
+
+  const publication = { statut: 'aucune' };
+
+  // 1. pull request, si une branche a été poussée
+  if (ticket.etat === 'termine' && ticket.nouvelleBranche) {
+    try {
+      const pr = await github.creerPR(config.depot, {
+        titre: `${ticket.origine.titre || 'Travail demandé'} (#${numero})`,
+        corps: [
+          `Répond à #${numero}.`,
+          '',
+          ticket.resume || ''
+        ].join('\n'),
+        source: ticket.nouvelleBranche,
+        cible: config.brancheCible || null
+      });
+      ticket.pullRequest = pr?.url || null;
+      publication.statut = 'pull_request';
+      publication.url = pr?.url || null;
+    } catch (err) {
+      publication.erreurPr = String(err.message || err);
+    }
+  }
+
+  // 2. commentaire de réponse
+  try {
+    const r = await github.commenter(config.depot, numero, composerReponse(ticket, config));
+    publication.statut = publication.erreurPr ? 'commentaire_seul' : (publication.statut === 'pull_request' ? 'complet' : 'commentaire');
+    publication.commentaire = r?.url || null;
+  } catch (err) {
+    publication.erreur = String(err.message || err);
+  }
+
+  ticket.publication = publication;
+  return ticket;
+}
+
 /** Construit la consigne complète remise à l'agent. */
 function construireConsigne(ticket, config) {
   const entete = [
@@ -290,6 +392,14 @@ async function executerTicket(ticket, contexte) {
 
   ticket.etat = 'en_cours';
   ticket.debutExecution = maintenant();
+
+  // branche courante avant le travail, pour détecter un push
+  let brancheAvant = null;
+  try {
+    const etatLocal = await github.etatLocal(config.workspace || contexte.workspace);
+    brancheAvant = etatLocal?.branche || null;
+  } catch { /* dépôt local absent : le push sera simplement impossible */ }
+
   emettre('ticket:debut', { ticket });
 
   const consigne = construireConsigne(ticket, config);
@@ -324,6 +434,19 @@ async function executerTicket(ticket, contexte) {
 
   ticket.finExecution = maintenant();
   ticket.duree = ticket.finExecution - ticket.debutExecution;
+
+  // a-t-on une nouvelle branche à proposer en pull request ?
+  if (ticket.etat === 'termine') {
+    ticket.nouvelleBranche = await branchePoussee(config.workspace || contexte.workspace, config.depot, brancheAvant);
+  }
+
+  // publication sur GitHub : commentaire et éventuelle pull request
+  try {
+    await publierResultat(ticket, config);
+  } catch (err) {
+    ticket.publication = { statut: 'erreur', erreur: String(err.message || err) };
+  }
+
   await gerer.enregistrer();
   emettre('ticket:fin', { ticket });
 
@@ -462,6 +585,9 @@ class Superviseur {
 
 module.exports = {
   Superviseur,
+  composerReponse,
+  publierResultat,
+  branchePoussee,
   collecterDeclencheurs,
   extraireConsigne,
   auteurAutorise,
