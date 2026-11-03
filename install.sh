@@ -94,6 +94,7 @@ DEPENDANCES=(gtk3 nss libxss libnotify libsecret alsa-lib libcups libdrm
              at-spi2-core pango cairo)
 
 MANQUANTES=()
+MANQUANTES_OPT=()
 for paquet in "${DEPENDANCES[@]}"; do
   if ! pacman -Qq "$paquet" >/dev/null 2>&1; then
     MANQUANTES+=("$paquet")
@@ -107,16 +108,53 @@ else
   ok "Toutes les dépendances sont déjà présentes."
 fi
 
-# ── 3. Options recommandées ───────────────────────────────────────────
-for optionnel in obsidian github-cli git; do
-  if ! pacman -Qq "$optionnel" >/dev/null 2>&1; then
-    case "$optionnel" in
-      obsidian)    attention "Obsidian absent — le bouton « Ouvrir dans Obsidian » sera inactif." ;;
-      github-cli)  attention "github-cli absent — l'intégration GitHub sera indisponible." ;;
-      git)         attention "git absent — la gestion de version sera indisponible." ;;
+# ── 3. Outils externes dont dépendent des fonctions intégrées ────────
+# git est une dépendance du paquet. gh et node sont facultatifs dans le
+# PKGBUILD car ils peuvent venir de mise/nvm/asdf : on les cherche donc
+# dans le PATH, pas seulement via pacman, et on propose de les installer.
+verifier_binaire() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+if ! verifier_binaire git; then
+  attention "git absent — la gestion de version sera indisponible."
+fi
+
+if ! verifier_binaire gh; then
+  MANQUANTES_OPT+=("github-cli")
+  attention "GitHub CLI absent — l'onglet Dépôt, le Superviseur et les pull requests seront indisponibles."
+fi
+
+if ! verifier_binaire node || ! verifier_binaire npm; then
+  MANQUANTES_OPT+=("nodejs" "npm")
+  attention "Node.js ou npm absent — les serveurs MCP (git, sqlite, mémoire…) ne démarreront pas."
+fi
+
+if [ ${#MANQUANTES_OPT[@]} -gt 0 ]; then
+  echo
+  info "Ces paquets complètent les fonctions GitHub et MCP :"
+  echo "    ${MANQUANTES_OPT[*]}"
+  echo
+  # sans terminal interactif (curl | bash), on n'attend pas de réponse
+  if [ -t 0 ]; then
+    printf 'Les installer maintenant ? [O/n] '
+    read -r REPONSE
+    case "${REPONSE:-O}" in
+      O|o|Y|y|"")
+        as_root pacman -S --needed --noconfirm "${MANQUANTES_OPT[@]}" \
+          && ok "Outils complémentaires installés." \
+          || attention "Installation partielle — utilisez Réglages → Superviseur → Outils système pour voir ce qui manque."
+        ;;
+      *) attention "Ignoré. Vous pourrez les installer plus tard : Réglages → Superviseur." ;;
     esac
+  else
+    info "Relancez : sudo pacman -S --needed ${MANQUANTES_OPT[*]}"
   fi
-done
+fi
+
+if ! pacman -Qq obsidian >/dev/null 2>&1; then
+  attention "Obsidian absent — le bouton « Ouvrir dans Obsidian » sera inactif (facultatif)."
+fi
 
 # ── 4. Téléchargement ─────────────────────────────────────────────────
 titre "Téléchargement"
