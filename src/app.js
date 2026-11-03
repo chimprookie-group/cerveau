@@ -2148,8 +2148,13 @@ function majAccueil() {
   if (titre) titre.textContent = a.titre;
   const texte = $('#accueilTexte');
   if (texte) texte.textContent = a.texte;
+  // Le logo est une image fixe : on n'écrase plus son contenu.
+  // On ne touche qu'à l'attribut d'accessibilité si le mode change le sens.
   const logo = $('#accueilLogo');
-  if (logo) logo.textContent = a.logo;
+  if (logo && a.logoAlt) {
+    const img = logo.querySelector('img');
+    if (img) img.alt = a.logoAlt;
+  }
 
   // affiche seulement les suggestions pertinentes pour le mode courant
   $$('.suggestion').forEach((b) => {

@@ -49,7 +49,7 @@ cp "$RACINE/pkg/cerveau.desktop" "$CIBLE/cerveau.desktop"
 cp "$RACINE/pkg/cerveau.metainfo.xml" "$CIBLE/cerveau.metainfo.xml"
 mkdir -p "$CIBLE/icons/scalable"
 cp "$RACINE/pkg/icons/scalable/cerveau.svg" "$CIBLE/icons/scalable/cerveau.svg"
-for taille in 16 32 48 64 128 256 512; do
+for taille in 16 24 32 48 64 128 256 512; do
   cp "$RACINE/build/icon-${taille}.png" "$CIBLE/icons/cerveau-${taille}.png"
 done
 cp "$RACINE/LICENSE" "$CIBLE/LICENSE"

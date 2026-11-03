@@ -1,6 +1,6 @@
 # Maintainer: Cerveau <cerveau@localhost>
 pkgname=cerveau
-pkgver=2.5.0
+pkgver=2.6.0
 pkgrel=1
 pkgdesc="Assistant IA francophone : coffre Obsidian, agent de code et intégration GitHub"
 arch=('x86_64' 'aarch64')
@@ -73,7 +73,7 @@ LAUNCHER
     "${pkgdir}/usr/share/applications/${pkgname}.desktop"
 
   # --- icônes ---
-  for taille in 16 32 48 64 128 256 512; do
+  for taille in 16 24 32 48 64 128 256 512; do
     install -Dm644 "${srcdir}/${pkgname}-${pkgver}/icons/${pkgname}-${taille}.png" \
       "${pkgdir}/usr/share/icons/hicolor/${taille}x${taille}/apps/${pkgname}.png"
   done

@@ -4,6 +4,27 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.6.0] — 2026-11-03
+
+### Modifié
+- **Nouveau logo.** Le singe à la loupe remplace l'emoji sur l'ensemble de
+  l'application : icône du paquet, barre latérale, accueil, fenêtre « À propos »,
+  favicon et icône de la barre des tâches.
+- Le logo est décliné en huit tailles (16, 24, 32, 48, 64, 128, 256, 512). Aux tailles
+  16 et 24 px, une **silhouette simplifiée** remplace le tracé détaillé, illisible en
+  dessous de 32 px.
+- Habillage « papier crème » : fond ivoire, trait terracotta en dégradé. Il se détache
+  aussi bien sur le thème clair que sur le thème sombre, contrairement à un fond coloré.
+
+### Corrigé
+- `majAccueil()` écrasait le contenu du logo à chaque changement de mode. Le logo est
+  désormais une image fixe, plus un texte remplacé par un emoji.
+
+### Vérifié
+- Logo affiché et chargé dans la barre latérale, l'accueil et « À propos »
+- Rendu correct en thème clair et sombre
+- Les huit tailles et les deux sources SVG présentes
+
 ## [2.5.0] — 2026-11-03
 
 ### Corrigé

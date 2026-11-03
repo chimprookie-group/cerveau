@@ -60,7 +60,7 @@ async function run(mainWindow, deps) {
       ongletTravail: !!q('#panneau-travail'),
       planTaches: !!q('#planTaches'),
       wsPied: !!q('#wsPiedNom'),
-      logo: q('#accueilLogo')?.textContent || ''
+      logo: q('#accueilLogo img') ? 'image' : (q('#accueilLogo')?.textContent || '')
     };
   })()`);
 
@@ -82,7 +82,7 @@ async function run(mainWindow, deps) {
   verifier('Onglet Travail présent', ui.ongletTravail);
   verifier('Zone plan de tâches présente', ui.planTaches);
   verifier('Indicateur workspace en pied', ui.wsPied);
-  verifier('Logo singe affiché', ui.logo.length > 0, ui.logo);
+  verifier('Logo de l\'application affiché', ui.logo === 'image' || ui.logo.length > 0, ui.logo);
 
   // 2. IPC config
   const cfg = config.getConfig();
@@ -1116,6 +1116,51 @@ async function run(mainWindow, deps) {
   verifier('Disposition enregistrée en config',
     dispoReglage.cfgStyle === 'superpose' && dispoReglage.cfgLargeur === 340,
     JSON.stringify({ style: dispoReglage.cfgStyle, largeur: dispoReglage.cfgLargeur }));
+
+  // 6vicies. Logo de l'application
+  const logoApp = await mainWindow.webContents.executeJavaScript(`(() => {
+    const barre = document.querySelector('.logo img');
+    const accueil = document.querySelector('#accueilLogo img');
+    const petit = document.querySelector('.accueil-logo.petit img');
+    const lisible = (img) => Boolean(img && img.complete && img.naturalWidth > 0);
+    return {
+      barre: lisible(barre),
+      accueil: lisible(accueil),
+      petit: lisible(petit),
+      source: accueil?.getAttribute('src') || '',
+      favicon: document.querySelector('link[rel="icon"]')?.getAttribute('href') || '',
+      emojiRestant: /🐵/.test(document.querySelector('.logo')?.textContent || '')
+    };
+  })()`);
+  verifier('Logo affiché dans la barre latérale', logoApp.barre === true);
+  verifier('Logo affiché sur l\'accueil', logoApp.accueil === true);
+  verifier('Logo affiché dans À propos', logoApp.petit === true);
+  verifier('Favicon défini', logoApp.favicon === 'images/logo.svg', logoApp.favicon);
+  verifier('Plus d\'emoji à la place du logo', logoApp.emojiRestant === false);
+
+  // les fichiers du logo existent et sont cohérents
+  const logoFichiers = ['build/icon.svg', 'build/icon-16.png', 'build/icon-24.png',
+    'build/icon-32.png', 'build/icon-48.png', 'build/icon-64.png', 'build/icon-128.png',
+    'build/icon-256.png', 'build/icon-512.png', 'build/icon.png',
+    'pkg/icons/scalable/cerveau.svg', 'src/images/logo.svg'];
+  const manquants = logoFichiers.filter((f) => !fs2.existsSync(path.join(racine, f)));
+  verifier('Toutes les tailles du logo présentes', manquants.length === 0, manquants.join(', ') || 'toutes');
+
+  // le logo réagit-il au thème ? il doit rester visible sur fond clair et sombre
+  const logoTheme = await mainWindow.webContents.executeJavaScript(`(async () => {
+    const out = {};
+    for (const theme of ['clair', 'sombre']) {
+      document.body.dataset.theme = theme;
+      await new Promise((r) => setTimeout(r, 200));
+      const img = document.querySelector('#accueilLogo img');
+      const box = document.querySelector('#accueilLogo').getBoundingClientRect();
+      out[theme] = { visible: img.complete && img.naturalWidth > 0, taille: Math.round(box.width) };
+    }
+    document.body.dataset.theme = window.cerveauUI.etat.config.ui?.theme || 'sombre';
+    return out;
+  })()`);
+  verifier('Logo visible en thème clair', logoTheme.clair?.visible === true);
+  verifier('Logo visible en thème sombre', logoTheme.sombre?.visible === true);
 
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
