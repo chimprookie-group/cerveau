@@ -1303,6 +1303,17 @@ async function run(mainWindow, deps) {
     ghMod.changerBranche = origChanger;
   }
 
+  // 6quatervicies. Exemple ZIMREAPER (navigateur piloté via MCP)
+  const appSrcZim = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
+  verifier('Exemple ZIMREAPER proposé', /nom: 'zimreaper'/.test(appSrcZim));
+  verifier('ZIMREAPER lancé en mode mcp', /arguments: \['mcp', '--launch'\]/.test(appSrcZim));
+  verifier('ZIMREAPER avec son dossier d\'état',
+    /ZIMREAPER_HOME/.test(appSrcZim) && /ZIMREAPER_LOG/.test(appSrcZim));
+  verifier('Exemple ZIMREAPER porte une note d\'installation',
+    /Installez ZIMREAPER/.test(appSrcZim));
+  verifier('Les variables d\'exemple développent $HOME',
+    /variablesEnv: Object\.fromEntries/.test(appSrcZim));
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 

@@ -1025,6 +1025,16 @@ const EXEMPLES_MCP = [
     desc: 'Référence du protocole, pour tester',
     commande: 'npx',
     arguments: ['-y', '@modelcontextprotocol/server-everything']
+  },
+  {
+    nom: 'zimreaper',
+    titre: 'Navigateur piloté (ZIMREAPER)',
+    desc: '21 outils : clic réel, saisie, réseau, captures',
+    commande: 'zimreaper',
+    // nécessite ZIMREAPER installé : voir le champ « commande »
+    arguments: ['mcp', '--launch'],
+    variablesEnv: { ZIMREAPER_HOME: '$HOME/.zimreaper', ZIMREAPER_LOG: 'warn' },
+    note: 'Installez ZIMREAPER (AppImage ou compilation) puis remplacez la commande par son chemin complet.'
   }
 ];
 
@@ -1107,7 +1117,11 @@ function rendreExemplesMCP() {
           commande: ex.commande,
           // $HOME est développé ici : spawn ne le fait pas lui-même
           arguments: ex.arguments.map((a) => a.replace(/^\$HOME/, etat.dossierPersonnel || '')),
-          variablesEnv: {},
+          variablesEnv: Object.fromEntries(
+            Object.entries(ex.variablesEnv || {}).map(([k, v]) => [
+              k, String(v).replace(/^\$HOME/, etat.dossierPersonnel || '')
+            ])
+          ),
           actif: true
         }];
         await enregistrerConfig({ serveursMCP: liste });
@@ -1117,7 +1131,8 @@ function rendreExemplesMCP() {
       }
     },
       el('div', { class: 'preset-nom', text: deja ? `${ex.titre} ✓` : ex.titre }),
-      el('div', { class: 'preset-desc', text: ex.desc })
+      el('div', { class: 'preset-desc', text: ex.desc }),
+      ex.note ? el('div', { class: 'preset-note', text: ex.note }) : null
     ));
   }
 }

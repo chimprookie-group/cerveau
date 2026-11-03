@@ -4,6 +4,27 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.8.1] — 2026-11-03
+
+### Ajouté
+- **Exemple MCP « Navigateur piloté (ZIMREAPER) »** dans *Plugins et web*. ZIMREAPER est
+  un navigateur Chromium qu'un agent pilote avec de vrais événements souris et clavier,
+  via MCP. Ses **21 outils** (navigation, clic, saisie, réseau, captures, sessions)
+  deviennent disponibles pour Cerveau en cochant un exemple.
+- Les exemples MCP peuvent désormais porter des **variables d'environnement** avec
+  `$HOME` développé, et une **note d'installation** affichée dans l'interface.
+
+### Vérifié
+- ZIMREAPER compilé et empaqueté en AppImage (97 Mo), puis connecté à Cerveau comme
+  serveur MCP : **21 outils découverts**.
+- Les 6 serveurs configurés chargent ensemble : **98 outils en 4,6 s**
+  (filesystem 14, zimreaper 21, memory 9, sqlite 10, git 28, everything 16).
+
+### Note
+ZIMREAPER n'a pas de release précompilée : il faut le compiler. La procédure a demandé
+trois contournements (binaire Electron absent du cache npm, module Python `PIL` manquant,
+`appimagetool` absent), documentés dans la note de l'exemple.
+
 ## [2.8.0] — 2026-11-03
 
 ### Ajouté
