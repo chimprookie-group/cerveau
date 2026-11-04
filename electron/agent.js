@@ -17,6 +17,8 @@ const toolbox = require('./tools');
 const codetools = require('./codetools');
 const githubtools = require('./githubtools');
 const webtools = require('./webtools');
+const memoireMod = require('./memoire');
+const sousagents = require('./sousagents');
 const { gestionnaire: mcp } = require('./mcp');
 
 const MAX_TOURS_DEFAUT = 25;
@@ -40,6 +42,9 @@ function outilsPourMode(mode, desactives = [], outilsMCP = []) {
     ];
   }
 
+  // la mémoire de long terme est disponible dans tous les modes
+  liste = [...liste, ...memoireMod.OUTILS_MEMOIRE];
+
   // les outils des serveurs MCP sont disponibles dans tous les modes
   liste = [...liste, ...(Array.isArray(outilsMCP) ? outilsMCP : [])];
 
@@ -50,6 +55,9 @@ function outilsPourMode(mode, desactives = [], outilsMCP = []) {
 
 function construireInviteSysteme(ctx, stats) {
   const { coffre, mode, workspace } = ctx;
+
+  // mémoire de long terme : placée tôt pour qu'elle pèse sur les réponses
+  const memoire = ctx.blocMemoire ? [ctx.blocMemoire, ''] : [];
   const lignes = [
     "Tu es Cerveau, un assistant de bureau francophone qui travaille sur la machine de l'utilisateur.",
     '',
@@ -123,6 +131,9 @@ function construireInviteSysteme(ctx, stats) {
     lignes.push('', 'Style attendu :', ...ctx.presets.map((p) => `- ${p}`));
   }
 
+  // la mémoire vient en dernier : elle précède immédiatement la demande
+  if (ctx.blocMemoire) lignes.push('', ctx.blocMemoire);
+
   return lignes.join('\n');
 }
 
@@ -154,7 +165,7 @@ function messageErreur(err) {
  * @param {function} opts.emit      (event) => void
  * @param {AbortSignal} opts.signal
  */
-async function run({ providerId, credentials, historique, ctx, emit, signal }) {
+async function run({ providerId, credentials, historique, ctx, emit, signal, limiteTours, outilsImposes }) {
   const mode = ctx.mode || 'notes';
   // charge les serveurs MCP déclarés (idempotent : ils restent en mémoire)
   let outilsMCP = [];
@@ -166,7 +177,49 @@ async function run({ providerId, credentials, historique, ctx, emit, signal }) {
     }
   }
 
-  const tools = outilsPourMode(mode, ctx.outilsDesactives || [], outilsMCP);
+  // Outils de délégation : chaque sous-agent relance la boucle avec sa propre
+  // consigne, sans l'historique courant et sans possibilité de déléguer à nouveau.
+  const outilsDelegation = ctx.desactiverSousAgents ? [] : sousagents.creerOutils({
+    executerSousAgent: async ({ consigne, ctx: ctxParent, tache }) => {
+      const outilsFiltres = sousagents.outilsSousAgent(
+        outilsPourMode(mode, ctxParent.outilsDesactives || [], outilsMCP)
+      );
+      const res = await run({
+        providerId,
+        credentials: ctxParent.credentials || credentials,
+        historique: [{ role: 'user', contenu: consigne }],
+        ctx: {
+          ...ctxParent,
+          // le sous-agent n'hérite pas de la mémoire d'écriture ni de la délégation
+          memoire: ctxParent.memoire,
+          desactiverSousAgents: true,
+          mode: 'code',
+          presets: [],
+          blocMemoire: ''
+        },
+        emit: () => {},
+        signal: undefined,
+        limiteTours: sousagents.MAX_TOURS_SOUS_AGENT,
+        outilsImposes: outilsFiltres
+      });
+      return res.texte || (res.erreur ? `Échec : ${res.erreur}` : '(aucun résultat)');
+    }
+  });
+
+  let tools = outilsPourMode(mode, ctx.outilsDesactives || [], outilsMCP);
+  if (Array.isArray(ctx.outilsImposes)) {
+    tools = ctx.outilsImposes;
+  } else if (outilsDelegation.length) {
+    tools = [...tools, ...outilsDelegation];
+  }
+
+  // la mémoire de long terme enrichit l'invite système
+  if (ctx.memoire) {
+    try {
+      ctx.blocMemoire = await ctx.memoire.blocPourInvite();
+    } catch { ctx.blocMemoire = ''; }
+  }
+
   const stats = (mode === 'notes' || mode === 'complet') && ctx.vaultPath
     ? await safeStats(ctx)
     : null;
@@ -198,7 +251,7 @@ async function run({ providerId, credentials, historique, ctx, emit, signal }) {
   let sansOutils = false;
   let dejaRejeteOutils = false;
 
-  const maxTours = Math.max(1, Number(ctx.agentMaxTours) || MAX_TOURS_DEFAUT);
+  const maxTours = Math.max(1, Number(limiteTours) || Number(ctx.agentMaxTours) || MAX_TOURS_DEFAUT);
 
   while (tours < maxTours) {
     tours += 1;
@@ -289,6 +342,8 @@ async function run({ providerId, credentials, historique, ctx, emit, signal }) {
         || codetools.PAR_NOM.get(appel.nom)
         || githubtools.PAR_NOM.get(appel.nom)
         || webtools.PAR_NOM.get(appel.nom)
+        || memoireMod.PAR_NOM.get(appel.nom)
+        || outilsDelegation.find((t) => t.nom === appel.nom)
         || outilsMCP.find((t) => t.nom === appel.nom);
       emit({ type: 'outil_appel', nom: appel.nom, arguments: appel.arguments, id: appel.id });
 
@@ -420,6 +475,11 @@ function resumerResultat(nom, res) {
     case 'lister_issues': return `${res.total} issue(s) · ${res.depot}`;
     case 'etat_ci': return `${res.total} exécution(s)`;
     // --- web ---
+    case 'deleguer_tache': return `sous-agent : ${String(res.resultat || '').slice(0, 80)}`;
+    case 'deleguer_parallelle': return `${res.aboutis}/${res.lances} sous-agent(s)`;
+    case 'memoire_retenir': return res.dejaConnu ? 'déjà connu' : (res.remplace ? 'mis à jour' : 'retenu');
+    case 'memoire_chercher': return `${res.total} fait(s) en mémoire`;
+    case 'memoire_oublier': return res.oublie ? 'oublié' : 'aucun fait correspondant';
     case 'web_search': return `${res.total} résultat(s) · ${res.moteur}`;
     case 'web_fetch': return `${res.titre || res.url} — ${res.longueurTotale} caractères`;
     default:

@@ -709,6 +709,107 @@ function initialiserTerminal() {
   });
 }
 
+/* ═══════════════════════════ MÉMOIRE ═══════════════════════════ */
+
+const NOMS_CATEGORIES = {
+  preference: 'Préférence',
+  projet: 'Projet',
+  decision: 'Décision',
+  fait: 'Fait'
+};
+
+async function rendreMemoire() {
+  const zone = $('#listeMemoire');
+  if (!zone) return;
+
+  const r = await API.memoire.lister();
+  zone.innerHTML = '';
+
+  const entrees = r.entrees || [];
+  const resume = $('#memoireResume');
+  if (resume) {
+    resume.textContent = entrees.length
+      ? `${entrees.length} fait(s) retenu(s). Les plus utilisés sont rappelés en premier.`
+      : "Aucun fait pour le moment. Cerveau en retiendra aussi de lui-même quand c'est utile.";
+    resume.style.color = '';
+  }
+
+  if (!entrees.length) {
+    zone.append(el('p', { class: 'vide petit', text: 'Rien en mémoire.' }));
+    return;
+  }
+
+  for (const e of entrees) {
+    const ligne = el('div', { class: 'fait-memoire' },
+      el('span', { class: `fait-categorie cat-${e.categorie}`, text: NOMS_CATEGORIES[e.categorie] || 'Fait' }),
+      el('div', { class: 'fait-corps' },
+        el('div', { class: 'fait-texte', text: e.texte }),
+        el('div', { class: 'fait-meta', text:
+          `${e.source === 'agent' ? 'retenu par l’IA' : 'ajouté par vous'}`
+          + (e.usage ? ` · utilisé ${e.usage} fois` : '')
+          + (e.majLe ? ` · ${formaterDate(e.majLe)}` : '') })
+      ),
+      el('button', {
+        class: 'btn-modele', text: 'Modifier', title: 'Modifier ce fait',
+        onclick: async () => {
+          const nouveau = await demanderTexte({
+            titre: 'Modifier le fait retenu',
+            valeur: e.texte,
+            aide: 'Une phrase claire, 500 caractères maximum.'
+          });
+          if (!nouveau) return;
+          const res = await API.memoire.modifier({ id: e.id, texte: nouveau });
+          if (res.ok) { notifier('Fait modifié.', 'succes', 2000); await rendreMemoire(); }
+          else notifier(res.message || 'Modification impossible.', 'erreur');
+        }
+      }),
+      el('button', {
+        class: 'btn-modele danger', text: '✕', title: 'Oublier ce fait',
+        onclick: async () => {
+          await API.memoire.supprimer(e.id);
+          notifier('Fait oublié.', 'info', 2000);
+          await rendreMemoire();
+        }
+      })
+    );
+    zone.append(ligne);
+  }
+}
+
+function initialiserMemoire() {
+  $('#btnMemoireAjouter')?.addEventListener('click', async () => {
+    const champ = $('#memoireTexte');
+    const texte = champ?.value.trim();
+    if (!texte) return notifier('Écrivez le fait à retenir.', 'erreur', 3000);
+
+    const r = await API.memoire.ajouter({
+      texte,
+      categorie: $('#memoireCategorie')?.value || 'fait'
+    });
+    if (r.ok) {
+      if (champ) champ.value = '';
+      notifier(r.deja ? 'Ce fait était déjà connu.' : 'Fait retenu.', 'succes', 2500);
+      await rendreMemoire();
+    } else {
+      notifier(r.message || 'Enregistrement impossible.', 'erreur', 4000);
+    }
+  });
+
+  // Entrée valide depuis le champ
+  $('#memoireTexte')?.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); $('#btnMemoireAjouter')?.click(); }
+  });
+
+  $('#btnMemoireVider')?.addEventListener('click', async () => {
+    if (!confirm('Oublier définitivement tous les faits retenus ?')) return;
+    await API.memoire.vider();
+    notifier('Mémoire vidée.', 'info', 2500);
+    await rendreMemoire();
+  });
+
+  rendreMemoire();
+}
+
 /* ═══════════════════════════ SUPERVISEUR ═══════════════════════════ */
 
 /** Affiche l'état des outils externes dont dépendent les fonctions intégrées. */
@@ -3381,6 +3482,7 @@ function ouvrirReglages(onglet = null) {
   initialiserPlugins();
   initialiserDispositionPanneau();
   initialiserSuperviseur();
+  initialiserMemoire();
 
   $('#modePermissions').value = etat.config.permissions?.mode || 'demander';
   $('#autoriserSuppression').checked = Boolean(etat.config.permissions?.allowDelete);

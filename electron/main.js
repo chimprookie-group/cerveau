@@ -16,6 +16,7 @@ const models = require('./models');
 const webtools = require('./webtools');
 const { gestionnaire: mcpGestionnaire } = require('./mcp');
 const { Superviseur } = require('./superviseur');
+const { Memoire } = require('./memoire');
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -348,6 +349,68 @@ ipcMain.handle('workspace:infos', async () => {
     git,
     entrees
   };
+});
+
+/* ---------------------------- IPC : mémoire ----------------------------- */
+
+let memoireInstance = null;
+function obtenirMemoire() {
+  if (!memoireInstance) {
+    memoireInstance = new Memoire(path.join(app.getPath('userData'), 'memoire.json'));
+  }
+  return memoireInstance;
+}
+
+ipcMain.handle('memoire:lister', async () => {
+  try {
+    const mem = obtenirMemoire();
+    const entrees = await mem.chercher('');
+    return { ok: true, entrees, total: entrees.length };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('memoire:ajouter', async (_e, { texte, categorie }) => {
+  try {
+    const r = await obtenirMemoire().retenir({ texte, categorie, source: 'utilisateur' });
+    return { ok: true, ...r };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('memoire:supprimer', async (_e, id) => {
+  try {
+    return { ok: true, ...(await obtenirMemoire().oublier(id)) };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('memoire:vider', async () => {
+  try {
+    const mem = obtenirMemoire();
+    await mem.vider();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('memoire:modifier', async (_e, { id, texte }) => {
+  try {
+    const mem = obtenirMemoire();
+    await mem.charger();
+    const entree = mem.entrees.find((x) => x.id === id);
+    if (!entree) return { ok: false, message: 'Fait introuvable.' };
+    entree.texte = String(texte || '').trim().slice(0, 500);
+    entree.majLe = Date.now();
+    await mem.enregistrer();
+    return { ok: true, entree };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
 });
 
 /* --------------------------- IPC : diagnostic --------------------------- */
@@ -923,6 +986,7 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
     agentCapSortie: cfg.agent?.capSortie,
     rechercheWeb: cfg.rechercheWeb || {},
     serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
+    memoire: obtenirMemoire(),
     presets: presetsActifs(cfg),
     temperature: typeof cfg.temperature === 'number' ? cfg.temperature : undefined,
     permissions: ctxPermissions(),

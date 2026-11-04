@@ -3076,6 +3076,47 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   margin: 7px 0 0;
 }
 
+/* ══════════════════ MÉMOIRE ══════════════════ */
+
+.liste-memoire { display: flex; flex-direction: column; gap: 6px; }
+
+.fait-memoire {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--fond-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  padding: 9px 11px;
+}
+
+.fait-categorie {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--fond);
+  color: var(--texte-3);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.fait-categorie.cat-preference { color: var(--accent-clair); background: rgba(217,139,95,0.16); }
+.fait-categorie.cat-projet { color: #7aa8d8; background: rgba(90,140,200,0.16); }
+.fait-categorie.cat-decision { color: var(--succes); background: rgba(90,170,110,0.16); }
+
+.fait-corps { flex: 1; min-width: 0; }
+
+.fait-texte { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+
+.fait-meta {
+  font-size: 10px;
+  color: var(--texte-3);
+  margin-top: 3px;
+}
+
 /* Responsive */
 /* ══════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════
    Deux styles, réglables dans Apparence :

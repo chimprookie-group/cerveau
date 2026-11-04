@@ -4,6 +4,36 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.9.0] — 2026-11-04
+
+### Ajouté
+- **Mémoire de long terme.** Cerveau retient des faits d'une conversation à l'autre :
+  préférences, conventions de projet, décisions. Ils sont rappelés à l'IA au début de
+  chaque échange, classés par catégorie, et utilisables sans avoir à les répéter.
+
+  - Trois outils pour l'IA : `memoire_retenir`, `memoire_chercher`, `memoire_oublier`
+  - Détection des doublons, y compris reformulés ou sans accents
+  - Plafond de 120 faits, les moins utilisés étant évincés
+  - Nouvelle section **Réglages → Mémoire** : ajouter, modifier, oublier, tout vider
+
+- **Sous-agents.** Cerveau peut confier une tâche ciblée à un agent isolé, qui ne voit
+  pas la conversation et renvoie un résultat sans ses étapes.
+
+  - `deleguer_tache` : une tâche, un résultat
+  - `deleguer_parallelle` : jusqu'à 3 sous-agents simultanés
+  - Récursion bloquée (un sous-agent ne peut pas déléguer)
+  - Écriture en mémoire interdite aux sous-agents
+  - Un échec isolé n'annule pas les autres
+
+- Les outils passent de 36 à **39** en mode Complet (19 en Notes, 25 en Code).
+
+### Vérifié de bout en bout
+- L'IA a retenu « je préfère les réponses courtes » via son outil, puis, dans une
+  **nouvelle exécution sans le lui redire**, a répondu « Réponses courtes et directes,
+  sans formule de politesse. C'est ce que j'ai en mémoire. »
+- Délégation réelle : le sous-agent a compté 18 fichiers `.js`, l'agent principal a
+  vérifié de son côté avec `find` — même résultat.
+
 ## [2.8.5] — 2026-11-03
 
 ### Corrigé

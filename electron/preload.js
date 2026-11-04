@@ -31,6 +31,14 @@ contextBridge.exposeInMainWorld('cerveau', {
     tester: () => ipcRenderer.invoke('web:tester')
   },
 
+  memoire: {
+    lister: () => ipcRenderer.invoke('memoire:lister'),
+    ajouter: (payload) => ipcRenderer.invoke('memoire:ajouter', payload),
+    modifier: (payload) => ipcRenderer.invoke('memoire:modifier', payload),
+    supprimer: (id) => ipcRenderer.invoke('memoire:supprimer', id),
+    vider: () => ipcRenderer.invoke('memoire:vider')
+  },
+
   diag: {
     outils: () => ipcRenderer.invoke('diag:outils')
   },

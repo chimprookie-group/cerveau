@@ -565,7 +565,7 @@ async function run(mainWindow, deps) {
              anciensOnglets: document.querySelectorAll('.onglet-reglage').length };
   })()`);
 
-  verifier('Navigation verticale avec 11 sections', reglages.nav.length === 11, `${reglages.nav.length} sections`);
+  verifier('Navigation verticale avec 12 sections', reglages.nav.length === 12, `${reglages.nav.length} sections`);
   verifier('Sections groupées', reglages.groupes.length >= 4, reglages.groupes.join(', '));
   verifier('Chaque section s\'affiche', Object.values(reglages.resultats).every(Boolean),
     Object.entries(reglages.resultats).filter(([, v]) => !v).map(([k]) => k).join(',') || 'toutes');
@@ -657,8 +657,8 @@ async function run(mainWindow, deps) {
   const agentTools = require('./agent');
   const nbComplet = agentMod.outilsPourMode('complet', [], []).length;
   const nbNotes = agentMod.outilsPourMode('notes', [], []).length;
-  verifier('Mode complet expose 36 outils', nbComplet === 36, `${nbComplet} outils`);
-  verifier('Mode notes expose 16 outils', nbNotes === 16, `${nbNotes} outils`);
+  verifier('Mode complet expose 39 outils', nbComplet === 39, `${nbComplet} outils`);
+  verifier('Mode notes expose 19 outils', nbNotes === 19, `${nbNotes} outils`);
 
   // 6decies. Les outils ne dépendent ni du fournisseur ni du modèle
   const agentModule2 = require('./agent');
@@ -667,16 +667,16 @@ async function run(mainWindow, deps) {
     compteParMode[m] = agentModule2.outilsPourMode(m, [], []).length;
   }
   verifier('Outils indépendants du fournisseur',
-    compteParMode.complet === 36 && compteParMode.notes === 16,
+    compteParMode.complet === 39 && compteParMode.notes === 19,
     JSON.stringify(compteParMode));
 
   const avecMCP = agentModule2.outilsPourMode('complet', [], [
     { nom: 'mcp_demo_x', description: 'd', schema: { type: 'object', properties: {} }, risque: 'lecture' }
   ]);
-  verifier('Outils MCP ajoutés à tous les modes', avecMCP.length === 37, `${avecMCP.length} outils`);
+  verifier('Outils MCP ajoutés à tous les modes', avecMCP.length === 40, `${avecMCP.length} outils`);
 
   const filtres = agentModule2.outilsPourMode('complet', ['executer_commande', 'creer_note'], []);
-  verifier('Désactivation respectée après bascule', filtres.length === 34
+  verifier('Désactivation respectée après bascule', filtres.length === 37
     && !filtres.some((t) => t.nom === 'executer_commande'), `${filtres.length} outils`);
 
   // un modèle qui refuse les outils doit déclencher un repli, pas un abandon
@@ -1456,6 +1456,84 @@ async function run(mainWindow, deps) {
     `window.cerveauUI.etat.conversations.filter((c) => !(c.messages || []).length).length`);
   verifier('Démarrage : pas d\'accumulation de vides',
     videsAuDemarrage <= 1, `${videsAuDemarrage} conversation(s) vide(s)`);
+
+  // 6novovicies. Mémoire de long terme et sous-agents
+  const memMod = require('./memoire');
+  const saMod = require('./sousagents');
+
+  const memFichier = path.join(os.tmpdir(), `mem-selftest-${Date.now()}.json`);
+  try {
+    const mem = new memMod.Memoire(memFichier);
+    const rMem = await mem.retenir({ texte: 'Test : préférence courte.', categorie: 'preference' });
+    verifier('Mémoire : fait retenu', rMem.cree === true);
+
+    const rDup = await mem.retenir({ texte: 'Test : preference courte.', categorie: 'preference' });
+    verifier('Mémoire : doublon normalisé détecté', rDup.deja === true);
+    verifier('Mémoire : pas de duplication',
+      (await mem.chercher('')).length === 1, `${(await mem.chercher('')).length} entrée(s)`);
+
+    const bloc = await mem.blocPourInvite();
+    verifier('Mémoire : bloc injectable', /Mémoire de long terme/.test(bloc) && /Préférences/.test(bloc));
+
+    const cible = (await mem.chercher(''))[0];
+    verifier('Mémoire : oubli', (await mem.oublier(cible.id)).supprimee === true);
+
+    let refusLong = false;
+    try { await mem.retenir({ texte: 'x'.repeat(600) }); } catch { refusLong = true; }
+    verifier('Mémoire : texte trop long refusé', refusLong);
+  } finally {
+    await fsp.rm(memFichier, { force: true });
+  }
+
+  // les outils mémoire sont disponibles dans tous les modes
+  const outilsNotes = require('./agent').outilsPourMode('notes', [], []);
+  verifier('Mémoire : outils disponibles en mode notes',
+    outilsNotes.filter((t) => t.nom.startsWith('memoire_')).length === 3);
+
+  // sous-agents
+  const filtresSA = saMod.outilsSousAgent([
+    { nom: 'lire_fichier' }, { nom: 'deleguer_tache' }, { nom: 'memoire_retenir' }
+  ]).map((o) => o.nom);
+  verifier('Sous-agents : récursion bloquée', !filtresSA.includes('deleguer_tache'));
+  verifier('Sous-agents : mémoire protégée', !filtresSA.includes('memoire_retenir'));
+  verifier('Sous-agents : lecture conservée', filtresSA.includes('lire_fichier'));
+
+  const consigneSA = saMod.construireConsigne({ tache: 'X', contexte: 'Y' });
+  verifier('Sous-agents : consigne construite',
+    consigneSA.includes('X') && consigneSA.includes('Y'));
+
+  let nbAppels = 0;
+  const outilsSA = saMod.creerOutils({ executerSousAgent: async () => { nbAppels++; return 'ok'; } });
+  const par = outilsSA.find((o) => o.nom === 'deleguer_parallelle');
+  const rPar = await par.executer({ taches: [{ tache: 'a' }, { tache: 'b' }, { tache: 'c' }, { tache: 'd' }] }, {});
+  verifier('Sous-agents : plafond de 3', rPar.lances === 3, `${rPar.lances}`);
+  verifier('Sous-agents : tous aboutis', rPar.aboutis === 3);
+
+  // un échec isolé ne casse pas le lot
+  let k = 0;
+  const outilsErr = saMod.creerOutils({
+    executerSousAgent: async () => { k++; if (k === 2) throw new Error('panne'); return 'ok'; }
+  });
+  const rErr = await outilsErr.find((o) => o.nom === 'deleguer_parallelle')
+    .executer({ taches: [{ tache: 'a' }, { tache: 'b' }, { tache: 'c' }] }, {});
+  verifier('Sous-agents : échec isolé capturé', rErr.aboutis === 2, `${rErr.aboutis}/3`);
+
+  // interface
+  const uiMem = await mainWindow.webContents.executeJavaScript(`(async () => {
+    window.cerveauUI.ouvrirReglages('memoire');
+    await new Promise((r) => setTimeout(r, 600));
+    const res = {
+      section: document.querySelector('.volet-reglage.actif')?.id,
+      champ: !!document.querySelector('#memoireTexte'),
+      liste: !!document.querySelector('#listeMemoire'),
+      boutons: ['btnMemoireAjouter', 'btnMemoireVider'].filter((id) => document.getElementById(id)).length
+    };
+    document.querySelector('#btnFermerReglages2').click();
+    return res;
+  })()`);
+  verifier('Mémoire : section accessible', uiMem.section === 'reglage-memoire');
+  verifier('Mémoire : champ et liste présents', uiMem.champ === true && uiMem.liste === true);
+  verifier('Mémoire : boutons présents', uiMem.boutons === 2);
 
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));

@@ -318,6 +318,10 @@
             <span class="nav-reglage-icone">⬡</span>
             <span class="nav-reglage-texte">Plugins et web</span>
           </button>
+          <button class="nav-reglage" data-reglage="memoire">
+            <span class="nav-reglage-icone">❖</span>
+            <span class="nav-reglage-texte">Mémoire</span>
+          </button>
           <button class="nav-reglage" data-reglage="superviseur">
             <span class="nav-reglage-icone">◎</span>
             <span class="nav-reglage-texte">Superviseur</span>
@@ -464,6 +468,51 @@
             <h3 class="section-reglage-titre">Outils disponibles</h3>
             <p class="section-reglage-desc">Désactivez ce que l'IA ne doit pas utiliser, quel que soit le mode.</p>
             <div id="reglageOutils" class="liste-outils-reglage"></div>
+          </section>
+        </div>
+
+        <!-- Mémoire de long terme -->
+        <div class="volet-reglage" id="reglage-memoire">
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Mémoire de long terme</h3>
+            <p class="section-reglage-desc">
+              Ce que Cerveau retient d'une conversation à l'autre : vos préférences,
+              les conventions de vos projets, les décisions prises. Ces faits sont
+              rappelés à l'IA au début de chaque échange.
+            </p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="memoireTexte">Ajouter un fait</label>
+                <p class="champ-reglage-aide">Une phrase claire. Il sera rappelé à chaque échange.</p>
+              </div>
+              <input type="text" id="memoireTexte" class="champ-reglage-controle large"
+                     placeholder="ex. Je préfère les réponses courtes" maxlength="500" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="memoireCategorie">Catégorie</label>
+                <p class="champ-reglage-aide">Classe le fait pour qu'il soit rappelé au bon moment.</p>
+              </div>
+              <select id="memoireCategorie" class="champ-reglage-controle">
+                <option value="preference">Préférence</option>
+                <option value="projet">Projet</option>
+                <option value="decision">Décision</option>
+                <option value="fait">Fait</option>
+              </select>
+            </div>
+
+            <div class="rangee-boutons">
+              <button id="btnMemoireAjouter" class="btn-principal">Retenir</button>
+              <button id="btnMemoireVider" class="btn-danger">Tout oublier</button>
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Faits retenus</h3>
+            <p class="section-reglage-desc" id="memoireResume">Aucun fait pour le moment.</p>
+            <div id="listeMemoire" class="liste-memoire"></div>
           </section>
         </div>
 
