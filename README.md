@@ -111,7 +111,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.13.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.14.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

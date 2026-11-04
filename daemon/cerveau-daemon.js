@@ -61,12 +61,18 @@ const ETAT_DIR = path.join(
   'cerveau'
 );
 
-// Electron nomme son dossier de données « Cerveau » (majuscule) ; le démon
-// utilise le même pour partager les fichiers d'état.
-const DONNEES_DIR = path.join(
-  process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'),
-  process.env.CERVEAU_DATA_DIR || 'Cerveau'
-);
+/**
+ * Dossier de données partagé avec l'application.
+ *
+ * C'est `app.getPath('userData')`, donc ~/.config/<nom de l'app>. Le nom est
+ * défini par `app.setName('cerveau')` dans electron/main.js : le dossier est
+ * donc ~/.config/cerveau (tout en minuscules). Le démon doit utiliser
+ * exactement le même, sinon il travaillerait sur des fichiers vides.
+ */
+const NOM_APP = 'cerveau';
+const DONNEES_DIR = process.env.CERVEAU_DATA_DIR
+  ? path.resolve(process.env.CERVEAU_DATA_DIR)
+  : path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), NOM_APP);
 
 const CHEMIN_PLAN = path.join(DONNEES_DIR, 'planificateur.json');
 const CHEMIN_OBJ = path.join(DONNEES_DIR, 'objectifs.json');

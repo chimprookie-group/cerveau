@@ -1903,6 +1903,58 @@ async function run(mainWindow, deps) {
     `window.cerveau.mcp.outils('inexistant')`);
   verifier('MCP : IPC outils répond', typeof outilsMCP.ok === 'boolean', String(outilsMCP.ok));
 
+  // 6octoquadragies. Cohérence des chemins, des contextes et des écouteurs
+  const mainSrcAudit = fs2.readFileSync(path.join(racine, 'electron', 'main.js'), 'utf8');
+  const daemonSrcAudit = fs2.readFileSync(path.join(racine, 'daemon', 'cerveau-daemon.js'), 'utf8');
+
+  // le nom de l'app fixe le dossier de données : sans lui, app et démon divergent
+  verifier('Cohérence : nom d’application fixé', /app\.setName\('cerveau'\)/.test(mainSrcAudit));
+  verifier('Cohérence : démon utilise le même dossier',
+    /NOM_APP = 'cerveau'/.test(daemonSrcAudit) && !/=== 'Cerveau'/.test(daemonSrcAudit));
+  verifier('Cohérence : migration des anciennes données',
+    /migrerDonneesAnciennes/.test(mainSrcAudit));
+
+  // les contextes d'agent doivent être complets (le Superviseur ne l'était pas)
+  const ctxSuperviseur = mainSrcAudit.slice(
+    mainSrcAudit.indexOf('executeur: async (params) => agent.run('),
+    mainSrcAudit.indexOf('ipcMain.handle(\'superviseur:etat\'')
+  );
+  verifier('Cohérence : Superviseur reçoit la mémoire', /memoire: obtenirMemoire\(\)/.test(ctxSuperviseur));
+  verifier('Cohérence : Superviseur reçoit les serveurs MCP', /serveursMCP:/.test(ctxSuperviseur));
+  verifier('Cohérence : Superviseur reçoit la recherche web', /rechercheWeb:/.test(ctxSuperviseur));
+  verifier('Cohérence : Superviseur reçoit les presets', /presets:/.test(ctxSuperviseur));
+
+  // aucune fonction d'initialisation ne doit empiler des écouteurs
+  const appSrcAudit = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
+  for (const f of ['initialiserComportement', 'initialiserReglagesAvances',
+                   'initialiserPlugins', 'initialiserDispositionPanneau']) {
+    const bloc = appSrcAudit.slice(
+      appSrcAudit.indexOf(`function ${f}()`),
+      appSrcAudit.indexOf(`function ${f}()` ) + 400
+    );
+    verifier(`Écouteurs : ${f} ne s’empile pas`, /Branche\) return|uneSeuleFois/.test(bloc)
+      || !/addEventListener/.test(bloc.slice(0, 400)));
+  }
+
+  // pas de doublon de déclaration de fonction
+  const nomsFonctions = [...appSrcAudit.matchAll(/^function ([a-zA-Z][a-zA-Z0-9_]*)\s*\(/gm)]
+    .map((m) => m[1]);
+  const doublons = nomsFonctions.filter((n, i) => nomsFonctions.indexOf(n) !== i);
+  verifier('Cohérence : aucune fonction déclarée deux fois',
+    doublons.length === 0, doublons.slice(0, 3).join(', '));
+
+  // toutes les classes utilisées en JS ont une règle CSS
+  const cssAudit = fs2.readFileSync(path.join(racine, 'src', 'styles.css'), 'utf8');
+  const classesDefinies = new Set([...cssAudit.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map((m) => m[1]));
+  // On ne garde que les classes littérales : les interpolations
+  // (class: `x ${y}`) produisent des fragments qui ne sont pas des classes.
+  const classesUtilisees = [...appSrcAudit.matchAll(/class:\s*'([^'$]+)'/g)]
+    .flatMap((m) => m[1].split(/\s+/))
+    .filter((c) => c && /^[a-z][a-z0-9-]*$/.test(c));
+  const orphelines = [...new Set(classesUtilisees)].filter((c) => !classesDefinies.has(c));
+  verifier('Cohérence : classes CSS toutes définies',
+    orphelines.length === 0, orphelines.slice(0, 4).join(', '));
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 

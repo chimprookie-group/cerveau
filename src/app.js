@@ -101,6 +101,7 @@ function el(tag, attrs = {}, ...enfants) {
   return n;
 }
 
+
 function notifier(message, type = 'info', duree = 3600) {
   const n = el('div', { class: `notification ${type}`, text: message });
   $('#notifications').append(n);
@@ -882,7 +883,11 @@ async function rendrePlanification() {
   }
 }
 
-function initialiserPlanification() {
+/** Branche les écouteurs — une seule fois dans la vie de l'application. */
+function brancherPlanification() {
+  if (brancherPlanification.fait) return;
+  brancherPlanification.fait = true;
+
   $('#btnPlanCreer')?.addEventListener('click', async () => {
     const nom = $('#planNom')?.value.trim();
     const consigne = $('#planConsigne')?.value.trim();
@@ -956,7 +961,11 @@ function initialiserPlanification() {
       rendrePlanification();
     }
   });
+}
 
+/** Rafraîchit l'affichage — à chaque ouverture des réglages. */
+function initialiserPlanification() {
+  brancherPlanification();
   rendrePlanification();
 }
 
@@ -1074,7 +1083,10 @@ async function rendreObjectifs() {
   }
 }
 
-function initialiserObjectifs() {
+function brancherObjectifs() {
+  if (brancherObjectifs.fait) return;
+  brancherObjectifs.fait = true;
+
   $('#btnObjectifCreer')?.addEventListener('click', async () => {
     const titre = $('#objectifTitre')?.value.trim();
     if (!titre) return notifier("Donnez un titre à l'objectif.", 'erreur', 3000);
@@ -1108,7 +1120,10 @@ function initialiserObjectifs() {
       else if (evt.objectif?.etat === 'suspendu') notifier(`Objectif suspendu : ${evt.objectif.blocage || 'voir le suivi'}`, 'erreur', 6000);
     }
   });
+}
 
+function initialiserObjectifs() {
+  brancherObjectifs();
   rendreObjectifs();
 }
 
@@ -1179,7 +1194,10 @@ async function rendreMemoire() {
   }
 }
 
-function initialiserMemoire() {
+function brancherMemoire() {
+  if (brancherMemoire.fait) return;
+  brancherMemoire.fait = true;
+
   $('#btnMemoireAjouter')?.addEventListener('click', async () => {
     const champ = $('#memoireTexte');
     const texte = champ?.value.trim();
@@ -1209,7 +1227,10 @@ function initialiserMemoire() {
     notifier('Mémoire vidée.', 'info', 2500);
     await rendreMemoire();
   });
+}
 
+function initialiserMemoire() {
+  brancherMemoire();
   rendreMemoire();
 }
 
@@ -1351,8 +1372,52 @@ function majEtatSuperviseur(snap) {
   rendreTickets(snap);
 }
 
+/**
+ * Branche les écouteurs du Superviseur — une seule fois.
+ * Sans ce garde-fou, chaque ouverture des réglages empilait un écouteur
+ * supplémentaire : au bout de onze, le moteur signalait une fuite mémoire.
+ */
+function brancherSuperviseur() {
+  if (brancherSuperviseur.fait) return;
+  brancherSuperviseur.fait = true;
+
+  API.superviseur.surEvenement((evt) => {
+    if (evt.type === 'ticket:cree') {
+      notifier(`Nouveau ticket : ${evt.ticket?.origine?.titre || evt.ticket?.resume || ''}`, 'info', 4000);
+    }
+    if (evt.type === 'ticket:fin') {
+      const t = evt.ticket;
+      notifier(`Ticket #${t?.origine?.numero} ${t?.etat === 'termine' ? 'terminé' : 'échoué'}.`,
+        t?.etat === 'termine' ? 'succes' : 'erreur', 5000);
+    }
+    rafraichirSuperviseur();
+  });
+}
+
+/** Rafraîchit l'état du Superviseur affiché dans les réglages. */
+async function rafraichirSuperviseur() {
+  const r = await API.superviseur.etat();
+  if (r.ok) majEtatSuperviseur(r);
+  else notifier(r.message || 'Superviseur indisponible.', 'erreur', 4000);
+}
+
+let superviseurBranche = false;
+
 async function initialiserSuperviseur() {
+  brancherSuperviseur();
   const cfg = etat.config.superviseur || {};
+
+  // Première ouverture : on branche tous les champs. Les suivantes se
+  // contentent de rafraîchir l'affichage — sinon les écouteurs s'empilent.
+  if (!superviseurBranche) {
+    superviseurBranche = true;
+    brancherChampsSuperviseur(cfg);
+  }
+  await rafraichirSuperviseur();
+  await rendreOutilsSysteme();
+}
+
+function brancherChampsSuperviseur(cfg) {
 
   const depot = $('#supDepot');
   if (depot) {
@@ -1448,11 +1513,7 @@ async function initialiserSuperviseur() {
     });
   }
 
-  const rafraichir = async () => {
-    const r = await API.superviseur.etat();
-    if (r.ok) majEtatSuperviseur(r);
-    else notifier(r.message || 'Superviseur indisponible.', 'erreur', 4000);
-  };
+  const rafraichir = rafraichirSuperviseur;
 
   $('#supDemarrer')?.addEventListener('click', async (e) => {
     const b = e.currentTarget;
@@ -1495,24 +1556,8 @@ async function initialiserSuperviseur() {
     if (!confirm("Effacer tout l'historique des tickets ?")) return;
     await API.superviseur.reinitialiser();
     notifier('Historique effacé.', 'info');
-    await rafraichir();
+    await rafraichirSuperviseur();
   });
-
-  // les événements du superviseur mettent l'interface à jour en direct
-  API.superviseur.surEvenement((evt) => {
-    if (evt.type === 'ticket:cree') {
-      notifier(`Nouveau ticket : ${evt.ticket?.origine?.titre || evt.ticket?.resume || ''}`, 'info', 4000);
-    }
-    if (evt.type === 'ticket:fin') {
-      const t = evt.ticket;
-      notifier(`Ticket #${t?.origine?.numero} ${t?.etat === 'termine' ? 'terminé' : 'échoué'}.`,
-        t?.etat === 'termine' ? 'succes' : 'erreur', 5000);
-    }
-    rafraichir();
-  });
-
-  await rafraichir();
-  await rendreOutilsSysteme();
 }
 
 /* ══════════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════════ */
@@ -1546,7 +1591,12 @@ function appliquerDispositionPanneau(cfg = etat.config) {
   synchroniserHauteurEntete();
 }
 
-function initialiserDispositionPanneau() {
+let initialiserDispositionPanneauBranche = false;
+function brancherDispositionPanneau() {
+  // Les réglages sont réaffichés à chaque ouverture : on ne branche les
+  // écouteurs qu'une fois, sinon ils s'empilent (fuite mémoire + double clic).
+  if (initialiserDispositionPanneauBranche) return;
+  initialiserDispositionPanneauBranche = true;
   const sel = $('#reglageStylePanneau');
   if (sel) {
     sel.addEventListener('change', async () => {
@@ -1871,7 +1921,12 @@ async function rafraichirEtatsMCP() {
   rendreServeursMCP();
 }
 
-function initialiserPlugins() {
+let initialiserPluginsBranche = false;
+function brancherPlugins() {
+  // Les réglages sont réaffichés à chaque ouverture : on ne branche les
+  // écouteurs qu'une fois, sinon ils s'empilent (fuite mémoire + double clic).
+  if (initialiserPluginsBranche) return;
+  initialiserPluginsBranche = true;
   const rw = etat.config.rechercheWeb || {};
   const moteur = $('#reglageMoteurWeb');
   if (moteur) {
@@ -1988,7 +2043,12 @@ function rendreOutilsReglage() {
   }
 }
 
-function initialiserReglagesAvances() {
+let initialiserReglagesAvancesBranche = false;
+function brancherReglagesAvances() {
+  // Les réglages sont réaffichés à chaque ouverture : on ne branche les
+  // écouteurs qu'une fois, sinon ils s'empilent (fuite mémoire + double clic).
+  if (initialiserReglagesAvancesBranche) return;
+  initialiserReglagesAvancesBranche = true;
   const cfg = etat.config;
   const g = cfg.general || {};
   const a = cfg.agent || {};
@@ -2081,7 +2141,12 @@ function rendrePresetsComportement() {
   }
 }
 
-function initialiserComportement() {
+let initialiserComportementBranche = false;
+function brancherComportement() {
+  // Les réglages sont réaffichés à chaque ouverture : on ne branche les
+  // écouteurs qu'une fois, sinon ils s'empilent (fuite mémoire + double clic).
+  if (initialiserComportementBranche) return;
+  initialiserComportementBranche = true;
   const zone = $('#promptSysteme');
   if (zone) {
     zone.value = etat.config.systemPrompt || '';
@@ -3967,6 +4032,44 @@ function afficherSectionReglage(id) {
   $$('.volet-reglage').forEach((v) => v.classList.toggle('actif', v.id === `reglage-${id}`));
   const zone = $('.reglages-contenu');
   if (zone) zone.scrollTop = 0;
+}
+
+/** Rappelés à chaque ouverture des réglages : branchent une fois, affichent toujours. */
+function initialiserComportement() {
+  brancherComportement();
+  rendrePresetsComportement();
+  const zone = $('#promptSysteme');
+  if (zone) zone.value = etat.config.systemPrompt || '';
+  majCompteurPrompt();
+  const temp = $('#temperature');
+  if (temp) {
+    const valeur = Number(etat.config.temperature ?? 0.7);
+    temp.value = String(valeur);
+    const aff = $('#valeurTemperature');
+    if (aff) aff.textContent = valeur.toFixed(1);
+  }
+}
+
+function initialiserReglagesAvances() {
+  brancherReglagesAvances();
+}
+
+function initialiserPlugins() {
+  brancherPlugins();
+  rendreServeursMCP();
+  rendreExemplesMCP();
+  const rw = etat.config.rechercheWeb || {};
+  const moteur = $('#moteurRecherche');
+  if (moteur) moteur.value = rw.moteur || 'duckduckgo';
+  const url = $('#urlRecherche');
+  if (url) url.value = rw.urlBase || '';
+  const cle = $('#cleRecherche');
+  if (cle) cle.value = rw.cle ? '••••••••' : '';
+}
+
+function initialiserDispositionPanneau() {
+  brancherDispositionPanneau();
+  appliquerDispositionPanneau();
 }
 
 function ouvrirReglages(onglet = null) {

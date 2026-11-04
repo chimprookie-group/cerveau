@@ -2,6 +2,46 @@
 
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme } = require('electron');
 const path = require('node:path');
+
+// Le nom de l'application détermine son dossier de données
+// (~/.config/<nom>). Sans cette ligne, Electron retombe sur « Electron »
+// quand le dossier de l'app est passé en argument — et le démon, qui lit
+// ~/.config/Cerveau, ne verrait jamais les tâches ni la mémoire.
+app.setName('cerveau');
+
+/**
+ * Récupère les données d'une installation antérieure.
+ *
+ * Les versions précédentes rangeaient leurs fichiers dans ~/.config/Cerveau
+ * (majuscule) parce que le nom de l'application n'était pas fixé explicitement.
+ * On rapatrie ces fichiers une fois, sans jamais écraser un fichier existant.
+ */
+function migrerDonneesAnciennes() {
+  try {
+    const dossierActuel = app.getPath('userData');
+    const dossierAncien = path.join(path.dirname(dossierActuel), 'Cerveau');
+    if (dossierAncien === dossierActuel) return;
+    if (!fs.existsSync(dossierAncien)) return;
+
+    const aMigrer = ['planificateur.json', 'objectifs.json', 'memoire.json',
+                     'superviseur.json', 'app.pid', 'daemon.log'];
+    let migres = 0;
+    for (const nom of aMigrer) {
+      const source = path.join(dossierAncien, nom);
+      const cible = path.join(dossierActuel, nom);
+      // on ne remplace jamais un fichier déjà présent
+      if (!fs.existsSync(source) || fs.existsSync(cible)) continue;
+      fs.mkdirSync(dossierActuel, { recursive: true });
+      fs.copyFileSync(source, cible);
+      fs.chmodSync(cible, 0o600);
+      migres += 1;
+    }
+    if (migres) {
+      console.log(`[cerveau] ${migres} fichier(s) repris depuis ${dossierAncien}`);
+    }
+  } catch { /* une migration ratée ne doit pas empêcher le démarrage */ }
+}
+
 const os = require('node:os');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
@@ -866,11 +906,20 @@ function contexteSuperviseur(cfg) {
         vaultPath: null,
         coffre: null,
         workspace: params.workspace,
+        depotGithub: cfg.superviseur?.depot || null,
+        githubUtilisateur: null,
         permissions: params.permissions,
         confirmer: params.confirmer,
         outilsDesactives: cfg.outilsDesactives || [],
         agentMaxTours: cfg.agent?.maxTours,
-        agentCapSortie: cfg.agent?.capSortie
+        agentCapSortie: cfg.agent?.capSortie,
+        temperature: cfg.temperature,
+        presets: cfg.presetsComportement || [],
+        systemPrompt: cfg.systemPrompt || '',
+        // le Superviseur travaille comme le chat : mêmes outils, même mémoire
+        memoire: obtenirMemoire(),
+        serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
+        rechercheWeb: cfg.rechercheWeb || {}
       },
       emit: params.emit
     })
@@ -1452,6 +1501,9 @@ if (!instanceUnique) {
   });
 
   app.whenReady().then(() => {
+    // après whenReady, app.getPath('userData') est fiable
+    migrerDonneesAnciennes();
+
     const cfg = config.getConfig();
     nativeTheme.themeSource = cfg.ui?.theme === 'clair' ? 'light' : 'dark';
     buildMenu();

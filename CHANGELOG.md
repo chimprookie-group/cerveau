@@ -4,6 +4,53 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.14.0] — 2026-11-04
+
+Version issue d'un **audit complet** : chaque couche a été vérifiée, et chaque
+défaut trouvé a été corrigé et verrouillé par un test.
+
+### Corrigé — bugs critiques
+
+- **L'application et le démon ne partageaient aucun fichier.** L'application
+  écrivait dans `~/.config/cerveau` (minuscule) tandis que le démon lisait
+  `~/.config/Cerveau` (majuscule), parce que le nom de l'application n'était jamais
+  fixé explicitement. Conséquence : les tâches planifiées, les objectifs et la mémoire
+  créés dans l'interface étaient **invisibles au démon**, qui tournait donc à vide.
+  Le nom est maintenant fixé (`app.setName('cerveau')`) et le démon calcule le même
+  chemin. Les données des versions précédentes sont **migrées automatiquement** au
+  premier lancement, sans jamais écraser un fichier existant.
+
+- **Le Superviseur travaillait avec un contexte incomplet.** Il n'avait ni mémoire,
+  ni serveurs MCP, ni recherche web, ni presets, ni température — donc il ne pouvait
+  pas utiliser les outils que le chat utilise. Son contexte est désormais complet.
+
+### Corrigé — fuite mémoire et doubles actions
+
+- **Chaque ouverture des réglages empilait des écouteurs.** Après onze ouvertures de
+  la fenêtre, le moteur signalait une fuite mémoire ; au-delà, un seul clic déclenchait
+  plusieurs fois la même action. Les branchements sont désormais uniques, les rendus
+  restant rafraîchis à chaque ouverture. Vérifié : **20 ouvertures, zéro avertissement**,
+  et un clic produit exactement une action.
+
+### Corrigé — styles manquants
+
+- Six classes utilisées n'avaient **aucune règle CSS** : `.btn-fermer`, `.moyenne`,
+  `.liste-fournisseurs`, `.menu-contexte`, `.nav-reglage-texte`, `.raccourci`. Le bouton
+  de fermeture de la modale des outils MCP était donc un texte nu, et le menu contextuel
+  n'avait ni fond ni bordure.
+- Ajout du style `.btn-mcp.outils` manquant.
+
+### Ajouté — garde-fous d'audit
+Un jeu de vérifications permanentes empêche ces régressions :
+IPC main ↔ preload alignés, identifiants DOM existants, classes CSS définies, fonctions
+déclarées une seule fois, contextes d'agent complets, chemins partagés.
+
+### Vérifié
+- **365 vérifications automatisées** passent.
+- Les **14 sections de réglages** s'ouvrent sans une seule erreur console.
+- Chat, notes du coffre et recherche web testés de bout en bout avec le vrai modèle :
+  `PONG`, « 6 notes », `Paris`.
+
 ## [2.13.0] — 2026-11-04
 
 ### Modifié
