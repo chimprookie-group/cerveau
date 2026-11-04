@@ -3213,6 +3213,228 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   outline: none;
 }
 
+
+/* ══════════════════ TABLEAU DES SERVEURS MCP ══════════════════ */
+
+.tableau-mcp {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+/* en-têtes de colonnes */
+.mcp-entetes {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.1fr) minmax(0, 1.4fr) 120px auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--fond-3);
+  border-bottom: 1px solid var(--bordure);
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texte-3);
+}
+
+.mcp-col-etat { text-align: left; }
+.mcp-col-actions { text-align: right; }
+
+/* une ligne de serveur */
+.mcp-ligne {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.1fr) minmax(0, 1.4fr) 120px auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--bordure);
+  transition: background 0.12s;
+}
+
+.mcp-ligne:last-child { border-bottom: none; }
+.mcp-ligne:hover { background: var(--fond-3); }
+.mcp-ligne.desactive { opacity: 0.55; }
+
+/* interrupteur compact */
+.mcp-cellule-nom { display: flex; align-items: center; gap: 9px; min-width: 0; }
+
+.mcp-interrupteur {
+  width: 30px; height: 17px;
+  border-radius: 20px;
+  border: 1px solid var(--bordure);
+  background: var(--fond);
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  padding: 0;
+}
+
+.mcp-interrupteur.actif { background: var(--accent); border-color: var(--accent); }
+
+.mcp-interrupteur-pastille {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--texte-3);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.mcp-interrupteur.actif .mcp-interrupteur-pastille {
+  transform: translateX(13px);
+  background: #fff;
+}
+
+.mcp-nom {
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* commande */
+.mcp-cellule-commande {
+  font-family: var(--police-mono);
+  font-size: 10px;
+  color: var(--texte-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* état */
+.mcp-cellule-etat { display: flex; align-items: center; gap: 6px; min-width: 0; }
+
+.mcp-pastille {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mcp-pastille.ok { background: var(--succes); }
+.mcp-pastille.echec { background: var(--danger); }
+.mcp-pastille.attente { background: var(--texte-3); opacity: 0.5; }
+
+.mcp-etat-txt {
+  font-size: 10.5px;
+  color: var(--texte-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcp-etat-txt.ok { color: var(--succes); }
+.mcp-etat-txt.echec { color: var(--danger); }
+
+/* actions : de vrais boutons, avec du texte lisible */
+.mcp-cellule-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.btn-mcp {
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 550;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--bordure);
+  background: var(--fond);
+  color: var(--texte-2);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.13s, border-color 0.13s, color 0.13s;
+}
+
+.btn-mcp:hover:not(:disabled) {
+  background: var(--accent-sombre);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-mcp:disabled { opacity: 0.6; cursor: default; }
+
+.btn-mcp.demarrer { min-width: 74px; justify-content: center; }
+
+.btn-mcp.retirer {
+  padding: 4px 8px;
+  color: var(--texte-3);
+}
+
+.btn-mcp.retirer:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+/* petite roue pendant le démarrage */
+.mcp-roue {
+  width: 9px; height: 9px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: mcp-tourne 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes mcp-tourne { to { transform: rotate(360deg); } }
+
+/* liste des outils dans la modale */
+.liste-outils-mcp {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.outil-mcp {
+  padding: 7px 10px;
+  border-radius: var(--rayon-petit);
+  background: var(--fond-3);
+}
+
+.outil-mcp-nom {
+  font-family: var(--police-mono);
+  font-size: 11.5px;
+  color: var(--accent-clair);
+  font-weight: 550;
+}
+
+.outil-mcp-desc {
+  font-size: 10.5px;
+  color: var(--texte-3);
+  line-height: 1.45;
+  margin-top: 2px;
+}
+
+/* écrans étroits : on empile */
+@media (max-width: 1100px) {
+  .mcp-entetes { display: none; }
+  .mcp-ligne {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "nom actions"
+      "cmd etat";
+    row-gap: 5px;
+  }
+  .mcp-cellule-nom { grid-area: nom; }
+  .mcp-cellule-commande { grid-area: cmd; }
+  .mcp-cellule-etat { grid-area: etat; justify-content: flex-end; }
+  .mcp-cellule-actions { grid-area: actions; }
+}
+
 /* Responsive */
 /* ══════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════
    Deux styles, réglables dans Apparence :

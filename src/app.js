@@ -1621,65 +1621,174 @@ const EXEMPLES_MCP = [
   }
 ];
 
-function rendreServeursMCP() {
+/**
+ * Tableau des serveurs MCP.
+ *
+ * Chaque ligne montre l'état réel du serveur (jamais démarré, en marche, en
+ * échec), le nombre d'outils disponibles et deux actions explicites. L'état
+ * est intégré à la ligne plutôt que dans une seconde liste : on voit d'un
+ * coup d'œil ce qui fonctionne et ce qui bloque.
+ */
+let etatsMCPCourants = {};
+
+async function rendreServeursMCP() {
   const zone = $('#listeServeursMCP');
   if (!zone) return;
   zone.innerHTML = '';
+
   const serveurs = etat.config.serveursMCP || [];
 
   if (!serveurs.length) {
-    zone.append(el('p', { class: 'vide petit', text: 'Aucun serveur MCP configuré. Utilisez un exemple ci-dessous.' }));
+    zone.append(el('p', { class: 'vide petit', text:
+      'Aucun serveur MCP configuré. Utilisez un exemple prêt à l’emploi ci-dessous.' }));
     return;
   }
 
+  // en-têtes du tableau
+  zone.append(el('div', { class: 'mcp-entetes' },
+    el('span', { text: 'Serveur' }),
+    el('span', { text: 'Commande' }),
+    el('span', { class: 'mcp-col-etat', text: 'État' }),
+    el('span', { class: 'mcp-col-actions', text: 'Actions' })
+  ));
+
   serveurs.forEach((srv, index) => {
-    const item = el('div', { class: 'mcp-item' },
-      el('input', {
-        type: 'checkbox',
-        class: 'champ-reglage-controle bascule',
-        checked: srv.actif !== false ? '' : null,
-        onchange: async (e) => {
-          const liste = [...(etat.config.serveursMCP || [])];
-          liste[index] = { ...liste[index], actif: e.target.checked };
-          await enregistrerConfig({ serveursMCP: liste });
-          rendreServeursMCP();
-        }
-      }),
-      el('div', { class: 'mcp-infos' },
-        el('div', { class: 'mcp-nom', text: srv.nom }),
-        el('div', { class: 'mcp-commande', text: `${srv.commande} ${(srv.arguments || []).join(' ')}` })
-      ),
-      el('button', {
-        class: 'btn-modele', text: 'Tester', title: 'Démarrer et lister les outils',
-        onclick: async (e) => {
-          const b = e.currentTarget;
-          b.disabled = true;
-          b.textContent = '…';
-          const r = await API.mcp.tester(srv.nom);
-          b.disabled = false;
-          b.textContent = 'Tester';
-          await rafraichirEtatsMCP();
-          if (r.ok && r.outils > 0) {
-            notifier(`« ${srv.nom} » : ${r.outils} outil(s) chargé(s).`, 'succes', 4000);
-          } else {
-            const etatSrv = r.etats?.[srv.nom];
-            notifier(`« ${srv.nom} » n'a pas démarré : ${etatSrv?.erreur || 'raison inconnue'}`, 'erreur', 9000);
+    const info = etatsMCPCourants[srv.nom];
+    const actif = srv.actif !== false;
+    const enMarche = Boolean(info?.ok);
+    const enEchec = info && !info.ok;
+    const jamaisLance = !info;
+
+    const etatTexte = enMarche
+      ? `${info.outils} outil${info.outils > 1 ? 's' : ''}`
+      : enEchec ? 'Échec' : jamaisLance ? 'Non démarré' : 'Inactif';
+    const etatClasse = enMarche ? 'ok' : enEchec ? 'echec' : 'attente';
+
+    const ligne = el('div', { class: 'mcp-ligne' + (actif ? '' : ' desactive') },
+      // 1. nom + interrupteur
+      el('div', { class: 'mcp-cellule-nom' },
+        el('button', {
+          class: `mcp-interrupteur${actif ? ' actif' : ''}`,
+          title: actif ? 'Désactiver ce serveur' : 'Activer ce serveur',
+          'aria-pressed': actif ? 'true' : 'false',
+          onclick: async () => {
+            const liste = [...(etat.config.serveursMCP || [])];
+            liste[index] = { ...liste[index], actif: !actif };
+            await enregistrerConfig({ serveursMCP: liste });
+            rendreServeursMCP();
           }
-        }
+        }, el('span', { class: 'mcp-interrupteur-pastille' })),
+        el('span', { class: 'mcp-nom', text: srv.nom })
+      ),
+
+      // 2. commande
+      el('div', {
+        class: 'mcp-cellule-commande',
+        title: `${srv.commande} ${(srv.arguments || []).join(' ')}`,
+        text: `${srv.commande} ${(srv.arguments || []).join(' ')}`
       }),
-      el('button', {
-        class: 'btn-modele danger', text: '✕', title: 'Retirer',
-        onclick: async () => {
-          const liste = (etat.config.serveursMCP || []).filter((_, i) => i !== index);
-          await enregistrerConfig({ serveursMCP: liste });
-          rendreServeursMCP();
-          rendreExemplesMCP();
-          notifier(`Serveur « ${srv.nom} » retiré.`, 'info', 2000);
-        }
-      })
+
+      // 3. état
+      el('div', { class: 'mcp-cellule-etat' },
+        el('span', { class: `mcp-pastille ${etatClasse}` }),
+        el('span', {
+          class: `mcp-etat-txt ${etatClasse}`,
+          text: etatTexte,
+          title: enEchec ? (info.erreur || '') : ''
+        })
+      ),
+
+      // 4. actions
+      el('div', { class: 'mcp-cellule-actions' },
+        el('button', {
+          class: 'btn-mcp demarrer',
+          title: 'Démarrer le serveur et lister ses outils',
+          onclick: async (e) => {
+            const b = e.currentTarget;
+            const avant = b.innerHTML;
+            b.disabled = true;
+            b.classList.add('en-cours');
+            b.innerHTML = '<span class="mcp-roue"></span>Démarrage…';
+            try {
+              const r = await API.mcp.tester(srv.nom);
+              await rafraichirEtatsMCP();
+              if (r.ok && r.outils > 0) {
+                notifier(`« ${srv.nom} » : ${r.outils} outil(s) disponible(s).`, 'succes', 4000);
+              } else {
+                const e2 = r.etats?.[srv.nom];
+                notifier(`« ${srv.nom} » n’a pas démarré : ${e2?.erreur || 'raison inconnue'}`, 'erreur', 10000);
+              }
+            } finally {
+              b.disabled = false;
+              b.classList.remove('en-cours');
+              b.innerHTML = avant;
+            }
+          }
+        }, 'Démarrer'),
+
+        el('button', {
+          class: 'btn-mcp outils',
+          title: 'Voir les outils exposés par ce serveur',
+          onclick: async (e) => {
+            const b = e.currentTarget;
+            b.disabled = true;
+            try {
+              const outils = await API.mcp.outils(srv.nom);
+              afficherOutilsMCP(srv.nom, outils);
+            } catch (err) {
+              notifier(String(err.message || err), 'erreur', 5000);
+            } finally {
+              b.disabled = false;
+            }
+          }
+        }, 'Outils'),
+
+        el('button', {
+          class: 'btn-mcp retirer',
+          title: 'Retirer ce serveur',
+          onclick: async () => {
+            const liste = (etat.config.serveursMCP || []).filter((_, i) => i !== index);
+            await enregistrerConfig({ serveursMCP: liste });
+            rendreServeursMCP();
+            rendreExemplesMCP();
+            notifier(`Serveur « ${srv.nom} » retiré.`, 'info', 2000);
+          }
+        }, '✕')
+      )
     );
-    zone.append(item);
+
+    zone.append(ligne);
   });
+}
+
+/** Affiche la liste des outils d'un serveur. */
+function afficherOutilsMCP(nom, outils) {
+  const existante = document.querySelector('#modaleOutilsMCP');
+  if (existante) existante.remove();
+
+  const liste = Array.isArray(outils) ? outils : (outils?.outils || []);
+
+  const modale = el('div', { class: 'modale', id: 'modaleOutilsMCP' },
+    el('div', { class: 'modale-fond', onclick: () => modale.remove() }),
+    el('div', { class: 'modale-contenu moyenne', role: 'dialog', 'aria-modal': 'true' },
+      el('div', { class: 'modale-entete' },
+        el('h2', { text: `Outils de « ${nom} »` }),
+        el('button', { class: 'btn-fermer', text: '✕', onclick: () => modale.remove() })
+      ),
+      el('div', { class: 'modale-corps' },
+        liste.length
+          ? el('div', { class: 'liste-outils-mcp' },
+              ...liste.map((o) => el('div', { class: 'outil-mcp' },
+                el('div', { class: 'outil-mcp-nom', text: o.nom || o.name || '(sans nom)' }),
+                o.description ? el('div', { class: 'outil-mcp-desc', text: o.description }) : null
+              ))
+            )
+          : el('p', { class: 'vide petit', text:
+              'Aucun outil. Démarrez d’abord le serveur avec « Démarrer ».' })
+      )
+    )
+  );
+  document.body.append(modale);
 }
 
 function rendreExemplesMCP() {
@@ -1756,30 +1865,10 @@ async function ajouterServeurMCP() {
 }
 
 async function rafraichirEtatsMCP() {
-  const zone = $('#etatsMCP');
-  if (!zone) return;
   const r = await API.mcp.etats();
-  zone.innerHTML = '';
-  const serveurs = etat.config.serveursMCP || [];
-  if (!serveurs.length) {
-    zone.append(el('p', { class: 'vide petit', text: 'Aucun serveur déclaré.' }));
-    return;
-  }
-  for (const srv of serveurs) {
-    const e = r.etats?.[srv.nom];
-    const ok = e?.ok;
-    zone.append(el('div', { class: 'mcp-etat' },
-      el('span', { class: 'menu-item-pastille ' + (ok ? 'ok' : 'absent') }),
-      el('span', { class: 'mcp-etat-nom', text: srv.nom }),
-      el('span', {
-        class: 'mcp-etat-detail',
-        title: e?.erreur || '',
-        text: ok ? `${e.outils} outil(s) chargé(s)`
-          : e?.erreur ? e.erreur.slice(0, 110)
-          : srv.actif === false ? 'désactivé' : 'pas encore démarré — cliquez sur Tester'
-      })
-    ));
-  }
+  etatsMCPCourants = r.etats || {};
+  // une seule liste : le tableau porte l'état, pas de doublon à maintenir
+  rendreServeursMCP();
 }
 
 function initialiserPlugins() {

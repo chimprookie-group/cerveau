@@ -4,6 +4,39 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.13.0] — 2026-11-04
+
+### Modifié
+- **Le tableau des serveurs MCP est entièrement refait.** Les boutons étaient
+  illisibles : le style `.btn-modele` impose une boîte de **20 × 20 px** prévue pour
+  une icône, et le mot « Tester » y était écrasé.
+
+  Le nouveau tableau est une vraie grille à quatre colonnes — Serveur, Commande,
+  État, Actions — avec :
+
+  - des **boutons de taille réelle** : « Démarrer » (74 × 24) et « Outils » (51 × 24) ;
+  - un **interrupteur** compact à la place de la case à cocher ;
+  - l'**état intégré à la ligne** (non démarré / N outils / échec), avec une pastille
+    verte, rouge ou grise et la raison de l'échec en infobulle ;
+  - une **roue de progression** pendant le démarrage, au lieu du bouton qui affichait
+    « … » ;
+  - les lignes désactivées grisées ;
+  - un empilement propre sur écran étroit (moins de 1100 px).
+
+### Ajouté
+- **Bouton « Outils »** : ouvre la liste des outils exposés par un serveur, avec leur
+  description. Le serveur est démarré automatiquement si besoin. Nouvel IPC
+  `mcp:outils` et méthode `outilsDuServeur()`.
+- La section redondante « État des serveurs » est supprimée : l'état figure désormais
+  dans le tableau, une seule source à maintenir.
+
+### Vérifié en réel
+- « Démarrer » sur `memory` : **Non démarré → 9 outils**, en vert.
+- « Outils » sur `memory` : modale listant **9 outils**, avec `create_entities` et sa
+  description.
+- Désactivation de `git` : la ligne passe en grisé, l'état affiche « Non démarré ».
+- Aucun bouton à texte ne mesure moins de 40 × 20 px.
+
 ## [2.12.1] — 2026-11-04
 
 ### Corrigé

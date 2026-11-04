@@ -1857,6 +1857,52 @@ async function run(mainWindow, deps) {
   verifier('Images : jointes au message utilisateur',
     /function imagesJointes/.test(appSrcPieces));
 
+  // 6sexquadragies. Tableau des serveurs MCP : boutons lisibles et fonctionnels
+  const uiMCP = await mainWindow.webContents.executeJavaScript(`(async () => {
+    window.cerveauUI.ouvrirReglages('plugins');
+    await new Promise((r) => setTimeout(r, 1100));
+    const zone = document.querySelector('#listeServeursMCP');
+    zone.scrollIntoView({ block: 'center' });
+    await new Promise((r) => setTimeout(r, 400));
+
+    const lignes = [...document.querySelectorAll('.mcp-ligne')];
+    const actions = [...document.querySelectorAll('.mcp-ligne .btn-mcp')]
+      .map((b) => { const r = b.getBoundingClientRect(); return { l: r.width, h: r.height, t: b.textContent.trim() }; });
+
+    return {
+      lignes: lignes.length,
+      entetes: [...document.querySelectorAll('.mcp-entetes span')].map((x) => x.textContent),
+      actions,
+      // plus de table d'états séparée
+      tableEtatsSeparee: Boolean(document.querySelector('#etatsMCP')),
+      boutonDix: actions.filter((a) => a.t === 'Démarrer').length,
+      boutonOutils: actions.filter((a) => a.t === 'Outils').length
+    };
+  })()`);
+  verifier('MCP : tableau avec en-têtes',
+    uiMCP.entetes.length === 4 && /Serveur/i.test(uiMCP.entetes[0]), uiMCP.entetes.join('|'));
+  verifier('MCP : une ligne par serveur', uiMCP.lignes >= 1, `${uiMCP.lignes} lignes`);
+  verifier('MCP : bouton « Démarrer » par serveur',
+    uiMCP.boutonDix === uiMCP.lignes, `${uiMCP.boutonDix}/${uiMCP.lignes}`);
+  verifier('MCP : bouton « Outils » par serveur',
+    uiMCP.boutonOutils === uiMCP.lignes, `${uiMCP.boutonOutils}/${uiMCP.lignes}`);
+
+  // régression : les boutons à texte faisaient 20x20 px et étaient écrasés.
+  // Les boutons-icônes (✕) restent volontairement carrés et sont exclus.
+  const aTexte = uiMCP.actions.filter((a) => a.t.length > 2);
+  const tropPetits = aTexte.filter((a) => a.l < 40 || a.h < 20);
+  verifier('MCP : boutons à texte assez grands',
+    tropPetits.length === 0,
+    tropPetits.map((a) => `${a.t}:${Math.round(a.l)}x${Math.round(a.h)}`).join(' '));
+  verifier('MCP : boutons à texte mesurés', aTexte.length >= 2, `${aTexte.length} boutons`);
+  verifier('MCP : plus de tableau d’états redondant',
+    uiMCP.tableEtatsSeparee === false);
+
+  // l'IPC des outils répond
+  const outilsMCP = await mainWindow.webContents.executeJavaScript(
+    `window.cerveau.mcp.outils('inexistant')`);
+  verifier('MCP : IPC outils répond', typeof outilsMCP.ok === 'boolean', String(outilsMCP.ok));
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 

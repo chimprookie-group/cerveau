@@ -88,6 +88,7 @@ contextBridge.exposeInMainWorld('cerveau', {
   mcp: {
     etats: () => ipcRenderer.invoke('mcp:etats'),
     tester: (nom) => ipcRenderer.invoke('mcp:tester', nom),
+    outils: (nom) => ipcRenderer.invoke('mcp:outils', nom),
     arreter: () => ipcRenderer.invoke('mcp:arreter')
   },
 

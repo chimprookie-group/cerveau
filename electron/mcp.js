@@ -278,6 +278,20 @@ class GestionnaireMCP {
   }
 
   /** État de chaque serveur, pour l'interface. */
+  /**
+   * Outils exposés par un serveur donné.
+   * Un serveur non démarré renvoie une liste vide : c'est à l'appelant de
+   * décider s'il faut le lancer d'abord.
+   */
+  outilsDuServeur(nom) {
+    const serveur = this.serveurs.get(nom);
+    if (!serveur || !Array.isArray(serveur.outils)) return [];
+    return serveur.outils.map((o) => ({
+      nom: o.nom || o.name,
+      description: o.description || ''
+    }));
+  }
+
   etatsServeurs() {
     const sortie = {};
     for (const [nom, etat] of this.etats) {

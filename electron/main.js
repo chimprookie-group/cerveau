@@ -971,6 +971,26 @@ ipcMain.handle('mcp:etats', async () => {
   }
 });
 
+ipcMain.handle('mcp:outils', async (_e, nom) => {
+  try {
+    if (!nom) return { ok: false, outils: [], message: 'Nom de serveur manquant.' };
+
+    // On charge le serveur s'il ne tourne pas encore : l'utilisateur qui
+    // clique « Outils » veut voir la liste, pas un message d'erreur.
+    const cfg = config.getConfig();
+    const cible = (cfg.serveursMCP || []).find((x) => x.nom === nom);
+    if (!cible) return { ok: false, outils: [], message: `Serveur « ${nom} » introuvable.` };
+
+    const dejaLa = mcpGestionnaire.etatsServeurs()[nom];
+    if (!dejaLa?.ok) await mcpGestionnaire.charger([cible]);
+
+    const outils = mcpGestionnaire.outilsDuServeur(nom);
+    return { ok: true, outils, total: outils.length };
+  } catch (err) {
+    return { ok: false, outils: [], message: String(err.message || err) };
+  }
+});
+
 ipcMain.handle('mcp:tester', async (_e, nom) => {
   try {
     const cfg = config.getConfig();
