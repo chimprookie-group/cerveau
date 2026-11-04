@@ -318,6 +318,10 @@
             <span class="nav-reglage-icone">⬡</span>
             <span class="nav-reglage-texte">Plugins et web</span>
           </button>
+          <button class="nav-reglage" data-reglage="objectifs">
+            <span class="nav-reglage-icone">◈</span>
+            <span class="nav-reglage-texte">Objectifs</span>
+          </button>
           <button class="nav-reglage" data-reglage="memoire">
             <span class="nav-reglage-icone">❖</span>
             <span class="nav-reglage-texte">Mémoire</span>
@@ -468,6 +472,64 @@
             <h3 class="section-reglage-titre">Outils disponibles</h3>
             <p class="section-reglage-desc">Désactivez ce que l'IA ne doit pas utiliser, quel que soit le mode.</p>
             <div id="reglageOutils" class="liste-outils-reglage"></div>
+          </section>
+        </div>
+
+        <!-- Objectifs persistants -->
+        <div class="volet-reglage" id="reglage-objectifs">
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Objectifs</h3>
+            <p class="section-reglage-desc">
+              Un travail qui dépasse un seul échange. Cerveau avance d'un tour à la fois,
+              note ce qu'il a fait, et reprend là où il s'était arrêté — même après un
+              redémarrage.
+            </p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="objectifTitre">Objectif</label>
+                <p class="champ-reglage-aide">Ce que vous voulez obtenir, en une phrase.</p>
+              </div>
+              <input type="text" id="objectifTitre" class="champ-reglage-controle large"
+                     placeholder="ex. Migrer le projet vers TypeScript" maxlength="200" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="objectifDescription">Détails</label>
+                <p class="champ-reglage-aide">Contexte, contraintes, ce qu'il faut éviter.</p>
+              </div>
+              <input type="text" id="objectifDescription" class="champ-reglage-controle large"
+                     placeholder="(facultatif)" maxlength="2000" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="objectifCritere">Critère de réussite</label>
+                <p class="champ-reglage-aide">Comment saura-t-on que c'est fini ?</p>
+              </div>
+              <input type="text" id="objectifCritere" class="champ-reglage-controle large"
+                     placeholder="ex. plus aucun fichier .js" maxlength="500" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="objectifMaxTours">Nombre de tours maximum</label>
+                <p class="champ-reglage-aide">Garde-fou : au-delà, l'objectif est suspendu.</p>
+              </div>
+              <input type="number" id="objectifMaxTours" min="1" max="100" step="1" value="20"
+                     class="champ-reglage-controle champ-nombre" />
+            </div>
+
+            <div class="rangee-boutons">
+              <button id="btnObjectifCreer" class="btn-principal">Créer l'objectif</button>
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Suivi</h3>
+            <p class="section-reglage-desc" id="objectifResume">Aucun objectif pour le moment.</p>
+            <div id="listeObjectifs" class="liste-objectifs"></div>
           </section>
         </div>
 

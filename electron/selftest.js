@@ -565,7 +565,7 @@ async function run(mainWindow, deps) {
              anciensOnglets: document.querySelectorAll('.onglet-reglage').length };
   })()`);
 
-  verifier('Navigation verticale avec 12 sections', reglages.nav.length === 12, `${reglages.nav.length} sections`);
+  verifier('Navigation verticale avec 13 sections', reglages.nav.length === 13, `${reglages.nav.length} sections`);
   verifier('Sections groupées', reglages.groupes.length >= 4, reglages.groupes.join(', '));
   verifier('Chaque section s\'affiche', Object.values(reglages.resultats).every(Boolean),
     Object.entries(reglages.resultats).filter(([, v]) => !v).map(([k]) => k).join(',') || 'toutes');
@@ -1534,6 +1534,68 @@ async function run(mainWindow, deps) {
   verifier('Mémoire : section accessible', uiMem.section === 'reglage-memoire');
   verifier('Mémoire : champ et liste présents', uiMem.champ === true && uiMem.liste === true);
   verifier('Mémoire : boutons présents', uiMem.boutons === 2);
+
+  // 6duodetricies. Objectifs persistants
+  const objMod = require('./objectifs');
+  const objFichier = path.join(os.tmpdir(), `obj-selftest-${Date.now()}.json`);
+  try {
+    const gest = new objMod.Objectifs(objFichier);
+    const obj = await gest.creer({ titre: 'Objectif de test', critere: 'Fait', maxTours: 3 });
+    verifier('Objectifs : création', Boolean(obj.id) && obj.etat === 'actif');
+    verifier('Objectifs : persistés', fs2.existsSync(objFichier));
+
+    const prompt = gest.promptDuTour(obj);
+    verifier('Objectifs : prompt contient la consigne',
+      prompt.includes('Objectif de test') && /SUITE\s*:/.test(prompt) && /TERMINE/.test(prompt));
+
+    // analyses
+    const aFin = gest.analyserReponse('Fait.\n\nTERMINE');
+    verifier('Objectifs : fin détectée', aFin.termine === true);
+    const aSuite = gest.analyserReponse('Fait.\n\nSUITE: continuer');
+    verifier('Objectifs : suite extraite', aSuite.prochainPas === 'continuer', aSuite.prochainPas);
+    const aBloque = gest.analyserReponse('Non.\n\nBLOQUE: clé absente');
+    verifier('Objectifs : blocage détecté', /clé absente/.test(aBloque.bloque || ''));
+
+    // un tour
+    const t1 = await gest.enregistrerTour(obj.id, { texte: 'Fait 1.\n\nSUITE: étape 2' });
+    verifier('Objectifs : tour compté', t1.objectif.tours === 1);
+    verifier('Objectifs : prochain pas retenu', t1.objectif.prochainPas === 'étape 2');
+    verifier('Objectifs : historique', t1.objectif.historique.length === 1);
+
+    // échec n'abandonne pas
+    const t2 = await gest.enregistrerTour(obj.id, { texte: '', ok: false, erreur: 'panne' });
+    verifier('Objectifs : échec non fatal', t2.objectif.etat === 'actif');
+
+    // blocage suspend
+    const t3 = await gest.enregistrerTour(obj.id, { texte: 'BLOQUE: permission' });
+    verifier('Objectifs : blocage suspend', t3.objectif.etat === 'suspendu');
+
+    // reprise
+    const repris = await gest.changerEtat(obj.id, 'actif');
+    verifier('Objectifs : reprise', repris.etat === 'actif' && repris.blocage === null);
+
+    // fin
+    const t4 = await gest.enregistrerTour(obj.id, { texte: 'Achevé.\n\nTERMINE' });
+    verifier('Objectifs : terminé', t4.objectif.etat === 'termine');
+  } finally {
+    await fsp.rm(objFichier, { force: true });
+  }
+
+  // interface
+  const uiObj = await mainWindow.webContents.executeJavaScript(`(async () => {
+    window.cerveauUI.ouvrirReglages('objectifs');
+    await new Promise((r) => setTimeout(r, 700));
+    const res = {
+      section: document.querySelector('.volet-reglage.actif')?.id,
+      champ: !!document.querySelector('#objectifTitre'),
+      liste: !!document.querySelector('#listeObjectifs'),
+      bouton: !!document.querySelector('#btnObjectifCreer')
+    };
+    document.querySelector('#btnFermerReglages2').click();
+    return res;
+  })()`);
+  verifier('Objectifs : section accessible', uiObj.section === 'reglage-objectifs');
+  verifier('Objectifs : champs et liste', uiObj.champ && uiObj.liste && uiObj.bouton);
 
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));

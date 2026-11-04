@@ -3117,6 +3117,80 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   margin-top: 3px;
 }
 
+/* ══════════════════ OBJECTIFS ══════════════════ */
+
+.liste-objectifs { display: flex; flex-direction: column; gap: 8px; }
+
+.objectif {
+  background: var(--fond-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  padding: 11px 13px;
+}
+
+.objectif-tete { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+
+.objectif-etat {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--fond);
+  color: var(--texte-3);
+  flex-shrink: 0;
+}
+
+.objectif-etat.encours { color: var(--accent-clair); background: rgba(217,139,95,0.16); }
+.objectif-etat.ok { color: var(--succes); background: rgba(90,170,110,0.16); }
+.objectif-etat.echec { color: var(--danger); background: rgba(200,80,70,0.16); }
+
+.objectif-titre { font-size: 12.5px; font-weight: 600; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+.objectif-tours {
+  font-family: var(--police-mono);
+  font-size: 10px;
+  color: var(--texte-3);
+  flex-shrink: 0;
+}
+
+.objectif-barre {
+  height: 4px;
+  border-radius: 3px;
+  background: var(--fond);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.objectif-barre-remplie {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-sombre), var(--accent-clair));
+  transition: width 0.3s;
+}
+
+.objectif-critere,
+.objectif-suite,
+.objectif-dernier {
+  font-size: 10.5px;
+  color: var(--texte-2);
+  line-height: 1.5;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+
+.objectif-suite { color: var(--accent-clair); }
+.objectif-dernier { color: var(--texte-3); }
+
+.objectif-blocage {
+  font-size: 10.5px;
+  color: var(--danger);
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
+}
+
+.objectif-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
 /* Responsive */
 /* ══════════════ DISPOSITION DU PANNEAU LATÉRAL ══════════════
    Deux styles, réglables dans Apparence :

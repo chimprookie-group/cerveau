@@ -4,6 +4,30 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.9.1] — 2026-11-04
+
+### Ajouté
+- **Objectifs persistants.** Un objectif est un travail qui dépasse un seul échange :
+  « migre le projet vers TypeScript », « écris la documentation de l'API ». Cerveau
+  avance d'un tour à la fois, note ce qu'il a fait, et **reprend là où il s'est arrêté**,
+  même après un redémarrage.
+
+  - Nouvelle section **Réglages → Objectifs** : créer, suivre, lancer le tour suivant,
+    suspendre, reprendre, abandonner.
+  - Chaque tour reçoit le titre, les détails, le critère de réussite et **l'historique
+    des pas déjà faits** — sans quoi il recommencerait depuis le début.
+  - L'agent conclut chaque tour par `SUITE:` (prochaine action) ou `TERMINE`.
+  - **Garde-fous** : budget de tours (20 par défaut, ajustable), suspension automatique
+    si l'agent écrit `BLOQUE:`, et un échec de tour n'abandonne pas l'objectif.
+  - Reprendre un objectif suspendu efface le blocage et redonne du budget.
+
+### Vérifié en réel
+- Objectif « compter les fichiers du dossier electron/ » : l'agent a constaté que le
+  dossier n'existait pas dans l'espace de travail et a répondu `BLOQUE:` → objectif
+  **suspendu automatiquement**, avec la raison affichée.
+- Même objectif avec le bon espace de travail : **terminé en 1 tour**, 19 fichiers
+  comptés, marqueur `TERMINE` reconnu.
+
 ## [2.9.0] — 2026-11-04
 
 ### Ajouté

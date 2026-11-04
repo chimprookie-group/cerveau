@@ -709,6 +709,158 @@ function initialiserTerminal() {
   });
 }
 
+/* ═══════════════════════════ OBJECTIFS ═══════════════════════════ */
+
+const ETATS_OBJECTIF = {
+  actif: { texte: 'En cours', classe: 'encours' },
+  suspendu: { texte: 'Suspendu', classe: 'attente' },
+  termine: { texte: 'Terminé', classe: 'ok' },
+  abandonne: { texte: 'Abandonné', classe: 'echec' }
+};
+
+async function rendreObjectifs() {
+  const zone = $('#listeObjectifs');
+  if (!zone) return;
+
+  const r = await API.objectif.lister();
+  zone.innerHTML = '';
+
+  const objectifs = r.objectifs || [];
+  const resume = $('#objectifResume');
+  if (resume) {
+    if (!objectifs.length) {
+      resume.textContent = "Aucun objectif pour le moment. Décrivez-en un ci-dessus.";
+    } else {
+      const actifs = objectifs.filter((o) => o.etat === 'actif').length;
+      const termines = objectifs.filter((o) => o.etat === 'termine').length;
+      resume.textContent = `${objectifs.length} objectif(s) · ${actifs} en cours · ${termines} terminé(s).`;
+    }
+  }
+
+  if (!objectifs.length) {
+    zone.append(el('p', { class: 'vide petit', text: 'Rien en cours.' }));
+    return;
+  }
+
+  for (const o of objectifs) {
+    const etat = ETATS_OBJECTIF[o.etat] || { texte: o.etat, classe: '' };
+    const dernier = o.historique?.[o.historique.length - 1];
+
+    const carte = el('div', { class: 'objectif' },
+      el('div', { class: 'objectif-tete' },
+        el('span', { class: `objectif-etat ${etat.classe}`, text: etat.texte }),
+        el('span', { class: 'objectif-titre', text: o.titre }),
+        el('span', { class: 'objectif-tours', text: `${o.tours || 0}/${o.maxTours} tours` })
+      ),
+      el('div', { class: 'objectif-barre' },
+        el('div', { class: 'objectif-barre-remplie', style: `width:${o.progression || 0}%` })
+      ),
+      o.critere ? el('div', { class: 'objectif-critere', text: `Réussi si : ${o.critere}` }) : null,
+      o.blocage ? el('div', { class: 'objectif-blocage', text: o.blocage }) : null,
+      o.prochainPas ? el('div', { class: 'objectif-suite', text: `Suite : ${o.prochainPas.slice(0, 160)}` }) : null,
+      dernier ? el('div', { class: 'objectif-dernier', text: `Dernier tour : ${dernier.resume.slice(0, 140)}` }) : null,
+      el('div', { class: 'objectif-actions' })
+    );
+
+    const actions = carte.querySelector('.objectif-actions');
+
+    if (o.etat === 'actif' || o.etat === 'suspendu') {
+      actions.append(el('button', {
+        class: 'btn-mini',
+        text: o.etat === 'suspendu' ? 'Reprendre' : 'Tour suivant',
+        onclick: async (e) => {
+          const b = e.currentTarget;
+          b.disabled = true;
+          b.textContent = 'En cours…';
+          if (o.etat === 'suspendu') {
+            await API.objectif.changerEtat({ id: o.id, etat: 'actif' });
+          }
+          const res = await API.objectif.tour(o.id);
+          b.disabled = false;
+          b.textContent = 'Tour suivant';
+          if (res.ok) {
+            notifier(`Tour ${res.objectif.tours} terminé.`, 'succes', 3000);
+            if (res.objectif.etat === 'termine') notifier('Objectif atteint.', 'succes', 5000);
+          } else {
+            notifier(res.message || 'Le tour a échoué.', 'erreur', 5000);
+          }
+          await rendreObjectifs();
+        }
+      }));
+
+      if (o.etat === 'actif') {
+        actions.append(el('button', {
+          class: 'btn-mini', text: 'Suspendre',
+          onclick: async () => {
+            await API.objectif.changerEtat({ id: o.id, etat: 'suspendu' });
+            await rendreObjectifs();
+          }
+        }));
+      }
+    }
+
+    if (o.etat !== 'abandonne' && o.etat !== 'termine') {
+      actions.append(el('button', {
+        class: 'btn-mini danger', text: 'Abandonner',
+        onclick: async () => {
+          if (!confirm(`Abandonner « ${o.titre} » ?`)) return;
+          await API.objectif.changerEtat({ id: o.id, etat: 'abandonne' });
+          await rendreObjectifs();
+        }
+      }));
+    }
+
+    actions.append(el('button', {
+      class: 'btn-modele danger', text: '✕', title: 'Supprimer',
+      onclick: async () => {
+        if (!confirm(`Supprimer définitivement « ${o.titre} » ?`)) return;
+        await API.objectif.supprimer(o.id);
+        await rendreObjectifs();
+      }
+    }));
+
+    zone.append(carte);
+  }
+}
+
+function initialiserObjectifs() {
+  $('#btnObjectifCreer')?.addEventListener('click', async () => {
+    const titre = $('#objectifTitre')?.value.trim();
+    if (!titre) return notifier("Donnez un titre à l'objectif.", 'erreur', 3000);
+
+    const r = await API.objectif.creer({
+      titre,
+      description: $('#objectifDescription')?.value.trim() || '',
+      critere: $('#objectifCritere')?.value.trim() || '',
+      maxTours: Number($('#objectifMaxTours')?.value) || 20
+    });
+
+    if (r.ok) {
+      if ($('#objectifTitre')) $('#objectifTitre').value = '';
+      if ($('#objectifDescription')) $('#objectifDescription').value = '';
+      if ($('#objectifCritere')) $('#objectifCritere').value = '';
+      notifier('Objectif créé. Lancez le premier tour quand vous voulez.', 'succes', 4000);
+      await rendreObjectifs();
+    } else {
+      notifier(r.message || 'Création impossible.', 'erreur', 4000);
+    }
+  });
+
+  // les événements d'un tour mettent l'interface à jour
+  API.objectif.surEvenement((evt) => {
+    if (evt.type === 'tour:debut') {
+      notifier(`Tour ${evt.tour} en cours…`, 'info', 2500);
+    }
+    if (evt.type === 'tour:fin') {
+      rendreObjectifs();
+      if (evt.objectif?.etat === 'termine') notifier('Objectif atteint.', 'succes', 6000);
+      else if (evt.objectif?.etat === 'suspendu') notifier(`Objectif suspendu : ${evt.objectif.blocage || 'voir le suivi'}`, 'erreur', 6000);
+    }
+  });
+
+  rendreObjectifs();
+}
+
 /* ═══════════════════════════ MÉMOIRE ═══════════════════════════ */
 
 const NOMS_CATEGORIES = {
@@ -3482,6 +3634,7 @@ function ouvrirReglages(onglet = null) {
   initialiserPlugins();
   initialiserDispositionPanneau();
   initialiserSuperviseur();
+  initialiserObjectifs();
   initialiserMemoire();
 
   $('#modePermissions').value = etat.config.permissions?.mode || 'demander';

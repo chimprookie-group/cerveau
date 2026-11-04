@@ -17,6 +17,7 @@ const webtools = require('./webtools');
 const { gestionnaire: mcpGestionnaire } = require('./mcp');
 const { Superviseur } = require('./superviseur');
 const { Memoire } = require('./memoire');
+const { Objectifs } = require('./objectifs');
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -349,6 +350,140 @@ ipcMain.handle('workspace:infos', async () => {
     git,
     entrees
   };
+});
+
+/* --------------------------- IPC : objectifs ---------------------------- */
+
+let objectifsInstance = null;
+let objectifEnCours = null;
+
+function obtenirObjectifs() {
+  if (!objectifsInstance) {
+    objectifsInstance = new Objectifs(path.join(app.getPath('userData'), 'objectifs.json'));
+  }
+  return objectifsInstance;
+}
+
+/** Contexte d'exécution d'un tour d'objectif. */
+function contexteObjectif(cfg) {
+  const providerId = cfg.activeProvider;
+  return {
+    providerId,
+    credentials: config.getProviderCredentials(providerId),
+    workspace: cfg.workspace,
+    permissions: { ...cfg.permissions, mode: 'auto' },
+    confirmer: async () => ({ autorise: true })
+  };
+}
+
+/**
+ * Exécute un tour d'objectif et enregistre l'avancement.
+ * Un seul tour à la fois : deux tours simultanés sur le même objectif
+ * produiraient des pas contradictoires.
+ */
+async function jouerTour(id, { annoncer = true } = {}) {
+  if (objectifEnCours) return { ok: false, message: 'Un tour est déjà en cours.' };
+
+  const gest = obtenirObjectifs();
+  const obj = await gest.trouver(id);
+  if (!obj) return { ok: false, message: 'Objectif introuvable.' };
+  if (obj.etat === 'termine' || obj.etat === 'abandonne') {
+    return { ok: false, message: `Objectif ${obj.etat}.` };
+  }
+  if (obj.etat === 'suspendu') {
+    return { ok: false, message: 'Objectif suspendu : reprenez-le d’abord.' };
+  }
+
+  const cfg = config.getConfig({ revealKeys: true });
+  const coffre = coffreActif();
+  const contexte = contexteObjectif(cfg);
+  if (!contexte.credentials?.apiKey) {
+    return { ok: false, message: 'Aucune clé d’API configurée.' };
+  }
+
+  objectifEnCours = id;
+  const envoyer = (type, payload) => {
+    try { mainWindow?.webContents.send('objectif:evenement', { type, id, ...payload }); } catch { /* ignore */ }
+  };
+
+  if (annoncer) envoyer('tour:debut', { tour: (obj.tours || 0) + 1 });
+
+  const prompt = gest.promptDuTour(obj);
+  let resultat;
+  try {
+    resultat = await agent.run({
+      providerId: contexte.providerId,
+      credentials: contexte.credentials,
+      historique: [{ role: 'user', contenu: prompt }],
+      ctx: {
+        mode: cfg.mode || 'complet',
+        vaultPath: coffre?.path || null,
+        coffre,
+        workspace: cfg.workspace || null,
+        depotGithub: null,
+        githubUtilisateur: null,
+        systemPrompt: cfg.systemPrompt || '',
+        outilsDesactives: cfg.outilsDesactives || [],
+        agentMaxTours: cfg.agent?.maxTours,
+        agentCapSortie: cfg.agent?.capSortie,
+        temperature: cfg.temperature,
+        presets: cfg.presetsComportement || [],
+        permissions: contexte.permissions,
+        confirmer: contexte.confirmer,
+        memoire: obtenirMemoire(),
+        serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
+        rechercheWeb: cfg.rechercheWeb || {}
+      },
+      emit: (evt) => {
+        if (evt.type === 'outil_resultat') envoyer('tour:outil', { nom: evt.nom, message: evt.message });
+        if (evt.type === 'erreur') envoyer('tour:erreur', { message: evt.message });
+      }
+    });
+  } catch (err) {
+    objectifEnCours = null;
+    const r = await gest.enregistrerTour(id, { texte: '', ok: false, erreur: String(err.message || err) });
+    envoyer('tour:fin', { objectif: r.objectif });
+    return { ok: false, message: String(err.message || err), objectif: r.objectif };
+  }
+
+  objectifEnCours = null;
+  const r = await gest.enregistrerTour(id, {
+    texte: resultat.texte || '',
+    ok: !resultat.erreur,
+    erreur: resultat.erreur || null
+  });
+
+  envoyer('tour:fin', { objectif: r.objectif, texte: resultat.texte || '' });
+  return { ok: true, objectif: r.objectif, texte: resultat.texte || '', analyse: r.analyse };
+}
+
+ipcMain.handle('objectif:lister', async () => {
+  try { return { ok: true, ...(await obtenirObjectifs().instantane()) }; }
+  catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('objectif:creer', async (_e, payload) => {
+  try {
+    const obj = await obtenirObjectifs().creer(payload || {});
+    return { ok: true, objectif: obj };
+  } catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('objectif:tour', async (_e, id) => {
+  try { return await jouerTour(id); }
+  catch (err) { objectifEnCours = null; return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('objectif:etat', async (_e, { id, etat }) => {
+  try {
+    const obj = await obtenirObjectifs().changerEtat(id, etat);
+    return { ok: true, objectif: obj };
+  } catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('objectif:supprimer', async (_e, id) => {
+  try { return { ok: true, ...(await obtenirObjectifs().supprimer(id)) }; }
+  catch (err) { return { ok: false, message: String(err.message || err) }; }
 });
 
 /* ---------------------------- IPC : mémoire ----------------------------- */

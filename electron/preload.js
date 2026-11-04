@@ -31,6 +31,19 @@ contextBridge.exposeInMainWorld('cerveau', {
     tester: () => ipcRenderer.invoke('web:tester')
   },
 
+  objectif: {
+    lister: () => ipcRenderer.invoke('objectif:lister'),
+    creer: (payload) => ipcRenderer.invoke('objectif:creer', payload),
+    tour: (id) => ipcRenderer.invoke('objectif:tour', id),
+    changerEtat: (payload) => ipcRenderer.invoke('objectif:etat', payload),
+    supprimer: (id) => ipcRenderer.invoke('objectif:supprimer', id),
+    surEvenement: (cb) => {
+      const h = (_e, data) => cb(data);
+      ipcRenderer.on('objectif:evenement', h);
+      return () => ipcRenderer.removeListener('objectif:evenement', h);
+    }
+  },
+
   memoire: {
     lister: () => ipcRenderer.invoke('memoire:lister'),
     ajouter: (payload) => ipcRenderer.invoke('memoire:ajouter', payload),
