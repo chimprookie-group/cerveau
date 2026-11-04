@@ -31,6 +31,20 @@ contextBridge.exposeInMainWorld('cerveau', {
     tester: () => ipcRenderer.invoke('web:tester')
   },
 
+  planification: {
+    lister: () => ipcRenderer.invoke('planification:lister'),
+    creer: (payload) => ipcRenderer.invoke('planification:creer', payload),
+    analyser: (texte) => ipcRenderer.invoke('planification:analyser', texte),
+    basculer: (payload) => ipcRenderer.invoke('planification:basculer', payload),
+    executer: (id) => ipcRenderer.invoke('planification:executer', id),
+    supprimer: (id) => ipcRenderer.invoke('planification:supprimer', id),
+    surEvenement: (cb) => {
+      const h = (_e, data) => cb(data);
+      ipcRenderer.on('planification:evenement', h);
+      return () => ipcRenderer.removeListener('planification:evenement', h);
+    }
+  },
+
   objectif: {
     lister: () => ipcRenderer.invoke('objectif:lister'),
     creer: (payload) => ipcRenderer.invoke('objectif:creer', payload),

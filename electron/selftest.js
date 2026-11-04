@@ -565,7 +565,7 @@ async function run(mainWindow, deps) {
              anciensOnglets: document.querySelectorAll('.onglet-reglage').length };
   })()`);
 
-  verifier('Navigation verticale avec 13 sections', reglages.nav.length === 13, `${reglages.nav.length} sections`);
+  verifier('Navigation verticale avec 14 sections', reglages.nav.length === 14, `${reglages.nav.length} sections`);
   verifier('Sections groupées', reglages.groupes.length >= 4, reglages.groupes.join(', '));
   verifier('Chaque section s\'affiche', Object.values(reglages.resultats).every(Boolean),
     Object.entries(reglages.resultats).filter(([, v]) => !v).map(([k]) => k).join(',') || 'toutes');
@@ -1596,6 +1596,82 @@ async function run(mainWindow, deps) {
   })()`);
   verifier('Objectifs : section accessible', uiObj.section === 'reglage-objectifs');
   verifier('Objectifs : champs et liste', uiObj.champ && uiObj.liste && uiObj.bouton);
+
+  // 6tricies. Tâches planifiées
+  const planMod = require('./planificateur');
+  const planFichier = path.join(os.tmpdir(), `plan-selftest-${Date.now()}.json`);
+  try {
+    const plan = new planMod.Planificateur(planFichier);
+
+    // analyse en français
+    const casFreq = [
+      ['toutes les 30 minutes', 30, 'minutes'],
+      ['chaque heure', 1, 'heures'],
+      ['tous les jours', 1, 'jours'],
+      ['chaque matin', 1, 'jours']
+    ];
+    let freqOk = true;
+    for (const [txt, n, u] of casFreq) {
+      const r = planMod.analyserIntervalle(txt);
+      if (!r || r.intervalle !== n || r.echelle !== u) freqOk = false;
+    }
+    verifier('Planification : fréquences comprises', freqOk);
+    verifier('Planification : texte vague rejeté',
+      planMod.analyserIntervalle('de temps en temps') === null);
+
+    // français correct
+    verifier('Planification : accords corrects',
+      planMod.decrireIntervalle({ intervalle: 1, echelle: 'jours' }) === 'Chaque jour'
+      && planMod.decrireIntervalle({ intervalle: 2, echelle: 'heures' }) === 'Toutes les 2 heures',
+      planMod.decrireIntervalle({ intervalle: 2, echelle: 'heures' }));
+
+    const tache = await plan.creer({ nom: 'Tâche de test', consigne: 'Fais un test', intervalle: 2, echelle: 'heures' });
+    verifier('Planification : création', Boolean(tache.id) && tache.actif === true);
+    verifier('Planification : persistée', fs2.existsSync(planFichier));
+    verifier('Planification : pas due tout de suite', (await plan.dues()).length === 0);
+
+    await plan.reporter(tache.id, { dansMs: -1000 });
+    verifier('Planification : due après échéance', (await plan.dues()).length === 1);
+
+    plan.marquerEnCours(tache.id, true);
+    verifier('Planification : une tâche en cours n\'est pas due', (await plan.dues()).length === 0);
+    plan.marquerEnCours(tache.id, false);
+
+    const e1 = await plan.enregistrerExecution(tache.id, { ok: true, resume: 'fait' });
+    verifier('Planification : exécution comptée', e1.executions === 1 && e1.historique.length === 1);
+    verifier('Planification : échéance repoussée', e1.prochaineEcheance > Date.now());
+
+    // trois échecs mettent en pause
+    for (let i = 0; i < 3; i++) {
+      await plan.reporter(tache.id, { dansMs: -1000 });
+      await plan.enregistrerExecution(tache.id, { ok: false, erreur: 'panne' });
+    }
+    const enPause = await plan.trouver(tache.id);
+    verifier('Planification : pause après 3 échecs', enPause.actif === false);
+    verifier('Planification : raison de pause', /3 échecs/.test(enPause.pauseAuto || ''));
+
+    const reactive = await plan.basculer(tache.id, true);
+    verifier('Planification : réactivation', reactive.actif === true && reactive.echecsConsecutifs === 0);
+  } finally {
+    await fsp.rm(planFichier, { force: true });
+  }
+
+  // interface
+  const uiPlan = await mainWindow.webContents.executeJavaScript(`(async () => {
+    window.cerveauUI.ouvrirReglages('planification');
+    await new Promise((r) => setTimeout(r, 800));
+    const res = {
+      section: document.querySelector('.volet-reglage.actif')?.id,
+      champs: ['planNom', 'planConsigne', 'planFrequence', 'planObjectif']
+        .filter((id) => document.getElementById(id)).length,
+      bouton: !!document.querySelector('#btnPlanCreer')
+    };
+    document.querySelector('#btnFermerReglages2').click();
+    return res;
+  })()`);
+  verifier('Planification : section accessible', uiPlan.section === 'reglage-planification');
+  verifier('Planification : champs présents', uiPlan.champs === 4, `${uiPlan.champs} champs`);
+  verifier('Planification : bouton présent', uiPlan.bouton === true);
 
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));

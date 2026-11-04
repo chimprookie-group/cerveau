@@ -318,6 +318,10 @@
             <span class="nav-reglage-icone">⬡</span>
             <span class="nav-reglage-texte">Plugins et web</span>
           </button>
+          <button class="nav-reglage" data-reglage="planification">
+            <span class="nav-reglage-icone">◔</span>
+            <span class="nav-reglage-texte">Tâches planifiées</span>
+          </button>
           <button class="nav-reglage" data-reglage="objectifs">
             <span class="nav-reglage-icone">◈</span>
             <span class="nav-reglage-texte">Objectifs</span>
@@ -472,6 +476,69 @@
             <h3 class="section-reglage-titre">Outils disponibles</h3>
             <p class="section-reglage-desc">Désactivez ce que l'IA ne doit pas utiliser, quel que soit le mode.</p>
             <div id="reglageOutils" class="liste-outils-reglage"></div>
+          </section>
+        </div>
+
+        <!-- Tâches planifiées -->
+        <div class="volet-reglage" id="reglage-planification">
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Tâches planifiées</h3>
+            <p class="section-reglage-desc">
+              Une consigne ou un objectif relancé automatiquement à intervalle régulier.
+              L'application doit être ouverte pour que la tâche s'exécute.
+            </p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="planNom">Nom de la tâche</label>
+                <p class="champ-reglage-aide">Pour la reconnaître dans la liste.</p>
+              </div>
+              <input type="text" id="planNom" class="champ-reglage-controle large"
+                     placeholder="ex. Résumé des issues" maxlength="120" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="planConsigne">Consigne</label>
+                <p class="champ-reglage-aide">Ce que Cerveau doit faire à chaque passage.</p>
+              </div>
+              <input type="text" id="planConsigne" class="champ-reglage-controle large"
+                     placeholder="ex. Résume les nouvelles issues du dépôt" maxlength="2000" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="planFrequence">Fréquence</label>
+                <p class="champ-reglage-aide">
+                  En mots : « toutes les 30 minutes », « chaque matin », « toutes les 2 heures ».
+                </p>
+              </div>
+              <input type="text" id="planFrequence" class="champ-reglage-controle large"
+                     placeholder="toutes les heures" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="planObjectif">Relancer un objectif</label>
+                <p class="champ-reglage-aide">
+                  Facultatif. Si choisi, la tâche joue un tour de cet objectif au lieu
+                  de la consigne.
+                </p>
+              </div>
+              <select id="planObjectif" class="champ-reglage-controle">
+                <option value="">— Aucun (consigne libre) —</option>
+              </select>
+            </div>
+
+            <div class="rangee-boutons">
+              <button id="btnPlanCreer" class="btn-principal">Créer la tâche</button>
+            </div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Suivi</h3>
+            <p class="section-reglage-desc" id="planResume">Aucune tâche planifiée.</p>
+            <div id="listePlanification" class="liste-objectifs"></div>
           </section>
         </div>
 

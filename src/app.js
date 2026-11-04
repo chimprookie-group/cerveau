@@ -709,6 +709,171 @@ function initialiserTerminal() {
   });
 }
 
+/* ═══════════════════════════ PLANIFICATION ═══════════════════════════ */
+
+/** « dans 5 min », « dans 2 h », « maintenant ». */
+function delaiLisible(ms) {
+  if (ms == null) return '—';
+  if (ms <= 2000) return 'maintenant';
+  const min = Math.round(ms / 60000);
+  if (min < 60) return `dans ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 48) return `dans ${h} h`;
+  return `dans ${Math.round(h / 24)} j`;
+}
+
+async function rendrePlanification() {
+  const zone = $('#listePlanification');
+  if (!zone) return;
+
+  const r = await API.planification.lister();
+  zone.innerHTML = '';
+
+  const taches = r.taches || [];
+  const resume = $('#planResume');
+  if (resume) {
+    resume.textContent = taches.length
+      ? `${taches.length} tâche(s) · ${r.actives} active(s)`
+        + (r.prochaineMs != null ? ` · prochaine ${delaiLisible(r.prochaineMs)}` : '')
+      : 'Aucune tâche planifiée.';
+  }
+
+  // alimente la liste déroulante des objectifs
+  const select = $('#planObjectif');
+  if (select) {
+    const valeur = select.value;
+    const obj = await API.objectif.lister();
+    const utiles = (obj.objectifs || []).filter((o) => o.etat === 'actif' || o.etat === 'suspendu');
+    select.innerHTML = '<option value="">— Aucun (consigne libre) —</option>';
+    for (const o of utiles) {
+      select.append(el('option', { value: o.id, text: o.titre.slice(0, 60) }));
+    }
+    select.value = valeur;
+  }
+
+  if (!taches.length) {
+    zone.append(el('p', { class: 'vide petit', text: 'Rien de planifié.' }));
+    return;
+  }
+
+  for (const t of taches) {
+    const dernier = t.historique?.[t.historique.length - 1];
+    const carte = el('div', { class: 'objectif' },
+      el('div', { class: 'objectif-tete' },
+        el('span', { class: `objectif-etat ${t.actif ? 'encours' : 'attente'}`,
+          text: t.actif ? 'Active' : 'En pause' }),
+        el('span', { class: 'objectif-titre', text: t.nom }),
+        el('span', { class: 'objectif-tours', text: t.description })
+      ),
+      el('div', { class: 'objectif-critere', text: t.objectifId
+        ? 'Relance un tour de l’objectif sélectionné.'
+        : (t.consigne || '').slice(0, 160) }),
+      t.actif && t.dansMs != null
+        ? el('div', { class: 'objectif-suite', text: `Prochain passage ${delaiLisible(t.dansMs)}` })
+        : null,
+      t.pauseAuto ? el('div', { class: 'objectif-blocage', text: t.pauseAuto }) : null,
+      t.executions ? el('div', { class: 'objectif-dernier', text:
+        `${t.executions} exécution(s)` + (dernier
+          ? ` · dernière ${formaterDate(dernier.quand)} : ${(dernier.resume || dernier.erreur || '').slice(0, 90)}`
+          : '') }) : null,
+      el('div', { class: 'objectif-actions' })
+    );
+
+    const actions = carte.querySelector('.objectif-actions');
+
+    actions.append(el('button', {
+      class: 'btn-mini', text: 'Exécuter maintenant',
+      onclick: async (e) => {
+        const b = e.currentTarget;
+        b.disabled = true; b.textContent = 'En cours…';
+        const res = await API.planification.executer(t.id);
+        b.disabled = false; b.textContent = 'Exécuter maintenant';
+        if (res.ok) notifier('Tâche exécutée.', 'succes', 3000);
+        else notifier(res.message || 'Échec de la tâche.', 'erreur', 5000);
+        await rendrePlanification();
+      }
+    }));
+
+    actions.append(el('button', {
+      class: 'btn-mini', text: t.actif ? 'Mettre en pause' : 'Reprendre',
+      onclick: async () => {
+        await API.planification.basculer({ id: t.id, actif: !t.actif });
+        await rendrePlanification();
+      }
+    }));
+
+    actions.append(el('button', {
+      class: 'btn-modele danger', text: '✕', title: 'Supprimer',
+      onclick: async () => {
+        if (!confirm(`Supprimer « ${t.nom} » ?`)) return;
+        await API.planification.supprimer(t.id);
+        await rendrePlanification();
+      }
+    }));
+
+    zone.append(carte);
+  }
+}
+
+function initialiserPlanification() {
+  $('#btnPlanCreer')?.addEventListener('click', async () => {
+    const nom = $('#planNom')?.value.trim();
+    const consigne = $('#planConsigne')?.value.trim();
+    const frequence = $('#planFrequence')?.value.trim() || 'toutes les heures';
+    const objectifId = $('#planObjectif')?.value || null;
+
+    if (!nom) return notifier('Donnez un nom à la tâche.', 'erreur', 3000);
+    if (!consigne && !objectifId) {
+      return notifier('Écrivez une consigne, ou choisissez un objectif.', 'erreur', 4000);
+    }
+
+    // la fréquence est lue en français ; si elle est incomprise, on le dit
+    const analyse = await API.planification.analyser(frequence);
+    if (!analyse.ok) {
+      return notifier(`Fréquence incomprise : « ${frequence} ». Essayez « toutes les 2 heures ».`, 'erreur', 6000);
+    }
+
+    const r = await API.planification.creer({
+      nom, consigne, objectifId,
+      intervalle: analyse.intervalle,
+      echelle: analyse.echelle
+    });
+
+    if (r.ok) {
+      if ($('#planNom')) $('#planNom').value = '';
+      if ($('#planConsigne')) $('#planConsigne').value = '';
+      notifier(`Tâche créée : ${analyse.intervalle} ${analyse.echelle}.`, 'succes', 4000);
+      await rendrePlanification();
+    } else {
+      notifier(r.message || 'Création impossible.', 'erreur', 4000);
+    }
+  });
+
+  // aperçu de la fréquence pendant la saisie
+  let minuteurFreq = null;
+  $('#planFrequence')?.addEventListener('input', () => {
+    clearTimeout(minuteurFreq);
+    minuteurFreq = setTimeout(async () => {
+      const texte = $('#planFrequence')?.value.trim();
+      if (!texte) return;
+      const r = await API.planification.analyser(texte);
+      const zone = $('#planFrequence');
+      if (zone) zone.style.borderColor = r.ok ? '' : 'var(--danger)';
+    }, 400);
+  });
+
+  API.planification.surEvenement((evt) => {
+    if (evt.type === 'debut') notifier(`Tâche « ${evt.nom} » démarrée.`, 'info', 2500);
+    if (evt.type === 'fin') {
+      if (evt.ok) notifier(`Tâche « ${evt.nom} » terminée.`, 'succes', 3000);
+      else notifier(`Tâche « ${evt.nom} » : ${evt.erreur || 'échec'}`, 'erreur', 6000);
+      rendrePlanification();
+    }
+  });
+
+  rendrePlanification();
+}
+
 /* ═══════════════════════════ OBJECTIFS ═══════════════════════════ */
 
 const ETATS_OBJECTIF = {
@@ -3634,6 +3799,7 @@ function ouvrirReglages(onglet = null) {
   initialiserPlugins();
   initialiserDispositionPanneau();
   initialiserSuperviseur();
+  initialiserPlanification();
   initialiserObjectifs();
   initialiserMemoire();
 

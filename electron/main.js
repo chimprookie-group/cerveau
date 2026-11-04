@@ -18,6 +18,7 @@ const { gestionnaire: mcpGestionnaire } = require('./mcp');
 const { Superviseur } = require('./superviseur');
 const { Memoire } = require('./memoire');
 const { Objectifs } = require('./objectifs');
+const { Planificateur, analyserIntervalle } = require('./planificateur');
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -350,6 +351,188 @@ ipcMain.handle('workspace:infos', async () => {
     git,
     entrees
   };
+});
+
+/* ------------------------ IPC : tâches planifiées ----------------------- */
+
+let planificateurInstance = null;
+let minuteriePlanificateur = null;
+let executionPlanifieeEnCours = false;
+
+function obtenirPlanificateur() {
+  if (!planificateurInstance) {
+    planificateurInstance = new Planificateur(path.join(app.getPath('userData'), 'planificateur.json'));
+  }
+  return planificateurInstance;
+}
+
+/** Exécute une tâche planifiée : un tour d'objectif, ou une consigne libre. */
+async function executerTachePlanifiee(tache) {
+  const cfg = config.getConfig({ revealKeys: true });
+  const creds = config.getProviderCredentials(cfg.activeProvider);
+  if (!creds?.apiKey) throw new Error('Aucune clé d’API configurée.');
+
+  const coffre = coffreActif();
+  const ctx = {
+    mode: cfg.mode || 'complet',
+    vaultPath: coffre?.path || null,
+    coffre,
+    workspace: cfg.workspace || null,
+    depotGithub: null,
+    githubUtilisateur: null,
+    systemPrompt: cfg.systemPrompt || '',
+    outilsDesactives: cfg.outilsDesactives || [],
+    agentMaxTours: cfg.agent?.maxTours,
+    agentCapSortie: cfg.agent?.capSortie,
+    temperature: cfg.temperature,
+    presets: cfg.presetsComportement || [],
+    permissions: { ...cfg.permissions, mode: cfg.permissions?.mode === 'auto' ? 'auto' : 'lecture' },
+    confirmer: async () => ({ autorise: false }),
+    memoire: obtenirMemoire(),
+    serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
+    rechercheWeb: cfg.rechercheWeb || {}
+  };
+
+  // tâche liée à un objectif : on joue un tour de cet objectif
+  if (tache.objectifId) {
+    const r = await jouerTour(tache.objectifId);
+    if (!r.ok) throw new Error(r.message || 'Le tour a échoué.');
+    return {
+      resume: `Tour ${r.objectif.tours}/${r.objectif.maxTours} — ${r.objectif.etat}`,
+      texte: (r.texte || '').slice(0, 400)
+    };
+  }
+
+  const r = await agent.run({
+    providerId: cfg.activeProvider,
+    credentials: creds,
+    historique: [{ role: 'user', contenu: tache.consigne }],
+    ctx,
+    emit: () => {}
+  });
+  if (r.erreur) throw new Error(r.erreur);
+  return { resume: (r.texte || '').slice(0, 300), texte: r.texte || '' };
+}
+
+/**
+ * Vérifie les échéances et lance ce qui est dû.
+ * Un seul passage à la fois : sans ce verrou, deux appels rapprochés
+ * lanceraient deux fois la même tâche.
+ */
+async function passerEnRevue() {
+  if (executionPlanifieeEnCours) return;
+  executionPlanifieeEnCours = true;
+  const gest = obtenirPlanificateur();
+  try {
+    const dues = await gest.dues();
+    for (const tache of dues) {
+      gest.marquerEnCours(tache.id, true);
+      try {
+        mainWindow?.webContents.send('planification:evenement', { type: 'debut', tacheId: tache.id, nom: tache.nom });
+      } catch { /* ignore */ }
+
+      try {
+        const res = await executerTachePlanifiee(tache);
+        const maj = await gest.enregistrerExecution(tache.id, { ok: true, resume: res.resume });
+        try {
+          mainWindow?.webContents.send('planification:evenement', {
+            type: 'fin', tacheId: tache.id, nom: maj.nom, ok: true, resume: res.resume
+          });
+        } catch { /* ignore */ }
+      } catch (err) {
+        const maj = await gest.enregistrerExecution(tache.id, {
+          ok: false, erreur: String(err.message || err)
+        });
+        try {
+          mainWindow?.webContents.send('planification:evenement', {
+            type: 'fin', tacheId: tache.id, nom: maj.nom, ok: false,
+            erreur: String(err.message || err).slice(0, 200),
+            enPause: maj.actif === false
+          });
+        } catch { /* ignore */ }
+      }
+    }
+  } catch { /* une panne du planificateur ne doit pas arrêter l'app */ }
+  finally {
+    executionPlanifieeEnCours = false;
+    planifierProchainPassage();
+  }
+}
+
+/**
+ * Programme le prochain passage, au plus tôt de l'échéance suivante.
+ * Une minuterie unique plutôt qu'une par tâche : moins de ressources,
+ * et un redémarrage ne provoque pas de rattrapage massif.
+ */
+function planifierProchainPassage() {
+  clearTimeout(minuteriePlanificateur);
+  minuteriePlanificateur = null;
+
+  obtenirPlanificateur().delaiProchaine()
+    .then((delai) => {
+      if (delai == null) return;
+      const attente = Math.min(Math.max(delai, 1000), 60_000);
+      minuteriePlanificateur = setTimeout(() => { passerEnRevue(); }, attente);
+      if (minuteriePlanificateur.unref) minuteriePlanificateur.unref();
+    })
+    .catch(() => { /* ignore */ });
+}
+
+ipcMain.handle('planification:lister', async () => {
+  try { return { ok: true, ...(await obtenirPlanificateur().instantane()) }; }
+  catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('planification:creer', async (_e, payload) => {
+  try {
+    const t = await obtenirPlanificateur().creer(payload || {});
+    planifierProchainPassage();
+    return { ok: true, tache: t };
+  } catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('planification:analyser', async (_e, texte) => {
+  try {
+    const r = analyserIntervalle(texte);
+    return { ok: true, ...(r || {}) };
+  } catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('planification:basculer', async (_e, { id, actif }) => {
+  try {
+    const t = await obtenirPlanificateur().basculer(id, actif);
+    planifierProchainPassage();
+    return { ok: true, tache: t };
+  } catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('planification:executer', async (_e, id) => {
+  try {
+    const gest = obtenirPlanificateur();
+    const t = await gest.trouver(id);
+    if (!t) return { ok: false, message: 'Tâche introuvable.' };
+    if (gest.enCours.has(id)) return { ok: false, message: 'Cette tâche tourne déjà.' };
+
+    gest.marquerEnCours(id, true);
+    try {
+      const res = await executerTachePlanifiee(t);
+      const maj = await gest.enregistrerExecution(id, { ok: true, resume: res.resume });
+      planifierProchainPassage();
+      return { ok: true, tache: maj, resume: res.resume };
+    } catch (err) {
+      const maj = await gest.enregistrerExecution(id, { ok: false, erreur: String(err.message || err) });
+      planifierProchainPassage();
+      return { ok: false, message: String(err.message || err), tache: maj };
+    }
+  } catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('planification:supprimer', async (_e, id) => {
+  try {
+    const r = await obtenirPlanificateur().supprimer(id);
+    planifierProchainPassage();
+    return { ok: true, ...r };
+  } catch (err) { return { ok: false, message: String(err.message || err) }; }
 });
 
 /* --------------------------- IPC : objectifs ---------------------------- */
@@ -1239,6 +1422,10 @@ if (!instanceUnique) {
     buildMenu();
     createWindow();
 
+    // Le planificateur repart avec l'application : une tâche due pendant
+    // l'absence s'exécute une fois, pas autant de fois qu'il y a eu d'heures.
+    planifierProchainPassage();
+
     // Reprise du Superviseur s'il était en marche avant la fermeture.
     // Sans cela, l'utilisateur croit qu'il surveille toujours son dépôt.
     if (cfg.superviseur?.actif && cfg.superviseur?.depot
@@ -1277,6 +1464,7 @@ app.on('web-contents-created', (_e, contents) => {
 // Arrêt propre des serveurs MCP : sans cela, leurs processus survivraient
 // à la fermeture de Cerveau.
 app.on('before-quit', () => {
+  clearTimeout(minuteriePlanificateur);
   try { mcpGestionnaire.arreterTout(); } catch { /* ignore */ }
   try { superviseur?.arreter(); } catch { /* ignore */ }
 });

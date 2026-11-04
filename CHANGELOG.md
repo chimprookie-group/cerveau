@@ -4,6 +4,35 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.10.0] — 2026-11-04
+
+### Ajouté
+- **Tâches planifiées.** Une consigne ou un objectif relancé automatiquement à intervalle
+  régulier : « résume les issues chaque matin », « vérifie que les tests passent toutes
+  les 2 heures ». C'est la suite logique des objectifs : au lieu de cliquer « tour
+  suivant », l'horloge s'en charge.
+
+  - Nouvelle section **Réglages → Tâches planifiées**.
+  - La fréquence s'écrit **en français** : « toutes les 30 minutes », « chaque matin »,
+    « toutes les 2 heures ». Le champ se colore en rouge si la formule n'est pas comprise.
+  - Une tâche peut relancer **un tour d'objectif** au lieu d'une consigne libre.
+  - Suivi : prochain passage, nombre d'exécutions, dernier résultat, historique.
+
+### Garde-fous
+- **Pas d'emballement** : une tâche ne se relance pas tant que la précédente tourne,
+  et **trois échecs consécutifs la mettent en pause** avec la raison affichée.
+- **Pas de rattrapage massif** : l'échéance est datée en absolu, donc une tâche due
+  pendant une absence s'exécute **une fois**, pas autant de fois qu'il y a eu d'heures.
+- Intervalle minimum d'une minute. L'application doit être ouverte pour que ça tourne.
+
+### Vérifié en réel
+- Tâche créée par l'interface avec « toutes les 2 heures » → description « Toutes les
+  2 heures », prochaine exécution dans ~2 h.
+- Exécution manuelle : l'agent a compté **20 fichiers `.js`**, historique enregistré,
+  échéance repoussée.
+- **Déclenchement automatique** : échéance forcée dans le passé → la tâche s'est
+  exécutée d'elle-même (1 → 2 exécutions) sans aucune interaction.
+
 ## [2.9.1] — 2026-11-04
 
 ### Ajouté
