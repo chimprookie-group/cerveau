@@ -34,13 +34,30 @@ Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 
 ![Réglages](docs/04-reglages.png)
 
-**Agent et outils** — 36 outils, désactivables un par un.
+**Agent et outils** — 39 outils en mode complet (19 en notes, 25 en code),
+désactivables un par un.
 
 ![Outils](docs/05-outils.png)
 
-**Plugins et web** — recherche internet et serveurs MCP externes.
+**Plugins et web** — recherche internet et serveurs MCP, avec leur état réel et
+leurs outils consultables.
 
 ![Plugins](docs/06-plugins.png)
+
+**Mémoire de long terme** — ce que Cerveau retient d'une conversation à l'autre :
+préférences, conventions de projet, décisions.
+
+![Mémoire](docs/07-memoire.png)
+
+**Objectifs** — un travail qui dépasse un seul échange. Cerveau avance d'un tour à la
+fois, note ce qu'il a fait et reprend là où il s'est arrêté.
+
+![Objectifs](docs/08-objectifs.png)
+
+**Tâches planifiées** — une consigne ou un objectif relancé automatiquement, avec un
+niveau d'autonomie réglable par tâche.
+
+![Tâches planifiées](docs/09-taches.png)
 
 ---
 
@@ -111,7 +128,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.14.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.14.1-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

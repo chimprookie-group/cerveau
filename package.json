@@ -1,7 +1,7 @@
 {
   "name": "cerveau",
   "productName": "Cerveau",
-  "version": "2.14.0",
+  "version": "2.14.1",
   "description": "Assistant IA de bureau en français avec coffre Obsidian intégré",
   "main": "electron/main.js",
   "author": "chimp",
@@ -11,7 +11,8 @@
     "vendor": "node scripts/copy-vendor.mjs",
     "package": "bash scripts/package.sh",
     "dist": "bash scripts/dist.sh",
-    "pkg": "bash scripts/dist.sh && cd pkg && makepkg -sf"
+    "pkg": "bash scripts/dist.sh && cd pkg && makepkg -sf",
+    "captures": "electron scripts/captures.js --no-sandbox"
   },
   "dependencies": {
     "@highlightjs/cdn-assets": "^11.11.1",

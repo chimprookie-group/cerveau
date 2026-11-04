@@ -4,6 +4,27 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.14.1] — 2026-11-04
+
+### Corrigé
+- **Les captures du README montraient une interface qui n'existe plus.** Elles dataient
+  du 2 novembre : quatre exemples MCP au lieu de six, aucune section Objectifs, Mémoire
+  ni Tâches planifiées, et l'ancienne table « État des serveurs » à la place du nouveau
+  tableau. Une personne découvrant le dépôt voyait donc une application différente de
+  celle qu'elle installait.
+
+### Ajouté
+- **`scripts/captures.js`** régénère les neuf captures depuis l'application réelle
+  (`npm run captures`). Il utilise une configuration et un coffre de démonstration :
+  la configuration personnelle n'est jamais touchée. Les images se périment moins
+  facilement, et se refaire prend une commande.
+- Trois captures pour les nouveautés : **Mémoire**, **Objectifs** et **Tâches
+  planifiées**, remplies d'exemples pour montrer à quoi ça ressemble en usage.
+
+### Modifié
+- Le README annonce **39 outils** en mode complet (19 en notes, 25 en code) au lieu
+  de 36.
+
 ## [2.14.0] — 2026-11-04
 
 Version issue d'un **audit complet** : chaque couche a été vérifiée, et chaque
