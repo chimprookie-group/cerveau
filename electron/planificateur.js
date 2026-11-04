@@ -29,6 +29,51 @@ const ECHELLES = ['minutes', 'heures', 'jours'];
 const ECHELLE_MS = { minutes: 60_000, heures: 3_600_000, jours: 86_400_000 };
 const MAX_ECHECS_CONSECUTIFS = 3;
 
+/**
+ * Niveaux d'autonomie d'une tâche planifiée.
+ *
+ * En arrière-plan, personne ne peut répondre à une demande d'autorisation.
+ * Sans choix explicite, la tâche tourne donc en lecture seule. L'utilisateur
+ * peut élever ce niveau tâche par tâche, en connaissance de cause.
+ */
+const NIVEAUX = {
+  lecture: {
+    id: 'lecture',
+    nom: 'Lecture seule',
+    description: 'Consultation seulement : rien ne peut être modifié, exécuté ni supprimé.'
+  },
+  ecriture: {
+    id: 'ecriture',
+    nom: 'Écriture de fichiers',
+    description: 'Peut créer et modifier des fichiers dans l’espace de travail. Pas de commande shell.'
+  },
+  commandes: {
+    id: 'commandes',
+    nom: 'Commandes autorisées',
+    description: 'Peut exécuter des commandes shell dans l’espace de travail. Pas de suppression ni de push.'
+  },
+  complet: {
+    id: 'complet',
+    nom: 'Complet',
+    description: 'Commandes, écriture, git push et actions GitHub. À réserver aux tâches de confiance.'
+  }
+};
+
+/** Traduit un niveau en réglages de permissions compréhensibles par l'agent. */
+function permissionsDuNiveau(niveau) {
+  const n = NIVEAUX[niveau] ? niveau : 'lecture';
+  if (n === 'lecture') {
+    return { mode: 'lecture', allowDelete: false, autoCommandes: false, autoPush: false, autoGithub: false };
+  }
+  if (n === 'ecriture') {
+    return { mode: 'auto', allowDelete: false, autoCommandes: false, autoPush: false, autoGithub: false };
+  }
+  if (n === 'commandes') {
+    return { mode: 'auto', allowDelete: false, autoCommandes: true, autoPush: false, autoGithub: false };
+  }
+  return { mode: 'auto', allowDelete: true, autoCommandes: true, autoPush: true, autoGithub: true };
+}
+
 function identifiant() {
   return `tache_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -124,7 +169,7 @@ class Planificateur {
    * Si `objectifId` est fourni, l'exécution joue un tour de cet objectif ;
    * sinon, la consigne est envoyée telle quelle à l'agent.
    */
-  async creer({ nom, consigne, intervalle, echelle, objectifId = null, maxTours = 1, actif = true }) {
+  async creer({ nom, consigne, intervalle, echelle, objectifId = null, maxTours = 1, actif = true, niveau = 'lecture' }) {
     await this.charger();
     const titre = String(nom || '').trim();
     if (!titre) throw new Error('La tâche doit avoir un nom.');
@@ -143,6 +188,8 @@ class Planificateur {
       nom: titre,
       consigne: texte,
       objectifId,
+      // lecture seule par défaut : c'est le choix sûr en arrière-plan
+      niveau: NIVEAUX[niveau] ? niveau : 'lecture',
       intervalle: n,
       echelle: u,
       actif: Boolean(actif),
@@ -233,6 +280,17 @@ class Planificateur {
     return t;
   }
 
+  /** Change le niveau d'autonomie d'une tâche. */
+  async changerNiveau(id, niveau) {
+    if (!NIVEAUX[niveau]) throw new Error(`Niveau inconnu : ${niveau}`);
+    const t = await this.trouver(id);
+    if (!t) throw new Error('Tâche introuvable.');
+    t.niveau = niveau;
+    t.majLe = Date.now();
+    await this.enregistrer();
+    return t;
+  }
+
   async basculer(id, actif) {
     const t = await this.trouver(id);
     if (!t) throw new Error('Tâche introuvable.');
@@ -286,6 +344,8 @@ class Planificateur {
 
 module.exports = {
   Planificateur,
+  NIVEAUX,
+  permissionsDuNiveau,
   analyserIntervalle,
   calculerEcheance,
   decrireIntervalle,

@@ -18,7 +18,7 @@ const { gestionnaire: mcpGestionnaire } = require('./mcp');
 const { Superviseur } = require('./superviseur');
 const { Memoire } = require('./memoire');
 const { Objectifs } = require('./objectifs');
-const { Planificateur, analyserIntervalle } = require('./planificateur');
+const { Planificateur, analyserIntervalle, NIVEAUX, permissionsDuNiveau } = require('./planificateur');
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -386,8 +386,11 @@ async function executerTachePlanifiee(tache) {
     agentCapSortie: cfg.agent?.capSortie,
     temperature: cfg.temperature,
     presets: cfg.presetsComportement || [],
-    permissions: { ...cfg.permissions, mode: cfg.permissions?.mode === 'auto' ? 'auto' : 'lecture' },
-    confirmer: async () => ({ autorise: false }),
+    permissions: permissionsDuNiveau(tache.niveau),
+    confirmer: async ({ nom }) => ({
+      autorise: false,
+      raison: `Niveau « ${tache.niveau} » : ${nom} n’est pas autorisé pour cette tâche planifiée.`
+    }),
     memoire: obtenirMemoire(),
     serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
     rechercheWeb: cfg.rechercheWeb || {}
@@ -526,6 +529,18 @@ ipcMain.handle('planification:executer', async (_e, id) => {
     }
   } catch (err) { return { ok: false, message: String(err.message || err) }; }
 });
+
+ipcMain.handle('planification:niveau', async (_e, { id, niveau }) => {
+  try {
+    const t = await obtenirPlanificateur().changerNiveau(id, niveau);
+    return { ok: true, tache: t };
+  } catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('planification:niveaux', async () => ({
+  ok: true,
+  niveaux: Object.values(NIVEAUX)
+}));
 
 ipcMain.handle('planification:supprimer', async (_e, id) => {
   try {

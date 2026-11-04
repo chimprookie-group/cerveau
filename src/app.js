@@ -768,6 +768,32 @@ async function rendrePlanification() {
       el('div', { class: 'objectif-critere', text: t.objectifId
         ? 'Relance un tour de l’objectif sélectionné.'
         : (t.consigne || '').slice(0, 160) }),
+      (() => {
+        const niveauActuel = t.niveau || 'lecture';
+        const sel = el('select', {
+          class: 'plan-niveau-select',
+          onchange: async (e) => {
+            const res = await API.planification.changerNiveau({
+              id: t.id, niveau: e.target.value
+            });
+            if (res.ok) notifier('Autonomie modifiée.', 'succes', 2500);
+            else notifier(res.message || 'Modification impossible.', 'erreur');
+            await rendrePlanification();
+          }
+        },
+          ...['lecture', 'ecriture', 'commandes', 'complet'].map((n) =>
+            el('option', {
+              value: n,
+              text: { lecture: 'Lecture seule', ecriture: 'Écriture', commandes: 'Commandes', complet: 'Complet' }[n]
+            })
+          )
+        );
+        // la valeur se pose APRÈS l'ajout des options : l'attribut « selected »
+        // est une présence, donc « selected: false » sélectionnait quand même.
+        sel.value = niveauActuel;
+        return el('div', { class: 'plan-niveau-ligne' },
+          el('span', { text: 'Autonomie : ' }), sel);
+      })(),
       t.actif && t.dansMs != null
         ? el('div', { class: 'objectif-suite', text: `Prochain passage ${delaiLisible(t.dansMs)}` })
         : null,
@@ -836,18 +862,37 @@ function initialiserPlanification() {
     const r = await API.planification.creer({
       nom, consigne, objectifId,
       intervalle: analyse.intervalle,
-      echelle: analyse.echelle
+      echelle: analyse.echelle,
+      niveau: $('#planNiveau')?.value || 'lecture'
     });
 
     if (r.ok) {
       if ($('#planNom')) $('#planNom').value = '';
       if ($('#planConsigne')) $('#planConsigne').value = '';
-      notifier(`Tâche créée : ${analyse.intervalle} ${analyse.echelle}.`, 'succes', 4000);
+      const unites = { minutes: 'minute', heures: 'heure', jours: 'jour' };
+      const mot = unites[analyse.echelle] || 'heure';
+      notifier(`Tâche créée : ${analyse.intervalle} ${mot}${analyse.intervalle > 1 ? 's' : ''}.`, 'succes', 4000);
       await rendrePlanification();
     } else {
       notifier(r.message || 'Création impossible.', 'erreur', 4000);
     }
   });
+
+  // aide sous le sélecteur d'autonomie
+  const majAideNiveau = () => {
+    const aide = $('#planNiveauAide');
+    if (!aide) return;
+    const textes = {
+      lecture: 'Consultation seulement : rien ne peut être modifié, exécuté ni supprimé.',
+      ecriture: 'Peut créer et modifier des fichiers dans l’espace de travail. Pas de commande shell.',
+      commandes: 'Peut exécuter des commandes shell. Pas de suppression ni de push.',
+      complet: 'Commandes, écriture, git push et actions GitHub. À réserver aux tâches de confiance.'
+    };
+    aide.textContent = textes[$('#planNiveau')?.value] || '';
+    aide.style.color = $('#planNiveau')?.value === 'complet' ? 'var(--danger)' : '';
+  };
+  $('#planNiveau')?.addEventListener('change', majAideNiveau);
+  majAideNiveau();
 
   // aperçu de la fréquence pendant la saisie
   let minuteurFreq = null;

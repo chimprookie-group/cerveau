@@ -50,7 +50,7 @@ function trouverRacine() {
 }
 
 const RACINE = trouverRacine();
-const { Planificateur } = require(path.join(RACINE, 'electron', 'planificateur.js'));
+const { Planificateur, permissionsDuNiveau } = require(path.join(RACINE, 'electron', 'planificateur.js'));
 const { Objectifs } = require(path.join(RACINE, 'electron', 'objectifs.js'));
 const { Memoire } = require(path.join(RACINE, 'electron', 'memoire.js'));
 const config = require(path.join(RACINE, 'electron', 'config.js'));
@@ -149,7 +149,11 @@ function applicationOuverte() {
 
 /* ----------------------------- exécution -------------------------------- */
 
-function contexteAgent(cfg, memoire) {
+function contexteAgent(cfg, memoire, niveau = 'lecture') {
+  // Le niveau de la tâche décide de ce qui est permis. En arrière-plan,
+  // personne ne peut confirmer : ce qui n'est pas explicitement autorisé
+  // par le niveau est refusé, sans blocage ni attente.
+  const permis = permissionsDuNiveau(niveau);
   return {
     mode: cfg.mode || 'complet',
     vaultPath: (cfg.vaults || []).find((v) => v.id === cfg.activeVaultId)?.path || null,
@@ -163,9 +167,13 @@ function contexteAgent(cfg, memoire) {
     agentCapSortie: cfg.agent?.capSortie,
     temperature: cfg.temperature,
     presets: cfg.presetsComportement || [],
-    // en arrière-plan, personne ne peut confirmer : lecture seule par défaut
-    permissions: { ...cfg.permissions, mode: cfg.permissions?.mode === 'auto' ? 'auto' : 'lecture' },
-    confirmer: async () => ({ autorise: false, raison: 'Exécution en arrière-plan : action non confirmable.' }),
+    permissions: permis,
+    // Une confirmation n'est jamais accordée en arrière-plan : si le niveau
+    // n'autorise pas l'action, elle est refusée plutôt que d'attendre.
+    confirmer: async ({ nom }) => ({
+      autorise: false,
+      raison: `Niveau « ${niveau} » : ${nom} n’est pas autorisé en arrière-plan.`
+    }),
     memoire,
     serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
     rechercheWeb: cfg.rechercheWeb || {}
@@ -191,7 +199,7 @@ async function executerTache(tache, { plan, objectifs, memoire }) {
       providerId: cfg.activeProvider,
       credentials: creds,
       historique: [{ role: 'user', contenu: prompt }],
-      ctx: contexteAgent(cfg, memoire),
+      ctx: contexteAgent(cfg, memoire, tache.niveau),
       emit: () => {}
     });
     const maj = await objectifs.enregistrerTour(obj.id, {
@@ -206,7 +214,7 @@ async function executerTache(tache, { plan, objectifs, memoire }) {
     providerId: cfg.activeProvider,
     credentials: creds,
     historique: [{ role: 'user', contenu: tache.consigne }],
-    ctx: contexteAgent(cfg, memoire),
+    ctx: contexteAgent(cfg, memoire, tache.niveau),
     emit: () => {}
   });
   if (res.erreur) throw new Error(res.erreur);

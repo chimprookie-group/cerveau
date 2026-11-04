@@ -519,6 +519,23 @@
 
             <div class="champ-reglage">
               <div class="champ-reglage-texte">
+                <label for="planNiveau">Autonomie de la tâche</label>
+                <p class="champ-reglage-aide">
+                  En arrière-plan, personne ne peut confirmer une action. Ce réglage
+                  décide de ce que la tâche peut faire seule.
+                </p>
+              </div>
+              <select id="planNiveau" class="champ-reglage-controle">
+                <option value="lecture">Lecture seule</option>
+                <option value="ecriture">Écriture de fichiers</option>
+                <option value="commandes">Commandes autorisées</option>
+                <option value="complet">Complet</option>
+              </select>
+            </div>
+            <p id="planNiveauAide" class="champ-reglage-aide plan-niveau-aide"></p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
                 <label for="planObjectif">Relancer un objectif</label>
                 <p class="champ-reglage-aide">
                   Facultatif. Si choisi, la tâche joue un tour de cet objectif au lieu

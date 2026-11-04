@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld('cerveau', {
     analyser: (texte) => ipcRenderer.invoke('planification:analyser', texte),
     basculer: (payload) => ipcRenderer.invoke('planification:basculer', payload),
     executer: (id) => ipcRenderer.invoke('planification:executer', id),
+    changerNiveau: (payload) => ipcRenderer.invoke('planification:niveau', payload),
+    niveaux: () => ipcRenderer.invoke('planification:niveaux'),
     supprimer: (id) => ipcRenderer.invoke('planification:supprimer', id),
     surEvenement: (cb) => {
       const h = (_e, data) => cb(data);

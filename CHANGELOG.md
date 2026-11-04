@@ -4,6 +4,44 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.12.0] — 2026-11-04
+
+### Ajouté
+- **Autonomie réglable par tâche planifiée.** En arrière-plan, personne ne peut répondre
+  à une demande d'autorisation : une tâche tournait donc en lecture seule. Elle peut
+  maintenant recevoir un niveau explicite, choisi en connaissance de cause.
+
+  | Niveau | Fichiers | Commandes | Push / GitHub | Suppression |
+  |---|---|---|---|---|
+  | Lecture seule *(défaut)* | ✗ | ✗ | ✗ | ✗ |
+  | Écriture de fichiers | ✓ | ✗ | ✗ | ✗ |
+  | Commandes autorisées | ✓ | ✓ | ✗ | ✗ |
+  | Complet | ✓ | ✓ | ✓ | ✓ |
+
+  Le niveau se choisit à la création et se change directement dans la carte de la
+  tâche. Le niveau « Complet » s'affiche en rouge : c'est un avertissement, pas une
+  décoration.
+
+### Vérifié en réel
+- Niveau `lecture` : l'agent a tenté d'écrire un fichier → **refusé**, aucun fichier créé.
+- Niveau `ecriture` : le fichier a été créé, mais la commande shell a été **refusée**.
+- Niveau `commandes` : la commande shell a été **exécutée**, le fichier créé.
+- Dans le vrai démon, avec le service systemd actif et l'application fermée : tâche de
+  niveau `ecriture` → fichier créé dans l'espace de travail, sans aucune interaction.
+
+### Limite connue
+L'unité systemd utilise `PrivateTmp=true` : le démon voit un `/tmp` privé, distinct de
+celui de la session. Une tâche qui écrit dans `/tmp` n'y laissera rien de visible pour
+l'utilisateur. C'est voulu — un dossier temporaire privé évite d'écraser les fichiers
+temporaires d'autres programmes — mais il faut le savoir. L'espace de travail, lui,
+n'est pas isolé.
+
+### Corrigé
+- **La carte d'une tâche affichait toujours le dernier niveau de la liste.** L'attribut
+  `selected` est une présence : `selected: false` le posait quand même. La valeur est
+  désormais affectée après l'ajout des options.
+- Accord au singulier dans la confirmation : « Tâche créée : 1 jour » au lieu de « 1 jours ».
+
 ## [2.11.0] — 2026-11-04
 
 ### Ajouté

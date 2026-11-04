@@ -1627,6 +1627,27 @@ async function run(mainWindow, deps) {
 
     const tache = await plan.creer({ nom: 'Tâche de test', consigne: 'Fais un test', intervalle: 2, echelle: 'heures' });
     verifier('Planification : création', Boolean(tache.id) && tache.actif === true);
+
+    // niveaux d'autonomie
+    verifier('Planification : lecture seule par défaut', tache.niveau === 'lecture', tache.niveau);
+    const nivL = planMod.permissionsDuNiveau('lecture');
+    const nivE = planMod.permissionsDuNiveau('ecriture');
+    const nivC = planMod.permissionsDuNiveau('commandes');
+    const nivF = planMod.permissionsDuNiveau('complet');
+    verifier('Niveaux : lecture bloque tout',
+      nivL.mode === 'lecture' && !nivL.autoCommandes && !nivL.allowDelete);
+    verifier('Niveaux : écriture autorise les fichiers, pas les commandes',
+      nivE.mode === 'auto' && !nivE.autoCommandes);
+    verifier('Niveaux : commandes autorise le shell, pas le push',
+      nivC.autoCommandes === true && nivC.autoPush === false && nivC.allowDelete === false);
+    verifier('Niveaux : complet autorise tout',
+      nivF.autoCommandes && nivF.autoPush && nivF.autoGithub && nivF.allowDelete);
+
+    const tNiv = await plan.changerNiveau(tache.id, 'ecriture');
+    verifier('Niveaux : changement enregistré', tNiv.niveau === 'ecriture');
+    let nivInvalide = false;
+    try { await plan.changerNiveau(tache.id, 'tout'); } catch { nivInvalide = true; }
+    verifier('Niveaux : niveau inconnu refusé', nivInvalide);
     verifier('Planification : persistée', fs2.existsSync(planFichier));
     verifier('Planification : pas due tout de suite', (await plan.dues()).length === 0);
 
@@ -1664,13 +1685,40 @@ async function run(mainWindow, deps) {
       section: document.querySelector('.volet-reglage.actif')?.id,
       champs: ['planNom', 'planConsigne', 'planFrequence', 'planObjectif']
         .filter((id) => document.getElementById(id)).length,
-      bouton: !!document.querySelector('#btnPlanCreer')
+      bouton: !!document.querySelector('#btnPlanCreer'),
+      niveau: !!document.querySelector('#planNiveau')
     };
     document.querySelector('#btnFermerReglages2').click();
     return res;
   })()`);
   verifier('Planification : section accessible', uiPlan.section === 'reglage-planification');
   verifier('Planification : champs présents', uiPlan.champs === 4, `${uiPlan.champs} champs`);
+  verifier('Planification : sélecteur d’autonomie', uiPlan.niveau === true);
+
+  // régression : « selected: false » posait quand même l'attribut, donc la
+  // carte affichait toujours le dernier niveau de la liste.
+  const uiSelNiveau = await mainWindow.webContents.executeJavaScript(`(async () => {
+    window.cerveauUI.ouvrirReglages('planification');
+    await new Promise((r) => setTimeout(r, 700));
+    // crée une tâche en niveau commandes via l'API
+    await window.cerveau.planification.creer({
+      nom: 'Test sélection niveau', consigne: 'test',
+      intervalle: 1, echelle: 'jours', niveau: 'commandes'
+    });
+    window.cerveauUI.ouvrirReglages('planification');
+    await new Promise((r) => setTimeout(r, 900));
+    const sel = document.querySelector('.plan-niveau-select');
+    const r = { valeur: sel?.value, texte: sel?.selectedOptions?.[0]?.text };
+    // nettoyage
+    const l = await window.cerveau.planification.lister();
+    for (const t of l.taches.filter((x) => x.nom === 'Test sélection niveau')) {
+      await window.cerveau.planification.supprimer(t.id);
+    }
+    document.querySelector('#btnFermerReglages2').click();
+    return r;
+  })()`);
+  verifier('Planification : sélecteur reflète le niveau réel',
+    uiSelNiveau.valeur === 'commandes', `${uiSelNiveau.valeur} / ${uiSelNiveau.texte}`);
   verifier('Planification : bouton présent', uiPlan.bouton === true);
 
   // 6quadragies. Démon des tâches planifiées
@@ -1689,7 +1737,10 @@ async function run(mainWindow, deps) {
   verifier('Application : écrit app.pid au démarrage',
     /app\.pid/.test(fs2.readFileSync(path.join(racine, 'electron', 'main.js'), 'utf8')));
   verifier('Démon : lecture seule par défaut',
-    /personne ne peut confirmer/.test(daemonSrc) && /autorise: false/.test(daemonSrc));
+    /permissionsDuNiveau/.test(daemonSrc) && /autorise: false/.test(daemonSrc));
+  verifier('Démon : respecte le niveau de chaque tâche',
+    /permissionsDuNiveau\(niveau\)/.test(daemonSrc)
+    && /contexteAgent\(cfg, memoire, tache\.niveau\)/.test(daemonSrc));
   verifier('Démon : journalise les exécutions', /CHEMIN_JOURNAL/.test(daemonSrc));
   verifier('Démon : rotation du journal', /1_048_576/.test(daemonSrc));
 
