@@ -511,7 +511,12 @@ function bornHistorique(messages, { maxMessages = 40, maxCaracteres = 120000 } =
     const m = recents[i];
     const taille = String(m.contenu || '').length;
     if (gardes.length && total + taille > maxCaracteres) break;
-    gardes.unshift({ role: m.role, contenu: m.contenu });
+    // les images doivent survivre à la réduction de l'historique
+    gardes.unshift({
+      role: m.role,
+      contenu: m.contenu,
+      ...(Array.isArray(m.images) && m.images.length ? { images: m.images } : {})
+    });
     total += taille;
   }
 
@@ -569,18 +574,33 @@ async function choisirFichiers() {
   await ajouterFichiers(r.chemins);
 }
 
-/** Compose le message final avec les pièces jointes. */
+/**
+ * Compose le message final avec les pièces jointes.
+ *
+ * Le texte et les fichiers texte voyagent dans `contenu`. Les images sont
+ * conservées à part : un modèle ne lit pas « [image jointe : chat.png] », il a
+ * besoin des octets. Elles sont donc ajoutées au message sous forme structurée
+ * (`images`), que l'agent transformera au format du fournisseur.
+ */
 function composerMessage(texte) {
   if (!piecesJointes.length) return texte;
   const morceaux = [texte];
   for (const p of piecesJointes) {
     if (p.type === 'texte') {
       morceaux.push(`\n\n<fichier nom="${p.nom}" langage="${p.langage}">\n${p.contenu}\n</fichier>`);
-    } else {
+    } else if (p.type === 'image') {
+      // repère lisible dans le texte, en plus des données structurées
       morceaux.push(`\n\n[image jointe : ${p.nom}]`);
     }
   }
   return morceaux.join('');
+}
+
+/** Images des pièces jointes courantes, au format attendu par l'agent. */
+function imagesJointes() {
+  return piecesJointes
+    .filter((p) => p.type === 'image' && p.dataUrl)
+    .map((p) => ({ nom: p.nom, dataUrl: p.dataUrl, mime: p.mime }));
 }
 
 function initialiserPieces() {
@@ -609,8 +629,29 @@ function initialiserPieces() {
   document.addEventListener('drop', async (e) => {
     if (!e.dataTransfer?.files?.length) return;
     e.preventDefault();
-    const chemins = [...e.dataTransfer.files].map((f) => f.path).filter(Boolean);
-    if (chemins.length) await ajouterFichiers(chemins);
+    // File.path n'existe plus depuis Electron 32 : le chemin vient de webUtils.
+    const chemins = [...e.dataTransfer.files]
+      .map((f) => API.fichiers.cheminDe(f))
+      .filter(Boolean);
+
+    if (chemins.length) {
+      await ajouterFichiers(chemins);
+    } else {
+      // repli : certains fichiers (captures, contenus distants) n'ont pas de chemin
+      for (const f of e.dataTransfer.files) {
+        if (!f.type.startsWith('image/')) continue;
+        const dataUrl = await new Promise((res) => {
+          const l = new FileReader();
+          l.onload = () => res(l.result);
+          l.readAsDataURL(f);
+        });
+        piecesJointes.push({
+          type: 'image', nom: f.name || 'image.png', taille: f.size,
+          mime: f.type, dataUrl
+        });
+      }
+      rendrePieces();
+    }
   });
 
   // collage d'image depuis le presse-papiers
@@ -2388,7 +2429,13 @@ async function envoyerMessage() {
 
   // message utilisateur
   const contenuComplet = composerMessage(texte);
-  conv.messages.push({ role: 'user', contenu: contenuComplet });
+  const images = imagesJointes();
+  conv.messages.push({
+    role: 'user',
+    contenu: contenuComplet,
+    // conservées pour que le modèle les voie vraiment, et pour l'historique
+    ...(images.length ? { images } : {})
+  });
   conv.date = Date.now();
   if (conv.titre === 'Nouvelle conversation') {
     conv.titre = texte.slice(0, 60) + (texte.length > 60 ? '…' : '');
@@ -3503,7 +3550,7 @@ function brancherEvenements() {
   $('#btnPalette')?.addEventListener('click', ouvrirPalette);
 
   // insertion de note
-  $('#btnJoindre').addEventListener('click', ouvrirModaleNotes);
+  $('#btnInsererNote')?.addEventListener('click', ouvrirModaleNotes);
   $('#btnFermerNotes').addEventListener('click', () => { $('#modaleNotes').hidden = true; });
   $('#modaleNotes .modale-fond').addEventListener('click', () => { $('#modaleNotes').hidden = true; });
   $('#rechercheNoteInsert').addEventListener('input', (e) => filtrerNotesInsert(e.target.value));

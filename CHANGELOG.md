@@ -4,6 +4,38 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.12.1] — 2026-11-04
+
+### Corrigé
+- **Le bouton « joindre » ouvrait aussi la fenêtre des notes.** Deux gestionnaires
+  étaient branchés sur le même bouton : le premier ouvrait le sélecteur de fichiers,
+  le second la liste des notes du coffre — les deux s'exécutaient. Il y a maintenant
+  **deux boutons distincts** : 📎 pour un fichier de votre ordinateur, ▤ pour une
+  note du coffre.
+
+- **Une image jointe n'était jamais transmise au modèle.** Elle était enregistrée,
+  affichée en vignette, puis remplacée par le simple texte « [image jointe : nom] ».
+  L'IA répondait donc qu'elle ne voyait rien — à juste titre. Les images partent
+  désormais au format attendu par chaque fournisseur :
+
+  | Fournisseur | Format |
+  |---|---|
+  | Anthropic | bloc `image` avec `source.base64` |
+  | OpenAI et compatibles | bloc `image_url` |
+
+- **Le glisser-déposer de fichiers ne faisait rien.** Il lisait `fichier.path`,
+  propriété **supprimée depuis Electron 32** ; le projet utilise Electron 45. Le
+  chemin vient maintenant de `webUtils.getPathForFile()`, exposé par le préchargement.
+  Un repli lit directement les images sans chemin (captures d'écran, contenus distants).
+
+- **L'icône du bouton « note » ne s'affichait pas** : le glyphe 🗎 manque dans les
+  polices courantes et rendait un carré vide. Remplacé par ▤.
+
+### Vérifié en réel
+Image de test portant le mot « BANANE » en gros caractères, envoyée par le vrai
+chemin d'envoi : le modèle a répondu **« BANANE »**. Avant ce correctif, il répondait
+qu'il ne voyait aucun contenu.
+
 ## [2.12.0] — 2026-11-04
 
 ### Ajouté

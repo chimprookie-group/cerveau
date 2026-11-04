@@ -225,20 +225,51 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
     : null;
   const systeme = construireInviteSysteme(ctx, stats);
 
+  /**
+   * Décompose une URL de données en mime + base64.
+   * Les images arrivent du renderer sous la forme « data:image/png;base64,… ».
+   */
+  const decomposerDataUrl = (dataUrl) => {
+    const m = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/s);
+    if (!m) return null;
+    return { mime: m[1], base64: m[2] };
+  };
+
   const anthropicMessages = [];
   for (const m of historique) {
+    const contenu = [];
+    // les images d'abord : Anthropic les accepte dans un bloc « image »
+    for (const img of Array.isArray(m.images) ? m.images : []) {
+      const d = decomposerDataUrl(img.dataUrl);
+      if (!d) continue;
+      contenu.push({
+        type: 'image',
+        source: { type: 'base64', media_type: d.mime, data: d.base64 }
+      });
+    }
+    contenu.push({ type: 'text', text: m.contenu });
     anthropicMessages.push({
       role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: [{ type: 'text', text: m.contenu }]
+      content: contenu
     });
   }
 
   const openaiMessages = [
     { role: 'system', content: systeme },
-    ...historique.map((m) => ({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: m.contenu
-    }))
+    ...historique.map((m) => {
+      const images = Array.isArray(m.images) ? m.images : [];
+      // format OpenAI « chat/completions » : le contenu devient un tableau
+      if (!images.length) {
+        return { role: m.role === 'assistant' ? 'assistant' : 'user', content: m.contenu };
+      }
+      const parties = [{ type: 'text', text: m.contenu }];
+      for (const img of images) {
+        if (img.dataUrl) {
+          parties.push({ type: 'image_url', image_url: { url: img.dataUrl } });
+        }
+      }
+      return { role: m.role === 'assistant' ? 'assistant' : 'user', content: parties };
+    })
   ];
 
   const isAnthropic = providers.classify(providerId) === 'anthropic';

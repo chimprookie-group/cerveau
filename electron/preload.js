@@ -1,6 +1,6 @@
 'use strict';
 
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 /**
  * Pont sécurisé entre l'interface et le processus principal.
@@ -93,7 +93,15 @@ contextBridge.exposeInMainWorld('cerveau', {
 
   fichiers: {
     lire: (chemin) => ipcRenderer.invoke('fichiers:lire', chemin),
-    choisir: () => ipcRenderer.invoke('fichiers:choisir')
+    choisir: () => ipcRenderer.invoke('fichiers:choisir'),
+    /**
+     * Chemin réel d'un fichier déposé.
+     * Depuis Electron 32, `File.path` a disparu : c'est `webUtils` qui le
+     * fournit, et il n'existe que dans le processus de préchargement.
+     */
+    cheminDe: (fichier) => {
+      try { return webUtils.getPathForFile(fichier); } catch { return null; }
+    }
   },
 
   terminal: {

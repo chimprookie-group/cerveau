@@ -1813,6 +1813,50 @@ async function run(mainWindow, deps) {
     /cerveau-daemon/.test(pkgbuildDaemon)
     && /usr\/lib\/systemd\/user/.test(pkgbuildDaemon));
 
+  // 6quinquadragies. Pièces jointes : deux boutons distincts, images transmises
+  const uiPieces = await mainWindow.webContents.executeJavaScript(`(async () => {
+    const joindre = document.querySelector('#btnJoindre');
+    const note = document.querySelector('#btnInsererNote');
+    return {
+      deux: Boolean(joindre) && Boolean(note),
+      distincts: joindre !== note,
+      titreJoindre: joindre?.title || '',
+      titreNote: note?.title || ''
+    };
+  })()`);
+  verifier('Pièces jointes : deux boutons distincts',
+    uiPieces.deux === true && uiPieces.distincts === true);
+  verifier('Pièces jointes : bouton fichier explicite',
+    /fichier/i.test(uiPieces.titreJoindre), uiPieces.titreJoindre);
+  verifier('Pièces jointes : bouton note explicite',
+    /note/i.test(uiPieces.titreNote), uiPieces.titreNote);
+
+  const appSrcPieces = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
+  verifier('Pièces jointes : un seul gestionnaire par bouton',
+    !/\$\('#btnJoindre'\)\.addEventListener\('click', ouvrirModaleNotes\)/.test(appSrcPieces));
+
+  // webUtils : File.path a disparu depuis Electron 32
+  verifier('Fichiers : chemin via webUtils',
+    /webUtils/.test(fs2.readFileSync(path.join(racine, 'electron', 'preload.js'), 'utf8')));
+  verifier('Fichiers : plus d’usage de File.path',
+    !/=> f\.path\b/.test(appSrcPieces) && !/\.map\(\(f\) => f\.path\)/.test(appSrcPieces));
+  const apiChemin = await mainWindow.webContents.executeJavaScript(
+    `typeof window.cerveau.fichiers.cheminDe`);
+  verifier('Fichiers : API cheminDe exposée', apiChemin === 'function', apiChemin);
+
+  // les images voyagent vraiment vers le fournisseur
+  const agentSrcImg = fs2.readFileSync(path.join(racine, 'electron', 'agent.js'), 'utf8');
+  verifier('Images : bloc « image » pour Anthropic',
+    /type: 'image',\s*\n?\s*source: \{ type: 'base64'/.test(agentSrcImg));
+  verifier('Images : bloc « image_url » pour OpenAI',
+    /type: 'image_url'/.test(agentSrcImg));
+  verifier('Images : dataUrl décomposée',
+    /decomposerDataUrl/.test(agentSrcImg));
+  verifier('Images : conservées dans l’historique borné',
+    /les images doivent survivre/.test(appSrcPieces));
+  verifier('Images : jointes au message utilisateur',
+    /function imagesJointes/.test(appSrcPieces));
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 
