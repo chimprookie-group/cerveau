@@ -1,6 +1,6 @@
 # Maintainer: Cerveau <cerveau@localhost>
 pkgname=cerveau
-pkgver=2.10.0
+pkgver=2.11.0
 pkgrel=1
 pkgdesc="Assistant IA francophone : coffre Obsidian, agent de code et intégration GitHub"
 arch=('x86_64' 'aarch64')
@@ -77,6 +77,15 @@ exec /opt/cerveau/electron/electron \
   /opt/cerveau/app "$@"
 LAUNCHER
   chmod 755 "${pkgdir}/usr/bin/${pkgname}"
+
+  # --- démon des tâches planifiées ---
+  # Service *utilisateur* : pas de root, s'arrête avec la session.
+  install -d "${pkgdir}/usr/bin"
+  install -m 755 app/daemon/cerveau-daemon.js "${pkgdir}/usr/bin/cerveau-daemon"
+  install -m 755 app/daemon/cerveau-daemon-install "${pkgdir}/usr/bin/cerveau-daemon-install"
+
+  install -d "${pkgdir}/usr/lib/systemd/user"
+  install -m 644 app/daemon/cerveau-daemon.service "${pkgdir}/usr/lib/systemd/user/cerveau-daemon.service"
 
   # --- raccourci bureau ---
   install -Dm644 "${srcdir}/${pkgname}-${pkgver}/cerveau.desktop" \

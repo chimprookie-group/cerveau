@@ -1,0 +1,28 @@
+[Unit]
+Description=Cerveau — tâches planifiées en arrière-plan
+Documentation=https://github.com/chimprookie-group/cerveau
+# Le démon n'a besoin ni du réseau graphique ni de l'interface :
+# il peut démarrer juste après la session utilisateur.
+After=default.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/cerveau-daemon
+Restart=on-failure
+RestartSec=30s
+
+# Le démon écrit dans ~/.config/Cerveau et lit ~/.config/cerveau.
+# Il n'a besoin d'aucun droit particulier — surtout pas root.
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Journal : les messages partent dans le journal systemd utilisateur
+# (`journalctl --user -u cerveau-daemon`), en plus du fichier daemon.log.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cerveau-daemon
+
+[Install]
+WantedBy=default.target

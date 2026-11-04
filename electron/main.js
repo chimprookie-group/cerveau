@@ -1422,6 +1422,21 @@ if (!instanceUnique) {
     buildMenu();
     createWindow();
 
+    // Fichier PID de l'application : le démon s'en sert pour lui céder la
+    // place. Sans lui, les deux exécuteraient les mêmes tâches en double.
+    try {
+      const fPid = path.join(app.getPath('userData'), 'app.pid');
+      require('node:fs').writeFileSync(fPid, String(process.pid), { mode: 0o600 });
+      app.on('will-quit', () => {
+        try {
+          const f = path.join(app.getPath('userData'), 'app.pid');
+          if (require('node:fs').readFileSync(f, 'utf8').trim() === String(process.pid)) {
+            require('node:fs').unlinkSync(f);
+          }
+        } catch { /* déjà absent */ }
+      });
+    } catch { /* sans ce fichier, le démon fera le travail */ }
+
     // Le planificateur repart avec l'application : une tâche due pendant
     // l'absence s'exécute une fois, pas autant de fois qu'il y a eu d'heures.
     planifierProchainPassage();

@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Installe, active ou retire le démon des tâches planifiées de Cerveau.
+#
+#   cerveau-daemon-install            installe et active le service utilisateur
+#   cerveau-daemon-install --retirer  désactive et retire le service
+#   cerveau-daemon-install --etat     affiche l'état du service
+#
+# Le service est un service *utilisateur* systemd : pas de root nécessaire,
+# et il s'arrête avec la session.
+
+set -euo pipefail
+
+SERVICE="cerveau-daemon.service"
+UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+SOURCE="/usr/lib/systemd/user/$SERVICE"
+
+couleur() { printf '\033[%sm%s\033[0m\n' "$1" "$2"; }
+ok() { couleur "32" "✓ $1"; }
+attention() { couleur "33" "⚠ $1"; }
+erreur() { couleur "31" "✗ $1"; }
+
+if ! command -v systemctl >/dev/null 2>&1; then
+  erreur "systemd introuvable : ce système ne gère pas les services utilisateur."
+  exit 1
+fi
+
+case "${1:-}" in
+  --retirer|--remove)
+    systemctl --user disable --now "$SERVICE" 2>/dev/null || true
+    rm -f "$UNIT_DIR/$SERVICE"
+    systemctl --user daemon-reload 2>/dev/null || true
+    ok "Démon retiré. Les tâches planifiées ne tourneront plus en arrière-plan."
+    exit 0
+    ;;
+
+  --etat|--status)
+    systemctl --user status "$SERVICE" --no-pager 2>/dev/null || {
+      attention "Le service n'est pas installé."
+      echo "  Installez-le avec : cerveau-daemon-install"
+      exit 0
+    }
+    exit 0
+    ;;
+esac
+
+# installation
+if [ ! -f "$SOURCE" ]; then
+  erreur "Fichier de service introuvable : $SOURCE"
+  echo "  Le paquet cerveau doit être installé."
+  exit 1
+fi
+
+mkdir -p "$UNIT_DIR"
+# Copie plutôt que lien symbolique : systemd refuse d'activer un lien
+# (« Refusing to operate on linked unit file »).
+install -m 644 "$SOURCE" "$UNIT_DIR/$SERVICE"
+systemctl --user daemon-reload
+systemctl --user enable --now "$SERVICE"
+
+ok "Démon installé et démarré."
+echo
+echo "  État    : systemctl --user status cerveau-daemon"
+echo "  Journal : journalctl --user -u cerveau-daemon -f"
+echo "  Fichier : ${XDG_CONFIG_HOME:-$HOME/.config}/Cerveau/daemon.log"
+echo
+echo "  Les tâches planifiées s'exécuteront désormais même Cerveau fermé."
+echo "  Pour tout arrêter : cerveau-daemon-install --retirer"

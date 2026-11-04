@@ -41,6 +41,9 @@ cp -a "$RACINE/src" "$CIBLE/app/src"
 cp -a "$RACINE/package.json" "$CIBLE/app/package.json"
 mkdir -p "$CIBLE/app/build"
 cp -a "$RACINE/build/icon.png" "$CIBLE/app/build/icon.png"
+
+# Démon des tâches planifiées : sources + unité systemd
+cp -a "$RACINE/daemon" "$CIBLE/app/daemon"
 # retire l'autotest de la distribution publique
 rm -f "$CIBLE/app/electron/selftest.js"
 

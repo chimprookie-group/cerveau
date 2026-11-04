@@ -1673,6 +1673,95 @@ async function run(mainWindow, deps) {
   verifier('Planification : champs présents', uiPlan.champs === 4, `${uiPlan.champs} champs`);
   verifier('Planification : bouton présent', uiPlan.bouton === true);
 
+  // 6quadragies. Démon des tâches planifiées
+  const daemonSrc = fs2.readFileSync(path.join(racine, 'daemon', 'cerveau-daemon.js'), 'utf8');
+  verifier('Démon : fichier présent', daemonSrc.length > 2000);
+  verifier('Démon : trouve les modules hors du paquet',
+    /trouverRacine/.test(daemonSrc) && /opt\/cerveau\/app/.test(daemonSrc));
+  verifier('Démon : verrou d’instance unique', /prendreVerrou/.test(daemonSrc));
+  verifier('Démon : vérifie le PID du verrou', /process\.kill\(pid, 0\)/.test(daemonSrc));
+  verifier('Démon : cède la place à l’application', /applicationOuverte/.test(daemonSrc));
+  // régression : le démon lisait son propre PID et se croyait en double
+  verifier('Démon : fichier PID distinct de l’application',
+    /CHEMIN_PID_APP/.test(daemonSrc) && /app\.pid/.test(daemonSrc));
+  verifier('Démon : ne lit pas son propre PID comme celui de l’app',
+    !/readFileSync\(CHEMIN_PID,/.test(daemonSrc));
+  verifier('Application : écrit app.pid au démarrage',
+    /app\.pid/.test(fs2.readFileSync(path.join(racine, 'electron', 'main.js'), 'utf8')));
+  verifier('Démon : lecture seule par défaut',
+    /personne ne peut confirmer/.test(daemonSrc) && /autorise: false/.test(daemonSrc));
+  verifier('Démon : journalise les exécutions', /CHEMIN_JOURNAL/.test(daemonSrc));
+  verifier('Démon : rotation du journal', /1_048_576/.test(daemonSrc));
+
+  // détection app vivante / morte, testée en Node natif (hors renderer)
+  const cheminDaemon = path.join(racine, 'daemon', 'cerveau-daemon.js');
+  const scriptDet = `
+    const d = require(${JSON.stringify(cheminDaemon)});
+    const fs = require('node:fs');
+    const f = d.CHEMIN_PID_APP;
+    const r = {};
+    try { fs.unlinkSync(f); } catch {}
+    r.sansFichier = d.applicationOuverte();
+    fs.writeFileSync(f, String(process.pid));
+    r.appVivante = d.applicationOuverte();
+    fs.writeFileSync(f, '999999');
+    r.pidMort = d.applicationOuverte();
+    try { fs.unlinkSync(f); } catch {}
+    r.final = d.applicationOuverte();
+    console.log(JSON.stringify(r));
+  `;
+  let det = null;
+  try {
+    const nodeBinDet = process.env.npm_node_execpath
+      || require('node:child_process').execSync('command -v node', { encoding: 'utf8' }).trim();
+    const brut = require('node:child_process').execFileSync(nodeBinDet, ['-e', scriptDet], {
+      encoding: 'utf8', timeout: 25000,
+      env: { ...process.env, XDG_CONFIG_HOME: tmpCfg }
+    });
+    det = JSON.parse(brut.trim().split('\n').pop());
+  } catch { det = null; }
+  if (det) {
+    verifier('Démon : aucune app détectée sans fichier', det.sansFichier === false, String(det.sansFichier));
+    verifier('Démon : app vivante détectée', det.appVivante === true, String(det.appVivante));
+    verifier('Démon : PID mort ignoré', det.pidMort === false, String(det.pidMort));
+    verifier('Démon : fichier retiré = pas d’app', det.final === false, String(det.final));
+  }
+
+  // le démon est syntaxiquement valide et sait répondre à --etat
+  const { execFileSync: executerFichier } = require('node:child_process');
+  // Dans le selftest, process.execPath est Electron, pas Node : on cherche
+  // explicitement un binaire node, sinon `--etat` relancerait Electron.
+  let etatDaemon = '';
+  const nodeBin = process.env.npm_node_execpath
+    || require('node:child_process').execSync('command -v node', { encoding: 'utf8' }).trim();
+  try {
+    etatDaemon = executerFichier(nodeBin, [
+      path.join(racine, 'daemon', 'cerveau-daemon.js'), '--etat'
+    ], { encoding: 'utf8', timeout: 25000, env: { ...process.env, XDG_CONFIG_HOME: tmpCfg } });
+  } catch (err) { etatDaemon = String(err.stdout || err.message); }
+  verifier('Démon : répond à --etat', /démon des tâches planifiées/.test(etatDaemon),
+    etatDaemon.split('\n')[0]);
+
+  // service systemd
+  const unitSrc = fs2.readFileSync(path.join(racine, 'daemon', 'cerveau-daemon.service'), 'utf8');
+  verifier('Service : unité systemd valide',
+    /\[Unit\]/.test(unitSrc) && /\[Service\]/.test(unitSrc) && /\[Install\]/.test(unitSrc));
+  verifier('Service : service utilisateur',
+    /WantedBy=default\.target/.test(unitSrc) && /Restart=on-failure/.test(unitSrc));
+  verifier('Service : pas de privilèges',
+    /NoNewPrivileges=true/.test(unitSrc) && !/User=root/.test(unitSrc));
+
+  // l'installateur du démon est un script shell valide
+  const instDaemon = fs2.readFileSync(path.join(racine, 'daemon', 'cerveau-daemon-install'), 'utf8');
+  verifier('Service : installateur présent',
+    /systemctl --user enable/.test(instDaemon) && /--retirer/.test(instDaemon));
+
+  // le paquet installe le démon
+  const pkgbuildDaemon = fs2.readFileSync(path.join(racine, 'pkg', 'PKGBUILD'), 'utf8');
+  verifier('Paquet : installe le démon',
+    /cerveau-daemon/.test(pkgbuildDaemon)
+    && /usr\/lib\/systemd\/user/.test(pkgbuildDaemon));
+
   // 7. Erreurs console
   verifier('Aucune erreur console', erreursConsole.length === 0, erreursConsole.join(' | '));
 

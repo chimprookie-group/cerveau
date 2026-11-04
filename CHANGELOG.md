@@ -4,6 +4,41 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.11.0] — 2026-11-04
+
+### Ajouté
+- **Démon des tâches planifiées.** Les tâches s'exécutent désormais **même Cerveau
+  fermé**, via un service *utilisateur* systemd — sans root, arrêté avec la session.
+
+  - `cerveau-daemon-install` : installe et démarre le service
+  - `cerveau-daemon --etat` : état des tâches et prochaine exécution
+  - `cerveau-daemon --une-fois` : exécute ce qui est dû, puis sort
+
+### Garde-fous
+- **Instance unique** : un verrou de fichier avec vérification du PID empêche deux
+  démons de lancer la même tâche — sans quoi les appels à l'IA seraient doublés.
+- **L'application reste prioritaire** : si Cerveau est ouvert, le démon se met en
+  veille pour éviter le double travail.
+- **Lecture seule en arrière-plan** : les actions qui demanderaient une confirmation
+  sont refusées, puisque personne ne peut répondre.
+- **Journal avec rotation** : `daemon.log`, plafonné à 1 Mo, en plus du journal systemd.
+
+### Corrigé pendant la mise au point
+- **Le démon se mettait en veille indéfiniment.** Il écrivait son PID dans
+  `daemon.pid`, puis relisait ce même fichier pour savoir si l'application était
+  ouverte — et se prenait pour elle. Cerveau écrit désormais `app.pid`, distinct.
+  Un test verrouille ce comportement.
+- **L'activation du service échouait** : systemd refuse un lien symbolique
+  (« Refusing to operate on linked unit file »). Le fichier est maintenant copié.
+
+### Vérifié en réel
+- Passage unique : une tâche due a été exécutée par le démon (20 fichiers `.js`
+  comptés), échéance repoussée à dans 57 min, historique enregistré.
+- Verrou : un second démarrage a été refusé (« Un démon tourne déjà, PID … »).
+- Arrêt propre sur SIGTERM, verrou libéré.
+- Le démon trouve ses modules aussi bien depuis les sources que depuis
+  `/opt/cerveau/app` une fois installé.
+
 ## [2.10.0] — 2026-11-04
 
 ### Ajouté

@@ -44,6 +44,31 @@ Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 
 ---
 
+## Tâches planifiées en arrière-plan
+
+Par défaut, les tâches planifiées ne tournent **que si Cerveau est ouvert**. Pour
+qu'elles s'exécutent en permanence, installez le démon — un service *utilisateur*
+systemd, sans root :
+
+```bash
+cerveau-daemon-install            # installe et démarre
+cerveau-daemon-install --etat     # état du service
+cerveau-daemon-install --retirer  # désactive et retire
+```
+
+| Commande | Effet |
+|---|---|
+| `journalctl --user -u cerveau-daemon -f` | suivre les exécutions |
+| `cerveau-daemon --etat` | état des tâches |
+| `cerveau-daemon --une-fois` | exécuter ce qui est dû, puis sortir |
+
+Le démon **cède la place à l'application** : s'il détecte que Cerveau est ouvert,
+il se met en veille pour éviter de doubler les appels à l'IA. Il tourne en
+**lecture seule** pour les actions qui demanderaient une confirmation, puisque
+personne ne peut répondre en arrière-plan.
+
+---
+
 ## Ce que le paquet installe, et ce qu'il faut en plus
 
 Le paquet `cerveau` contient l'application et son interface. **`git`** est la seule
@@ -86,7 +111,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.10.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.11.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
