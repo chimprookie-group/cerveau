@@ -3116,6 +3116,13 @@ function traiterEvenementAgent(evt) {
       rendrePlan(evt.taches);
       break;
     }
+    case 'verification': {
+      if (reflexionActive && !reflexionActive.fige) {
+        reflexionActive.label = evt.phase === 'debut' ? 'Vérification du résultat' : libelleReflexion();
+        majReflexion();
+      }
+      break;
+    }
     case 'erreur': {
       const ind = corps.querySelector('.indicateur');
       if (ind) ind.remove();

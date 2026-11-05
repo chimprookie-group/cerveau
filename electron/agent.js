@@ -327,8 +327,56 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
   let relancesAuto = 0;
   let planCourant = null;
   let derniereErreur = false;
+  let outilsFaits = [];
+  let verifications = 0;
+  let extensionTours = false;
 
-  const maxTours = Math.max(1, Number(limiteTours) || Number(ctx.agentMaxTours) || MAX_TOURS_DEFAUT);
+  let maxTours = Math.max(1, Number(limiteTours) || Number(ctx.agentMaxTours) || MAX_TOURS_DEFAUT);
+
+  /**
+   * Demande au modèle si la tâche est réellement terminée. Un petit appel à
+   * part, sans outils ni historique : il ne pollue pas la conversation.
+   */
+  const verifierDemande = async (texte) => {
+    const demande = [...historique].reverse().find((m) => m.role === 'user')?.contenu || '';
+    if (!demande) return { termine: true };
+
+    const invite = `Tu vérifies si une tâche demandée à un assistant est réellement terminée.
+Demande de l'utilisateur :
+${String(demande).slice(0, 2000)}
+
+Outils exécutés : ${[...new Set(outilsFaits)].slice(-15).join(', ') || 'aucun'}.
+Réponse finale de l'assistant :
+${String(texte).slice(0, 3000)}
+
+La demande est-elle entièrement satisfaite et vérifiée (fichiers écrits, commandes exécutées, tests) ?
+Réponds uniquement par OUI ou NON.`;
+
+    let verdict = '';
+    try {
+      for await (const evt of providers.stream({
+        providerId,
+        apiKey: credentials.apiKey,
+        baseUrl: credentials.baseUrl,
+        model: credentials.model,
+        messages: [{ role: 'user', content: invite }],
+        tools: [],
+        maxTokens: 40,
+        temperature: 0,
+        signal
+      })) {
+        if (evt.type === 'texte') verdict += evt.delta;
+        if (evt.type === 'erreur' || evt.type === 'fin') break;
+      }
+    } catch {
+      return { termine: true };   // vérification impossible : on ne bloque pas
+    }
+
+    const reponse = verdict.trim().toUpperCase();
+    const pasFini = /^(NON|PAS\b|INCOMPLET)/.test(reponse)
+      || /NON\b|PAS (ENCORE|TERMIN|FINI)|INCOMPLET/.test(reponse);
+    return { termine: !pasFini };
+  };
 
   while (tours < maxTours) {
     tours += 1;
@@ -468,6 +516,30 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
         continue;
       }
 
+      // Dernier filet : le modèle a peut-être conclu trop tôt. On lui demande
+      // de vérifier, une seule fois, que la demande est réellement satisfaite.
+      if (!dejaRejeteOutils && outilsExecutes > 0 && verifications < 1 && !signal?.aborted) {
+        verifications += 1;
+        emit({ type: 'verification', phase: 'debut' });
+        const verdict = await verifierDemande(texteFinal);
+        emit({ type: 'verification', phase: 'fin', termine: verdict.termine });
+
+        if (!verdict.termine) {
+          if (texteTour.trim()) {
+            messages.push(isAnthropic
+              ? { role: 'assistant', content: [{ type: 'text', text: texteTour }] }
+              : { role: 'assistant', content: texteTour });
+            texteFinal += '\n\n';
+            emit({ type: 'texte', delta: '\n\n' });
+          }
+          const consigne = "La vérification indique que la demande n'est pas encore entièrement satisfaite. Poursuis avec les outils jusqu'au bout, puis vérifie le résultat. Ne demande pas à l'utilisateur de dire « continue ».";
+          messages.push(isAnthropic
+            ? { role: 'user', content: [{ type: 'text', text: consigne }] }
+            : { role: 'user', content: consigne });
+          continue;
+        }
+      }
+
       emit({ type: 'fin', raison });
       return { texte: texteFinal, outils: outilsExecutes };
     }
@@ -503,6 +575,7 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
       try {
         const res = await outil.executer(appel.arguments || {}, ctx);
         outilsExecutes += 1;
+        outilsFaits.push(appel.nom);
         if (appel.nom === 'plan_taches' && Array.isArray(res?.taches)) {
           planCourant = res.taches;
         }
@@ -537,6 +610,17 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
       }
     }
     derniereErreur = resultats.some((r) => !r.ok);
+
+    // plan encore en cours à la limite : une extension bornée plutôt qu'un arrêt
+    if (tours >= maxTours && !extensionTours && !signal?.aborted
+        && Array.isArray(planCourant) && planCourant.some((t) => t.statut !== 'termine')) {
+      extensionTours = true;
+      maxTours += 15;
+      emit({
+        type: 'avertissement',
+        message: 'Plan encore en cours à la limite de tours : poursuite exceptionnelle de 15 tours.'
+      });
+    }
 
     // --- réinjection des résultats dans l'historique du fournisseur ---
     if (isAnthropic) {

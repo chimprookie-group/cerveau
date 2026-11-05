@@ -897,6 +897,52 @@ async function run(mainWindow, deps) {
   verifier('Réponse coupée : poursuite automatique',
     toursRelance >= 2 && /et fin/.test(resRelance.texte), `${toursRelance} tour(s)`);
 
+  // conclusion prématurée : une vérification courte doit forcer la reprise
+  let toursVerif = 0;
+  let verifs = 0;
+  const serveurVerif = require('node:http').createServer((req, res) => {
+    if (req.method !== 'POST') { res.writeHead(200); return res.end('ok'); }
+    let b = '';
+    req.on('data', (c) => { b += c; });
+    req.on('end', () => {
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      const send = (o) => res.write('data: ' + JSON.stringify(o) + '\n\n');
+      if (b.includes('Tu vérifies si une tâche')) {
+        verifs += 1;
+        send({ choices: [{ delta: { content: 'NON' } }] });
+      } else {
+        toursVerif += 1;
+        if (toursVerif === 1) {
+          send({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'v0', type: 'function',
+            function: { name: 'lister_fichiers', arguments: '{}' } }] } }] });
+          send({ choices: [{ delta: {}, finish_reason: 'tool_calls' }] });
+        } else if (toursVerif === 2) {
+          send({ choices: [{ delta: { content: "J'ai commencé le travail." } }] });
+          send({ choices: [{ delta: {}, finish_reason: 'stop' }] });
+        } else {
+          send({ choices: [{ delta: { content: 'Travail terminé et vérifié.' } }] });
+          send({ choices: [{ delta: {}, finish_reason: 'stop' }] });
+        }
+      }
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+  });
+  await new Promise((r) => serveurVerif.listen(0, r));
+  const portVerif = serveurVerif.address().port;
+  const resVerif = await agentModule2.run({
+    providerId: 'custom',
+    credentials: { apiKey: 'k', baseUrl: `http://127.0.0.1:${portVerif}/v1`, model: 'verif' },
+    historique: [{ role: 'user', contenu: 'fais tout le travail' }],
+    ctx: { mode: 'code', vaultPath: null, coffre: null, workspace: os.tmpdir(),
+      permissions: { mode: 'auto' }, confirmer: async () => ({ autorise: true }) },
+    emit: () => {}
+  });
+  serveurVerif.close();
+  verifier('Conclusion prématurée : vérification et reprise',
+    verifs === 1 && toursVerif >= 3 && /Travail terminé/.test(resVerif.texte),
+    `${toursVerif} tour(s), ${verifs} vérification(s)`);
+
   // 6undecies. Non-régression des bugs corrigés lors de l'audit
   const tMcp = Date.now();
   const outilsFantome = await mcpMod.gestionnaire.charger([

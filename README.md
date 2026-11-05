@@ -139,7 +139,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.20.1-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.21.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -294,6 +294,9 @@ demande (`charger_competence`) et peut enregistrer une nouvelle procédure
 - **Poursuite automatique** : si le modèle s'arrête avant la fin (réponse coupée,
   plan incomplet, outil en échec), l'agent reprend seul au lieu d'attendre que
   l'utilisateur écrive « continue ».
+- **Vérification de fin de tâche** : après un tour qui a exécuté des outils, un
+  appel court demande au modèle si la demande est réellement satisfaite ; s'il
+  répond non, l'agent poursuit. Une seule vérification par demande.
 
 ### Voir les images
 

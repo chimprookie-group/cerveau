@@ -4,6 +4,22 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.21.0] — 2026-11-05
+
+### Corrigé
+- **L'agent pouvait conclure trop tôt sans qu'aucun signe ne le trahisse.** Après un
+  tour qui a utilisé des outils, une courte vérification demande au modèle si la
+  demande est réellement satisfaite. S'il répond NON, l'agent reprend seul avec une
+  consigne explicite ; une seule vérification par demande, dans un appel séparé qui
+  ne pollue pas la conversation.
+- **Limite de tours atteinte avec un plan inachevé** : une extension exceptionnelle
+  de 15 tours, annoncée, au lieu d'un arrêt sec.
+- L'indicateur de réflexion affiche « Vérification du résultat… » pendant ce contrôle.
+
+### Modifié
+- La vérification ne s'applique qu'après un tour ayant réellement exécuté des outils :
+  une réponse simple ne déclenche aucun appel supplémentaire.
+
 ## [2.20.1] — 2026-11-05
 
 ### Modifié
