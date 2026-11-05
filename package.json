@@ -1,7 +1,7 @@
 {
   "name": "cerveau",
   "productName": "Cerveau",
-  "version": "2.25.0",
+  "version": "2.26.0",
   "description": "Assistant IA de bureau en français avec coffre Obsidian intégré",
   "main": "electron/main.js",
   "author": "chimp",

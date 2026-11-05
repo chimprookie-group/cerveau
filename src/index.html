@@ -304,12 +304,16 @@
             <button id="btnRafraichirCerveau" class="btn-mini" title="Rafraîchir le cerveau">⟳</button>
           </div>
           <div id="cerveauGraphe" class="cerveau-graphe">
-            <p class="vide">Ouvrez un coffre pour voir le cerveau.</p>
+            <div id="cerveauScene" class="cerveau-scene">
+              <canvas id="cerveauCanvas" aria-label="Cerveau 3D du coffre"></canvas>
+              <div id="cerveauBulle" class="cerveau-bulle" hidden></div>
+              <div id="cerveauEtat" class="cerveau-etat vide">Ouvrez un coffre pour voir le cerveau.</div>
+            </div>
           </div>
           <div class="cerveau-legende">
             <span class="cerveau-pastille"></span> note
             <span class="cerveau-pastille lien"></span> lien
-            <span class="cerveau-aide">Survolez un nœud, cliquez pour ouvrir.</span>
+            <span class="cerveau-aide">Glisser : tourner · molette : zoomer · clic : ouvrir.</span>
           </div>
         </div>
       </div>

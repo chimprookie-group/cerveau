@@ -3254,7 +3254,7 @@ function masquerApercuTour() {
   if (apercu) apercu.hidden = true;
 }
 
-/* --------------------- cerveau : cartographie du coffre ------------------ */
+/* --------------------- cerveau 3D interactif --------------------------- */
 
 function hashTexte(texte) {
   let h = 2166136261;
@@ -3265,178 +3265,658 @@ function hashTexte(texte) {
   return (h >>> 0) / 4294967295;
 }
 
-function svgEl(nom, attrs = {}, ...enfants) {
-  const n = document.createElementNS('http://www.w3.org/2000/svg', nom);
-  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
-  for (const e of enfants) if (e) n.append(e);
-  return n;
+const cerveau3D = {
+  actif: false,
+  raf: 0,
+  temps: 0,
+  dernier: 0,
+  canvas: null,
+  ctx: null,
+  dpr: 1,
+  largeur: 0,
+  hauteur: 0,
+  cx: 0,
+  cy: 0,
+  echelle: 1,
+  yaw: 0.95,
+  pitch: 0.12,
+  zoom: 1.3,
+  drag: null,
+  survol: null,
+  notes: [],
+  liens: [],
+  synapses: [],
+  mesh: [],
+  etoiles: [],
+  positions: new Map(),
+  proj: new Map(),
+  lueur: null,
+  bulle: null,
+  scene: null,
+  charge: false
+};
+
+/** Point de la surface d'un hémisphère (deux ellipsoïdes accolés, reliefs). */
+function surfaceCerveau3D(phi, theta, cote, graine = 0) {
+  const relief = 1
+    + 0.06 * Math.sin(theta * 7 + graine) * Math.sin(phi * 5 + graine * 0.5)
+    + 0.035 * Math.sin(theta * 13 + phi * 3 + graine * 1.7);
+  const sx = Math.sin(phi) * Math.cos(theta);
+  const sy = Math.cos(phi);
+  const sz = Math.sin(phi) * Math.sin(theta);
+
+  // hémisphère : ellipsoïde bombé, face interne aplatie (sillon longitudinal)
+  let x = cote * 0.26 + 0.25 * relief * sx;
+  if (Math.sign(x) !== cote) x = cote * 0.05;
+  let y = 0.37 * relief * sy;
+  let z = 0.53 * relief * sz;
+
+  // lobe temporal : renflement latéral bas
+  const temporal = Math.exp(-(((y + 0.2) / 0.18) ** 2) - (((z - 0.16) / 0.34) ** 2));
+  x += cote * 0.06 * temporal;
+
+  // frontal un peu plus haut, occipital un peu plus bas
+  y += 0.03 * Math.max(0, sz) - 0.02 * Math.max(0, -sz);
+
+  return { x, y, z };
 }
 
-function construireSvgCerveau(g) {
-  const W = 360;
-  const H = 540;
-  const cx = 180;
-  const cy = 248;
+/** Petit lobe du cervelet, à l'arrière-bas. */
+function pointCervelet3D(phi, theta, cote) {
+  return {
+    x: cote * 0.15 + 0.15 * Math.sin(phi) * Math.cos(theta),
+    y: -0.33 + 0.09 * Math.cos(phi),
+    z: -0.36 + 0.16 * Math.sin(phi) * Math.sin(theta)
+  };
+}
+
+function creerLueurCerveau() {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255, 244, 214, 1)');
+  grad.addColorStop(0.22, 'rgba(255, 215, 128, 0.9)');
+  grad.addColorStop(0.55, 'rgba(255, 179, 71, 0.28)');
+  grad.addColorStop(1, 'rgba(255, 179, 71, 0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  return c;
+}
+
+/** Construit la scène : positions 3D des notes, liens, maillage du cerveau. */
+function construireCerveau3D(g) {
   const notes = g.notes || [];
   const n = notes.length;
-
   const positions = new Map();
+
   notes.forEach((note, i) => {
-    // deux hémisphères : chaque note rejoint un lobe, en spirale dorée
-    const lobe = hashTexte(`${note.chemin}:lobe`) < 0.5 ? -1 : 1;
-    const angle = i * 2.399963;
-    const r = Math.sqrt((i + 0.8) / n);
-    const hx = hashTexte(`${note.chemin}:x`) - 0.5;
-    const hy = hashTexte(`${note.chemin}:y`) - 0.5;
-    const x = cx + lobe * 28 + Math.cos(angle) * 74 * r + hx * 16;
-    const y = 238 + Math.sin(angle) * 152 * r + hy * 16;
-    positions.set(note.chemin, { x, y });
+    const u = (i + 0.5) / n;
+    const phi = Math.acos(1 - 2 * u);
+    const theta = i * 2.399963;
+    const cote = hashTexte(`${note.chemin}:cote`) < 0.5 ? -1 : 1;
+    const zone = hashTexte(`${note.chemin}:zone`);
+    const p = zone < 0.09
+      ? pointCervelet3D(phi, theta, cote)
+      : surfaceCerveau3D(phi, theta, cote, hashTexte(note.chemin) * 6.28);
+    positions.set(note.chemin, p);
   });
 
-  const degres = new Map();
+  // maillage : surface des hémisphères + cervelet + tronc cérébral
+  const mesh = [];
+  for (const cote of [-1, 1]) {
+    for (let i = 0; i < 950; i += 1) {
+      const u = (i + 0.5) / 950;
+      const phi = Math.acos(1 - 2 * u);
+      const theta = i * 2.399963 + (cote < 0 ? 0 : Math.PI);
+      mesh.push(surfaceCerveau3D(phi, theta, cote, 0));
+    }
+    for (let i = 0; i < 80; i += 1) {
+      const u = (i + 0.5) / 80;
+      const phi = Math.acos(1 - 2 * u);
+      const theta = i * 2.399963 + (cote < 0 ? 1.3 : 4.4);
+      mesh.push(pointCervelet3D(phi, theta, cote));
+    }
+  }
+  for (let i = 0; i < 60; i += 1) {
+    const u = i / 60;
+    const r = 0.055 - 0.02 * u;
+    const ang = i * 2.399963;
+    mesh.push({
+      x: Math.cos(ang) * r,
+      y: -0.24 - 0.34 * u,
+      z: 0.02 + Math.sin(ang) * r
+    });
+  }
+
+  // liens réels
+  const liens = [];
   for (const [a, b] of g.liens || []) {
+    if (positions.has(a) && positions.has(b)) liens.push([a, b]);
+  }
+
+  // synapses : plus proche voisin de chaque note, pour la continuité visuelle
+  const synapses = [];
+  if (n > 1) {
+    const deja = new Set(liens.map(([a, b]) => (a < b ? `${a}|${b}` : `${b}|${a}`)));
+    for (const note of notes) {
+      const pa = positions.get(note.chemin);
+      let meilleur = null;
+      let dmin = Infinity;
+      for (const autre of notes) {
+        if (autre.chemin === note.chemin) continue;
+        const pb = positions.get(autre.chemin);
+        const d = (pa.x - pb.x) ** 2 + (pa.y - pb.y) ** 2 + (pa.z - pb.z) ** 2;
+        if (d < dmin) { dmin = d; meilleur = autre.chemin; }
+      }
+      if (meilleur) {
+        const cle = note.chemin < meilleur ? `${note.chemin}|${meilleur}` : `${meilleur}|${note.chemin}`;
+        if (!deja.has(cle)) {
+          deja.add(cle);
+          synapses.push([note.chemin, meilleur]);
+        }
+      }
+    }
+  }
+
+  const degres = new Map();
+  for (const [a, b] of liens) {
     degres.set(a, (degres.get(a) || 0) + 1);
     degres.set(b, (degres.get(b) || 0) + 1);
   }
 
-  const svg = svgEl('svg', {
-    viewBox: `0 0 ${W} ${H}`,
-    class: 'cerveau-svg',
-    role: 'img',
-    'aria-label': `Carte du coffre : ${n} notes, ${(g.liens || []).length} liens`
-  });
+  cerveau3D.notes = notes;
+  cerveau3D.liens = liens;
+  cerveau3D.degres = degres;
+  cerveau3D.synapses = synapses;
+  cerveau3D.mesh = mesh;
+  cerveau3D.positions = positions;
+  cerveau3D.proj = new Map();
+  cerveau3D.yaw = 0.95;
+  cerveau3D.pitch = 0.12;
+  cerveau3D.zoom = 1.3;
+  cerveau3D.survol = null;
+  cerveau3D.charge = true;
+}
 
-  const defs = svgEl('defs',
-    svgEl('radialGradient', { id: 'fondCerveau', cx: '50%', cy: '42%', r: '75%' },
-      svgEl('stop', { offset: '0%', 'stop-color': '#111a2e' }),
-      svgEl('stop', { offset: '55%', 'stop-color': '#080d17' }),
-      svgEl('stop', { offset: '100%', 'stop-color': '#04060b' })
-    ),
-    svgEl('radialGradient', { id: 'auraCerveau', cx: '50%', cy: '50%', r: '50%' },
-      svgEl('stop', { offset: '0%', 'stop-color': '#ffd479', 'stop-opacity': '0.5' }),
-      svgEl('stop', { offset: '45%', 'stop-color': '#ffb347', 'stop-opacity': '0.18' }),
-      svgEl('stop', { offset: '100%', 'stop-color': '#ffb347', 'stop-opacity': '0' })
-    ),
-    svgEl('radialGradient', { id: 'lueurNoeud', cx: '50%', cy: '50%', r: '50%' },
-      svgEl('stop', { offset: '0%', 'stop-color': '#fff3d6', 'stop-opacity': '0.95' }),
-      svgEl('stop', { offset: '55%', 'stop-color': '#ffd479', 'stop-opacity': '0.85' }),
-      svgEl('stop', { offset: '100%', 'stop-color': '#ffb347', 'stop-opacity': '0' })
-    ),
-    svgEl('filter', { id: 'flouCerveau', x: '-40%', y: '-40%', width: '180%', height: '180%' },
-      svgEl('feGaussianBlur', { stdDeviation: '4' })
-    )
-  );
-  svg.append(defs);
+function projeterCerveau3D(p) {
+  const cosY = Math.cos(cerveau3D.yaw);
+  const sinY = Math.sin(cerveau3D.yaw);
+  const cosP = Math.cos(cerveau3D.pitch);
+  const sinP = Math.sin(cerveau3D.pitch);
+  const x1 = p.x * cosY + p.z * sinY;
+  const z1 = -p.x * sinY + p.z * cosY;
+  const y1 = p.y * cosP - z1 * sinP;
+  const z2 = p.y * sinP + z1 * cosP;
+  const s = (cerveau3D.zoom * cerveau3D.echelle) / (2.9 - z2);
+  return {
+    x: cerveau3D.cx + x1 * s,
+    y: cerveau3D.cy - y1 * s,
+    z: z2,
+    s
+  };
+}
 
-  svg.append(svgEl('rect', {
-    x: 0, y: 0, width: W, height: H, rx: 14, fill: 'url(#fondCerveau)'
-  }));
+function pointBezier3D(a, b, t) {
+  const cx = (a.x + b.x) * 0.25;
+  const cy = (a.y + b.y) * 0.25;
+  const cz = (a.z + b.z) * 0.25;
+  const u = 1 - t;
+  return {
+    x: u * u * a.x + 2 * u * t * cx + t * t * b.x,
+    y: u * u * a.y + 2 * u * t * cy + t * t * b.y,
+    z: u * u * a.z + 2 * u * t * cz + t * t * b.z
+  };
+}
 
-  // étoiles
-  for (let i = 0; i < 90; i += 1) {
-    const x = hashTexte(`etoile-x-${i}`) * W;
-    const y = hashTexte(`etoile-y-${i}`) * H;
-    const r = 0.35 + hashTexte(`etoile-r-${i}`) * 0.9;
-    const o = 0.15 + hashTexte(`etoile-o-${i}`) * 0.5;
-    svg.append(svgEl('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2), fill: '#ffffff', opacity: o.toFixed(2) }));
+function dessinerCerveau3D(temps) {
+  const { ctx, largeur: w, hauteur: h } = cerveau3D;
+  if (!ctx || !w || !h) return;
+
+  ctx.clearRect(0, 0, w, h);
+
+  const fond = ctx.createRadialGradient(w / 2, h * 0.46, 10, w / 2, h * 0.46, Math.max(w, h) * 0.72);
+  fond.addColorStop(0, '#121b30');
+  fond.addColorStop(0.55, '#080d18');
+  fond.addColorStop(1, '#04060b');
+  ctx.fillStyle = fond;
+  ctx.fillRect(0, 0, w, h);
+
+  for (const e of cerveau3D.etoiles) {
+    const scintille = 0.45 + 0.55 * Math.abs(Math.sin(temps * 0.00025 + e.phase));
+    ctx.fillStyle = `rgba(255,255,255,${(e.o * scintille).toFixed(3)})`;
+    ctx.fillRect(e.x * w, e.y * h, e.r, e.r);
   }
 
-  // contour du cerveau
-  const contour = 'M180 70 C138 62 96 92 86 142 C78 186 90 236 112 284 '
-    + 'C130 322 156 356 180 384 C204 356 230 322 248 284 '
-    + 'C270 236 282 186 274 142 C264 92 222 62 180 70 Z';
-  svg.append(svgEl('path', {
-    d: contour, fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.12',
-    'stroke-width': '4', filter: 'url(#flouCerveau)'
-  }));
-  svg.append(svgEl('path', {
-    d: contour, fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.3', 'stroke-width': '1.3'
-  }));
-  svg.append(svgEl('path', {
-    d: 'M180 96 C172 150 174 220 180 372',
-    fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.12', 'stroke-width': '1'
-  }));
-  svg.append(svgEl('path', {
-    d: 'M180 96 C142 86 104 118 98 166 C92 214 108 266 134 310',
-    fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.09', 'stroke-width': '1'
-  }));
-  svg.append(svgEl('path', {
-    d: 'M180 96 C218 86 256 118 262 166 C268 214 252 266 226 310',
-    fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.09', 'stroke-width': '1'
-  }));
+  // halo derrière la masse cérébrale
+  const halo = ctx.createRadialGradient(w / 2, h * 0.5, 8, w / 2, h * 0.5, Math.min(w, h) * 0.55);
+  halo.addColorStop(0, 'rgba(255, 190, 90, 0.10)');
+  halo.addColorStop(1, 'rgba(255, 190, 90, 0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, 0, w, h);
 
-  // liens (avant les nœuds)
-  for (const [a, b] of g.liens || []) {
-    const pa = positions.get(a);
-    const pb = positions.get(b);
-    if (!pa || !pb) continue;
-    const mx = (pa.x + pb.x) / 2;
-    const my = (pa.y + pb.y) / 2;
-    const qx = mx + (cx - mx) * 0.32;
-    const qy = my + (cy - my) * 0.32;
-    svg.append(svgEl('path', {
-      d: `M ${pa.x.toFixed(1)} ${pa.y.toFixed(1)} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${pb.x.toFixed(1)} ${pb.y.toFixed(1)}`,
-      fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.13', 'stroke-width': '0.8'
-    }));
+  // silhouette de cerveau (vue de face), avec sillon central et circonvolutions
+  const bw = Math.min(w, h) * 0.92;
+  const bh = bw * 1.0;
+  const bx = cerveau3D.cx - bw / 2;
+  const by = h * 0.47 - bh * 0.47;
+  const px = (x) => bx + x * bw;
+  const py = (y) => by + y * bh;
+  const corps = new Path2D();
+  corps.moveTo(px(0.50), py(0.14));
+  corps.bezierCurveTo(px(0.40), py(0.08), px(0.25), py(0.08), px(0.17), py(0.20));
+  corps.bezierCurveTo(px(0.10), py(0.30), px(0.08), py(0.44), px(0.12), py(0.56));
+  corps.bezierCurveTo(px(0.15), py(0.66), px(0.20), py(0.73), px(0.26), py(0.76));
+  corps.bezierCurveTo(px(0.30), py(0.84), px(0.38), py(0.87), px(0.45), py(0.84));
+  corps.bezierCurveTo(px(0.47), py(0.89), px(0.49), py(0.91), px(0.50), py(0.91));
+  corps.bezierCurveTo(px(0.51), py(0.91), px(0.53), py(0.89), px(0.55), py(0.84));
+  corps.bezierCurveTo(px(0.62), py(0.87), px(0.70), py(0.84), px(0.74), py(0.76));
+  corps.bezierCurveTo(px(0.80), py(0.73), px(0.85), py(0.66), px(0.88), py(0.56));
+  corps.bezierCurveTo(px(0.92), py(0.44), px(0.90), py(0.30), px(0.83), py(0.20));
+  corps.bezierCurveTo(px(0.75), py(0.08), px(0.60), py(0.08), px(0.50), py(0.14));
+  corps.closePath();
+
+  ctx.save();
+  const fondCerveau = ctx.createRadialGradient(w / 2, h * 0.45, 10, w / 2, h * 0.5, bw * 0.6);
+  fondCerveau.addColorStop(0, 'rgba(255, 200, 110, 0.06)');
+  fondCerveau.addColorStop(1, 'rgba(30, 20, 8, 0)');
+  ctx.fillStyle = fondCerveau;
+  ctx.fill(corps);
+
+  // circonvolutions
+  ctx.strokeStyle = 'rgba(255, 214, 150, 0.12)';
+  ctx.lineWidth = 1;
+  const gyri = [
+    [0.32, 0.18, 0.22, 0.34, 0.20, 0.46],
+    [0.40, 0.16, 0.30, 0.30, 0.28, 0.44],
+    [0.24, 0.30, 0.16, 0.44, 0.18, 0.56],
+    [0.30, 0.52, 0.24, 0.62, 0.28, 0.70],
+    [0.68, 0.18, 0.78, 0.34, 0.80, 0.46],
+    [0.60, 0.16, 0.70, 0.30, 0.72, 0.44],
+    [0.76, 0.30, 0.84, 0.44, 0.82, 0.56],
+    [0.70, 0.52, 0.76, 0.62, 0.72, 0.70],
+    [0.50, 0.18, 0.46, 0.40, 0.47, 0.60],
+    [0.50, 0.18, 0.54, 0.40, 0.53, 0.60]
+  ];
+  for (const [x1, y1, x2, y2, x3, y3] of gyri) {
+    ctx.beginPath();
+    ctx.moveTo(px(x1), py(y1));
+    ctx.quadraticCurveTo(px(x2), py(y2), px(x3), py(y3));
+    ctx.stroke();
   }
+
+  // sillon central
+  ctx.strokeStyle = 'rgba(255, 226, 180, 0.22)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(px(0.50), py(0.15));
+  ctx.quadraticCurveTo(px(0.47), py(0.5), px(0.50), py(0.88));
+  ctx.stroke();
 
   // tronc cérébral
-  svg.append(svgEl('path', {
-    d: 'M170 380 C162 400 166 418 180 426 C194 418 198 400 190 380',
-    fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.16', 'stroke-width': '1.1'
-  }));
+  ctx.strokeStyle = 'rgba(255, 214, 150, 0.2)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(px(0.465), py(0.86));
+  ctx.quadraticCurveTo(px(0.47), py(0.94), px(0.50), py(0.98));
+  ctx.quadraticCurveTo(px(0.53), py(0.94), px(0.535), py(0.86));
+  ctx.stroke();
 
-  // cœur lumineux
-  svg.append(svgEl('circle', { cx, cy, r: 58, fill: 'url(#auraCerveau)', filter: 'url(#flouCerveau)' }));
-  svg.append(svgEl('circle', { cx, cy, r: 7, fill: '#ffe6b0', class: 'cerveau-coeur' }));
-  svg.append(svgEl('circle', { cx, cy, r: 14, fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.35', 'stroke-width': '1' }));
+  // liseré lumineux
+  ctx.strokeStyle = 'rgba(255, 190, 90, 0.16)';
+  ctx.lineWidth = 8;
+  ctx.stroke(corps);
+  ctx.strokeStyle = 'rgba(255, 230, 190, 0.55)';
+  ctx.lineWidth = 1.3;
+  ctx.shadowColor = 'rgba(255, 190, 90, 0.8)';
+  ctx.shadowBlur = 10;
+  ctx.stroke(corps);
+  ctx.shadowBlur = 0;
 
-  // nœuds
-  for (const note of notes) {
-    const p = positions.get(note.chemin);
-    if (!p) continue;
-    const degre = degres.get(note.chemin) || 0;
-    const r = 3 + Math.min(degre, 6) * 0.85;
+  // tout le réseau reste à l'intérieur du cerveau
+  ctx.clip(corps);
 
-    const groupe = svgEl('g', {
-      class: 'cerveau-noeud',
-      'data-chemin': note.chemin,
-      tabindex: '0',
-      role: 'button'
-    },
-      svgEl('circle', { cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: (r + 4).toFixed(1), fill: 'url(#lueurNoeud)', opacity: '0.5' }),
-      svgEl('circle', { cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: r.toFixed(1), fill: '#ffd479', opacity: (0.6 + Math.min(degre, 6) * 0.06).toFixed(2) })
-    );
-    const infos = [note.titre];
-    if (note.dossier) infos.push(note.dossier);
-    if (note.tags?.length) infos.push(note.tags.map((t) => `#${t}`).join(' '));
-    groupe.append(svgEl('title', {}, document.createTextNode(infos.join(' · '))));
-
-    const ouvrir = () => ouvrirNote(note.chemin);
-    groupe.addEventListener('click', ouvrir);
-    groupe.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrir(); }
-    });
-    svg.append(groupe);
+  // projections des notes (utilisées par les liens et le survol)
+  cerveau3D.proj = new Map();
+  for (const note of cerveau3D.notes) {
+    const p = cerveau3D.positions.get(note.chemin);
+    if (p) cerveau3D.proj.set(note.chemin, projeterCerveau3D(p));
   }
 
-  return svg;
+  // maillage : points de la surface, du plus loin au plus proche
+  const meshProj = cerveau3D.mesh.map((p) => projeterCerveau3D(p));
+  meshProj.sort((a, b) => a.z - b.z);
+  for (const p of meshProj) {
+    const profondeur = Math.max(0, Math.min(1, (p.z + 0.6) / 1.2));
+    const alpha = 0.07 + profondeur * 0.3;
+    ctx.fillStyle = `rgba(255, 214, 150, ${alpha.toFixed(3)})`;
+    const r = Math.max(0.8, p.s * 0.005);
+    ctx.fillRect(p.x, p.y, r, r);
+  }
+
+  const haloNoeud = cerveau3D.lueur;
+  const survol = cerveau3D.survol;
+  const liensDuSurvol = new Set();
+  if (survol) {
+    for (const [a, b] of cerveau3D.liens) {
+      if (a === survol || b === survol) {
+        liensDuSurvol.add(a);
+        liensDuSurvol.add(b);
+      }
+    }
+  }
+
+  // synapses (fines, discrètes)
+  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = 'rgba(255, 205, 130, 0.07)';
+  ctx.beginPath();
+  for (const [a, b] of cerveau3D.synapses) {
+    const pa = cerveau3D.proj.get(a);
+    const pb = cerveau3D.proj.get(b);
+    if (!pa || !pb) continue;
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+  }
+  ctx.stroke();
+
+  // liens réels : courbes qui plongent vers le centre
+  ctx.lineWidth = 0.8;
+  for (const [a, b] of cerveau3D.liens) {
+    const pa = cerveau3D.proj.get(a);
+    const pb = cerveau3D.proj.get(b);
+    if (!pa || !pb) continue;
+    const lumineux = survol && (a === survol || b === survol);
+    ctx.strokeStyle = lumineux
+      ? 'rgba(255, 236, 190, 0.65)'
+      : 'rgba(255, 205, 130, 0.16)';
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    const mx = (pa.x + pb.x) / 2;
+    const my = (pa.y + pb.y) / 2;
+    ctx.quadraticCurveTo(mx + (cerveau3D.cx - mx) * 0.3, my + (cerveau3D.cy - my) * 0.3, pb.x, pb.y);
+    ctx.stroke();
+  }
+
+  // flux : particules qui parcourent les liens
+  for (let i = 0; i < cerveau3D.liens.length; i += 1) {
+    const [a, b] = cerveau3D.liens[i];
+    const na = cerveau3D.positions.get(a);
+    const nb = cerveau3D.positions.get(b);
+    const pa = cerveau3D.proj.get(a);
+    const pb = cerveau3D.proj.get(b);
+    if (!na || !nb || !pa || !pb) continue;
+
+    for (let k = 0; k < 2; k += 1) {
+      const phase = hashTexte(`${a}|${b}|${k}`);
+      const t = (temps * 0.00016 + phase) % 1;
+      const p = pointBezier3D(na, nb, t);
+      const proj = projeterCerveau3D(p);
+      const taille = Math.max(1.4, proj.s * 0.012);
+      const alpha = 0.35 + 0.5 * Math.sin(Math.PI * t);
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(haloNoeud, proj.x - taille * 2, proj.y - taille * 2, taille * 4, taille * 4);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // nœuds
+  const notesProj = cerveau3D.notes
+    .map((note) => ({ note, p: cerveau3D.proj.get(note.chemin) }))
+    .filter((x) => x.p)
+    .sort((a, b) => a.p.z - b.p.z);
+
+  for (const { note, p } of notesProj) {
+    const degre = cerveau3D.degres?.get(note.chemin) || 0;
+    const r = 2.2 + Math.min(degre, 6) * 0.55;
+    const proche = survol === note.chemin;
+    const taille = (r + (proche ? 3 : 0)) * 2.6;
+    ctx.globalAlpha = proche ? 1 : 0.78;
+    ctx.drawImage(haloNoeud, p.x - taille, p.y - taille, taille * 2, taille * 2);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = proche ? '#fff3d6' : '#ffd479';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r * 0.65, 0, Math.PI * 2);
+    ctx.fill();
+    if (proche) {
+      ctx.strokeStyle = 'rgba(255, 236, 190, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 1.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    cerveau3D.proj.set(note.chemin, p);
+  }
+
+  // cœur central
+  const coeur = projeterCerveau3D({ x: 0, y: 0.02, z: 0 });
+  const pulsation = 0.85 + 0.15 * Math.sin(temps * 0.0016);
+  const hg = ctx.createRadialGradient(coeur.x, coeur.y, 0, coeur.x, coeur.y, 34 * pulsation);
+  hg.addColorStop(0, 'rgba(255, 250, 230, 0.95)');
+  hg.addColorStop(0.25, 'rgba(255, 210, 121, 0.55)');
+  hg.addColorStop(1, 'rgba(255, 170, 60, 0)');
+  ctx.fillStyle = hg;
+  ctx.beginPath();
+  ctx.arc(coeur.x, coeur.y, 34 * pulsation, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff6dd';
+  ctx.beginPath();
+  ctx.arc(coeur.x, coeur.y, 2.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // on sort du masque et on redessine le liseré par-dessus le réseau
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255, 230, 190, 0.5)';
+  ctx.lineWidth = 1.1;
+  ctx.shadowColor = 'rgba(255, 190, 90, 0.7)';
+  ctx.shadowBlur = 8;
+  ctx.stroke(corps);
+  ctx.shadowBlur = 0;
+}
+
+function boucleCerveau3D(ts) {
+  if (!cerveau3D.actif) return;
+  const dt = Math.min(64, ts - (cerveau3D.dernier || ts));
+  cerveau3D.dernier = ts;
+  cerveau3D.temps += dt;
+
+  if (!cerveau3D.drag && !cerveau3D.survol) {
+    cerveau3D.yaw += dt * 0.00022;
+  }
+
+  dessinerCerveau3D(cerveau3D.temps);
+  cerveau3D.raf = requestAnimationFrame(boucleCerveau3D);
+}
+
+function redimensionnerCerveau3D() {
+  const canvas = cerveau3D.canvas;
+  const scene = cerveau3D.scene;
+  if (!canvas || !scene) return;
+  const rect = scene.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  if (!rect.width || !rect.height) return;
+
+  cerveau3D.dpr = dpr;
+  cerveau3D.largeur = rect.width;
+  cerveau3D.hauteur = rect.height;
+  cerveau3D.cx = rect.width / 2;
+  cerveau3D.cy = rect.height * 0.52;
+  cerveau3D.echelle = Math.min(rect.width, rect.height) * 2.0;
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  canvas.style.width = `${rect.width}px`;
+  canvas.style.height = `${rect.height}px`;
+  cerveau3D.ctx = canvas.getContext('2d');
+  cerveau3D.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function demarrerCerveau3D() {
+  if (!cerveau3D.charge) return;
+  if (cerveau3D.actif) return;
+  if (!cerveau3D.canvas) return;
+  cerveau3D.actif = true;
+  cerveau3D.dernier = 0;
+  redimensionnerCerveau3D();
+  cerveau3D.raf = requestAnimationFrame(boucleCerveau3D);
+}
+
+function arreterCerveau3D() {
+  cerveau3D.actif = false;
+  if (cerveau3D.raf) cancelAnimationFrame(cerveau3D.raf);
+  cerveau3D.raf = 0;
+}
+
+function noeudSousPointeur(x, y) {
+  let meilleur = null;
+  let dmin = 16;
+  for (const note of cerveau3D.notes) {
+    const p = cerveau3D.proj.get(note.chemin);
+    if (!p) continue;
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d < dmin) { dmin = d; meilleur = note; }
+  }
+  return meilleur;
+}
+
+function afficherBulleCerveau(note) {
+  const bulle = cerveau3D.bulle;
+  if (!bulle) return;
+  if (!note) { bulle.hidden = true; return; }
+  const p = cerveau3D.proj.get(note.chemin);
+  if (!p) { bulle.hidden = true; return; }
+
+  bulle.innerHTML = '';
+  bulle.append(el('div', { class: 'cerveau-bulle-titre', text: note.titre }));
+  if (note.dossier) bulle.append(el('div', { class: 'cerveau-bulle-dossier', text: note.dossier }));
+  if (note.tags?.length) {
+    bulle.append(el('div', { class: 'cerveau-bulle-tags', text: note.tags.map((t) => `#${t}`).join(' ') }));
+  }
+  bulle.hidden = false;
+
+  const marge = 10;
+  const largeur = bulle.offsetWidth;
+  let gauche = p.x + 14;
+  if (gauche + largeur > cerveau3D.largeur - marge) gauche = p.x - largeur - 14;
+  bulle.style.left = `${Math.max(marge, gauche)}px`;
+  bulle.style.top = `${Math.max(marge, p.y - bulle.offsetHeight / 2)}px`;
+}
+
+function brancherCerveau3D() {
+  const canvas = $('#cerveauCanvas');
+  const scene = $('#cerveauScene');
+  if (!canvas || !scene) return;
+  cerveau3D.canvas = canvas;
+  cerveau3D.scene = scene;
+  cerveau3D.bulle = $('#cerveauBulle');
+  cerveau3D.lueur = creerLueurCerveau();
+  cerveau3D.etoiles = Array.from({ length: 140 }, (_, i) => ({
+    x: hashTexte(`etoile-x-${i}`),
+    y: hashTexte(`etoile-y-${i}`),
+    r: 0.5 + hashTexte(`etoile-r-${i}`) * 1.1,
+    o: 0.15 + hashTexte(`etoile-o-${i}`) * 0.55,
+    phase: hashTexte(`etoile-p-${i}`) * 6.28
+  }));
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    cerveau3D.drag = { x: e.clientX, y: e.clientY, bouge: false };
+    cerveau3D.survol = null;
+    if (cerveau3D.bulle) cerveau3D.bulle.hidden = true;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.classList.add('cerveau-drag');
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    const rect = scene.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (cerveau3D.drag) {
+      const dx = e.clientX - cerveau3D.drag.x;
+      const dy = e.clientY - cerveau3D.drag.y;
+      cerveau3D.drag.x = e.clientX;
+      cerveau3D.drag.y = e.clientY;
+      if (Math.abs(dx) + Math.abs(dy) > 2) cerveau3D.drag.bouge = true;
+      cerveau3D.yaw += dx * 0.008;
+      cerveau3D.pitch = Math.max(-1.3, Math.min(1.3, cerveau3D.pitch + dy * 0.006));
+      return;
+    }
+
+    const note = noeudSousPointeur(x, y);
+    if (note?.chemin !== cerveau3D.survol?.chemin) {
+      cerveau3D.survol = note;
+      afficherBulleCerveau(note);
+    } else if (note) {
+      afficherBulleCerveau(note);
+    }
+    canvas.style.cursor = note ? 'pointer' : 'grab';
+  });
+
+  const relacher = (e) => {
+    if (!cerveau3D.drag) return;
+    const bouge = cerveau3D.drag.bouge;
+    cerveau3D.drag = null;
+    canvas.classList.remove('cerveau-drag');
+    canvas.style.cursor = 'grab';
+    if (bouge) return;
+    const rect = scene.getBoundingClientRect();
+    const note = noeudSousPointeur(e.clientX - rect.left, e.clientY - rect.top);
+    if (note) ouvrirNote(note.chemin);
+  };
+  canvas.addEventListener('pointerup', relacher);
+  canvas.addEventListener('pointercancel', relacher);
+
+  canvas.addEventListener('pointerleave', () => {
+    if (cerveau3D.drag) return;
+    cerveau3D.survol = null;
+    if (cerveau3D.bulle) cerveau3D.bulle.hidden = true;
+  });
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    cerveau3D.zoom = Math.max(0.55, Math.min(2.6, cerveau3D.zoom * Math.exp(-e.deltaY * 0.0012)));
+  }, { passive: false });
+
+  canvas.addEventListener('dblclick', () => {
+    cerveau3D.yaw = 0.55;
+    cerveau3D.pitch = 0.12;
+    cerveau3D.zoom = 1.3;
+  });
+
+  if (typeof ResizeObserver !== 'undefined') {
+    const observateur = new ResizeObserver(() => {
+      if (cerveau3D.actif) redimensionnerCerveau3D();
+    });
+    observateur.observe(scene);
+  } else {
+    window.addEventListener('resize', () => {
+      if (cerveau3D.actif) redimensionnerCerveau3D();
+    });
+  }
 }
 
 async function rendreCerveau(forcer = false) {
-  const zone = $('#cerveauGraphe');
+  const scene = $('#cerveauScene');
   const infos = $('#cerveauInfos');
-  if (!zone) return;
+  const etat = $('#cerveauEtat');
+  if (!scene) return;
 
-  zone.innerHTML = '';
-  zone.append(el('p', { class: 'vide', text: 'Cartographie du coffre…' }));
+  arreterCerveau3D();
+  brancherCerveau3D();
+
+  if (etat) {
+    etat.hidden = false;
+    etat.textContent = 'Cartographie du coffre…';
+  }
 
   let g;
   try {
     g = await API.obs.graphe({ limite: 320, forcer });
   } catch (err) {
-    zone.innerHTML = '';
-    zone.append(el('p', { class: 'vide', text: err.message || 'Coffre indisponible.' }));
+    if (etat) {
+      etat.hidden = false;
+      etat.textContent = err.message || 'Coffre indisponible.';
+    }
     if (infos) infos.textContent = '—';
     return;
   }
@@ -3446,13 +3926,21 @@ async function rendreCerveau(forcer = false) {
     infos.textContent = `${g.affichees} notes · ${g.liens.length} liens${total}`;
   }
 
-  zone.innerHTML = '';
   if (!g.notes.length) {
-    zone.append(el('p', { class: 'vide', text: 'Aucune note dans le coffre.' }));
+    if (etat) {
+      etat.hidden = false;
+      etat.textContent = 'Aucune note dans le coffre.';
+    }
+    if (infos) infos.textContent = '—';
     return;
   }
-  zone.append(construireSvgCerveau(g));
+
+  construireCerveau3D(g);
+  if (etat) etat.hidden = true;
+  demarrerCerveau3D();
 }
+
+/* --------------------- traitement des événements agent ----------------- */
 
 /* --------------------- traitement des événements agent ----------------- */
 
@@ -4656,6 +5144,12 @@ function basculerSidebar() {
 function basculerPanneauObsidian() {
   const p = $('#panneauObsidian');
   p.classList.toggle('replie');
+  if (p.classList.contains('replie')) {
+    arreterCerveau3D();
+  } else if ($('.onglet-panneau.actif')?.dataset.panneau === 'cerveau') {
+    if (cerveau3D.charge) demarrerCerveau3D();
+    else rendreCerveau();
+  }
   enregistrerConfig({ ui: { obsidianPanelOpen: !p.classList.contains('replie') } });
 }
 
@@ -4664,6 +5158,7 @@ function actifOngletPanneau(nom) {
   $$('.volet-panneau').forEach((v) => v.classList.toggle('actif', v.id === `panneau-${nom}`));
   if (nom === 'travail') rafraichirTachesFond();
   if (nom === 'cerveau') rendreCerveau();
+  else arreterCerveau3D();
   if ($('#panneauObsidian').classList.contains('replie')) basculerPanneauObsidian();
 }
 

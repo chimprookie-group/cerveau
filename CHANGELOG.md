@@ -4,6 +4,19 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.26.0] — 2026-11-05
+
+### Modifié
+- **Cerveau 3D interactif** : la cartographie 2D est remplacée par un vrai cerveau
+  en volume — silhouette avec deux hémisphères, sillon central, circonvolutions et
+  tronc cérébral, notes en nœuds dorés, liens en fibres courbes et **particules de
+  flux** qui parcourent les connexions.
+  - **glisser** pour tourner, **molette** pour zoomer, **double-clic** pour recentrer,
+    rotation lente automatique (pause au survol) ;
+  - survol : titre, dossier et tags ; clic : ouverture de la note ;
+  - rendu canvas optimisé (DPI, arrêt quand l'onglet n'est pas visible, réseau
+    masqué à l'intérieur de la silhouette).
+
 ## [2.25.0] — 2026-11-05
 
 ### Ajouté
