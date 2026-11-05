@@ -2675,6 +2675,7 @@ async function enregistrerConfig(patch) {
 /* ═══════════════════════════ CONVERSATIONS ═══════════════════════════ */
 
 function nouvelleConversation({ silencieux = false } = {}) {
+  sauverBrouillonImmediat();
   const conv = {
     id: identifiant('conv'),
     titre: 'Nouvelle conversation',
@@ -2917,6 +2918,7 @@ function afficherConversations() {
 function chargerConversation(id) {
   const conv = etat.conversations.find((c) => c.id === id);
   if (!conv) return;
+  sauverBrouillonImmediat();
   etat.conversationCourante = conv;
   afficherConversation();
   afficherConversations();
@@ -3060,9 +3062,17 @@ async function compacterSiBesoin(conv) {
 }
 
 let minuteurBrouillon = null;
+let restaurationRegeneration = null;
 
 function cleBrouillon(id) {
   return `cerveau.brouillon.${id}`;
+}
+
+function ecrireBrouillon(id, valeur) {
+  try {
+    if (String(valeur || '').trim()) localStorage.setItem(cleBrouillon(id), valeur);
+    else localStorage.removeItem(cleBrouillon(id));
+  } catch { /* quota dépassé */ }
 }
 
 function sauverBrouillon() {
@@ -3071,12 +3081,16 @@ function sauverBrouillon() {
   if (!conv || !saisie) return;
   const valeur = saisie.value;
   clearTimeout(minuteurBrouillon);
-  minuteurBrouillon = setTimeout(() => {
-    try {
-      if (valeur.trim()) localStorage.setItem(cleBrouillon(conv.id), valeur);
-      else localStorage.removeItem(cleBrouillon(conv.id));
-    } catch { /* quota dépassé */ }
-  }, 250);
+  minuteurBrouillon = setTimeout(() => ecrireBrouillon(conv.id, valeur), 250);
+}
+
+/** Écrit le brouillon tout de suite (avant de changer de conversation). */
+function sauverBrouillonImmediat() {
+  const conv = etat.conversationCourante;
+  const saisie = $('#saisie');
+  if (!conv || !saisie) return;
+  clearTimeout(minuteurBrouillon);
+  ecrireBrouillon(conv.id, saisie.value);
 }
 
 function restaurerBrouillon() {
@@ -3118,7 +3132,13 @@ async function envoyerMessage(options = {}) {
       return;
     }
     texte = dernierUser.contenu;
-    if (conv.messages[conv.messages.length - 1]?.role === 'assistant') conv.messages.pop();
+    const dernier = conv.messages[conv.messages.length - 1];
+    if (dernier?.role === 'assistant') {
+      conv.messages.pop();
+      restaurationRegeneration = { conv, message: dernier };
+    }
+  } else {
+    restaurationRegeneration = null;
   }
 
   // contexte trop gros : on résume les échanges anciens avant d'envoyer
@@ -3198,9 +3218,13 @@ async function envoyerMessage(options = {}) {
 
     finaliserMessage(conv, etatFlux, res);
   } catch (err) {
-    etatFlux.bloc.hidden = false;
-    figerReflexion('erreur');
-    corps.textContent = `Erreur : ${err.message || err}`;
+    if (restaurerReponseRegeneree(conv, err.message)) {
+      etatFlux.bloc.remove();
+    } else {
+      etatFlux.bloc.hidden = false;
+      figerReflexion('erreur');
+      corps.textContent = `Erreur : ${err.message || err}`;
+    }
     if (!conv.usage) conv.usage = { entree: 0, sortie: 0, appels: 0 };
     conv.usage.statut = 'erreur';
     conv.usage.dernierMessage = String(err.message || err);
@@ -3236,11 +3260,33 @@ function replierOutils(zoneOutils) {
   details.open = false;
 }
 
+function restaurerReponseRegeneree(conv, erreur) {
+  const sauvegarde = restaurationRegeneration;
+  if (!sauvegarde || sauvegarde.conv !== conv) return false;
+  conv.messages.push(sauvegarde.message);
+  conv.date = Date.now();
+  restaurationRegeneration = null;
+  persisterConversations();
+  afficherConversation();
+  notifier(
+    `Régénération impossible${erreur ? ` (${String(erreur).slice(0, 80)})` : ''} : réponse précédente conservée.`,
+    'erreur',
+    5000
+  );
+  return true;
+}
+
 function finaliserMessage(conv, etatFlux, res) {
+  const texteAvant = etatFlux.texte.trim();
+  if (!texteAvant && restaurerReponseRegeneree(conv, res?.erreur || 'réponse vide')) {
+    etatFlux.bloc.remove();
+    return;
+  }
   etatFlux.bloc.hidden = false;
   figerReflexion(res?.erreur ? 'erreur' : 'termine');
   replierOutils(etatFlux.zoneOutils);
   const texteFinal = etatFlux.texte.trim();
+  if (texteFinal) restaurationRegeneration = null;
   etatFlux.corps.innerHTML = renduMarkdown.rendre(texteFinal || (res.erreur ? `⚠️ ${res.erreur}` : ''));
   renduMarkdown.embellir(etatFlux.corps);
 

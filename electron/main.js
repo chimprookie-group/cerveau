@@ -234,7 +234,7 @@ function fournisseurSansCle(id, creds) {
  * Journal court des fins de requête, pour diagnostiquer un arrêt inexpliqué.
  * Fichier : ~/.config/cerveau/agent.log (200 dernières lignes).
  */
-process.on('uncaughtException', (err) => {
+process.on('uncaughtExceptionMonitor', (err) => {
   journaliserAgent(`crash · ${String(err?.stack || err).slice(0, 2000)}`);
 });
 process.on('unhandledRejection', (err) => {
@@ -1634,7 +1634,7 @@ function definirAutostart(actif) {
       fs.mkdirSync(dossierAutostart(), { recursive: true });
       const lanceur = fs.existsSync('/usr/bin/cerveau')
         ? '/usr/bin/cerveau'
-        : `${process.execPath} ${app.getAppPath()}`;
+        : `"${process.execPath}" "${app.getAppPath()}"`;
       fs.writeFileSync(fichier, `[Desktop Entry]
 Type=Application
 Name=Cerveau

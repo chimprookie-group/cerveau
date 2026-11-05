@@ -132,7 +132,7 @@ function load() {
       cache.ui.theme = 'deepseek';
     }
     cache.ui.themeMigre = true;
-    save();
+    try { save(); } catch { /* disque en lecture seule : on garde la valeur en mémoire */ }
   }
 
   return cache;

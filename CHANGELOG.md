@@ -4,6 +4,19 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.33.1] — 2026-11-06
+
+### Corrigé
+- **Régénération** : si la nouvelle requête échoue (fournisseur indisponible,
+  réponse vide), l'ancienne réponse est **restaurée** au lieu d'être perdue.
+- **Brouillons** : le texte est enregistré immédiatement avant de changer de
+  conversation, sans attendre le délai d'écriture.
+- **Autostart** : chemin correctement échappé si le lanceur contient des espaces.
+- **Migration du thème** : ne bloque plus le démarrage si la configuration est en
+  lecture seule.
+- **Journal de crash** : écoute non intrusive (`uncaughtExceptionMonitor`).
+- Petite remise en forme de la page « Comportement » des réglages.
+
 ## [2.33.0] — 2026-11-06
 
 ### Modifié
