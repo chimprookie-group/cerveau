@@ -158,7 +158,13 @@ function construireInviteSysteme(ctx, stats) {
     "- Tâche en plusieurs étapes : utilise plan_taches, puis mets-le à jour.",
     '- Après une modification, vérifie le résultat (test, commande, relecture) et dis ce que tu as vérifié.',
     "- Ne prétends jamais avoir exécuté quelque chose que tu n'as pas exécuté.",
-    "- Si un outil échoue, lis l'erreur et adapte-toi ; ne répète pas la même commande à l'identique."
+    "- Si un outil échoue, lis l'erreur et adapte-toi ; ne répète pas la même commande à l'identique.",
+    '',
+    'Capacités système :',
+    '- plan_taches pour structurer une tâche longue, lancer_sous_agent pour déléguer une exploration.',
+    '- compétences (lister_competences, charger_competence) pour les procédures, plugins locaux pour des outils supplémentaires, serveurs MCP pour les services externes.',
+    '- taches de fond pour les commandes longues, voir_image pour les images, recherche web pour l’actualité, mémoire pour les faits durables.',
+    '- Après chaque action, vérifie le résultat réel (fichier écrit, test passé, commande exécutée) avant de conclure.'
   ];
 
   if (Array.isArray(ctx.competences) && ctx.competences.length) {

@@ -2162,6 +2162,8 @@ function brancherReglagesAvances() {
   lier('#reglageModeDemarrage', g.modeDemarrage, 'general.modeDemarrage', (v) => v, 'complet');
   lier('#reglagePanneauDemarrage', g.panneauOuvert, 'general.panneauOuvert', (v) => v, true);
   lier('#reglageRestaurer', g.restaurerDerniere, 'general.restaurerDerniere', (v) => v, false);
+  lier('#reglageAutostart', g.demarrerAuDemarrage, 'general.demarrerAuDemarrage', (v) => v, false);
+  lier('#reglageNotifications', g.notifications, 'general.notifications', (v) => v, true);
   lier('#reglageHistorique', g.historiqueMax, 'general.historiqueMax', (v) => Number(v) || 200, 200);
 
   lier('#reglageMaxTours', a.maxTours, 'agent.maxTours', (v) => Number(v) || 25, 25);
@@ -2171,6 +2173,38 @@ function brancherReglagesAvances() {
 
   const chemin = $('#reglageCheminConfig');
   if (chemin) chemin.textContent = etat.config.configPath || '~/.config/cerveau/config.json';
+
+  $('#reglageAutostart')?.addEventListener('change', async (e) => {
+    const r = await API.app.definirAutostart(e.target.checked);
+    if (!r.ok) {
+      e.target.checked = !e.target.checked;
+      await enregistrerConfig({ general: { demarrerAuDemarrage: e.target.checked } });
+      notifier(r.message || 'Impossible de modifier le démarrage automatique.', 'erreur', 5000);
+      return;
+    }
+    notifier(r.actif ? 'Cerveau démarrera avec la session.' : 'Démarrage automatique désactivé.', 'succes', 3000);
+  });
+
+  let urlMaj = '';
+  $('#btnVerifierMaj')?.addEventListener('click', async () => {
+    const info = $('#infoMaj');
+    const ouvrir = $('#btnOuvrirMaj');
+    if (info) info.textContent = 'Recherche…';
+    if (ouvrir) ouvrir.hidden = true;
+    const r = await API.app.verifierMaj();
+    if (!r.ok) {
+      if (info) info.textContent = 'Vérification impossible';
+      notifier(r.message || 'GitHub injoignable.', 'erreur', 5000);
+      return;
+    }
+    if (r.aJour) {
+      if (info) info.textContent = `À jour (${r.actuelle})`;
+      return;
+    }
+    if (info) info.textContent = `Version ${r.distante} disponible`;
+    if (r.url && ouvrir) { urlMaj = r.url; ouvrir.hidden = false; }
+  });
+  $('#btnOuvrirMaj')?.addEventListener('click', () => { if (urlMaj) API.app.ouvrirUrl(urlMaj); });
 
   $('#btnOuvrirConfig')?.addEventListener('click', () => API.app.ouvrirDossierConfig());
   $('#btnOuvrirCompetences')?.addEventListener('click', () => API.competences.ouvrirDossier());
@@ -4791,6 +4825,10 @@ function initialiserReglagesAvances() {
   brancherReglagesAvances();
   rendreCompetences();
   rendrePlugins();
+  API.app.autostart().then((r) => {
+    const case_ = $('#reglageAutostart');
+    if (case_) case_.checked = Boolean(r?.actif);
+  }).catch(() => { /* API indisponible */ });
 }
 
 function initialiserPlugins() {

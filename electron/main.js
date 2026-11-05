@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme, Notification } = require('electron');
 const path = require('node:path');
 
 // Le nom de l'application détermine son dossier de données
@@ -234,6 +234,13 @@ function fournisseurSansCle(id, creds) {
  * Journal court des fins de requête, pour diagnostiquer un arrêt inexpliqué.
  * Fichier : ~/.config/cerveau/agent.log (200 dernières lignes).
  */
+process.on('uncaughtException', (err) => {
+  journaliserAgent(`crash · ${String(err?.stack || err).slice(0, 2000)}`);
+});
+process.on('unhandledRejection', (err) => {
+  journaliserAgent(`promesse rejetée · ${String(err?.stack || err).slice(0, 2000)}`);
+});
+
 function journaliserAgent(ligne) {
   try {
     const fichier = path.join(app.getPath('userData'), 'agent.log');
@@ -1568,6 +1575,15 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
       `fin · ${pid} · ${creds.model} · ${res.erreur ? `erreur : ${String(res.erreur).slice(0, 200)}` : 'ok'}`
       + ` · ${res.outils || 0} outil(s) · ${res.texte ? res.texte.length : 0} car.`
     );
+    if (config.getConfig().general?.notifications !== false
+        && mainWindow && !mainWindow.isFocused()) {
+      try {
+        new Notification({
+          title: 'Cerveau',
+          body: res.erreur ? 'La requête s’est arrêtée.' : 'La réponse est prête.'
+        }).show();
+      } catch { /* pas de serveur de notification */ }
+    }
     emit({ type: 'termine', ...res });
     return { ok: !res.erreur, ...res };
   } catch (err) {
@@ -1594,6 +1610,90 @@ ipcMain.on('agent:reponse-confirmation', (_e, { id, autorise, raison }) => {
 });
 
 /* ------------------------ IPC : utilitaires ---------------------------- */
+
+/* ----------------------- intégration au bureau ------------------------- */
+
+function dossierAutostart() {
+  return path.join(
+    process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'),
+    'autostart'
+  );
+}
+
+function cheminAutostart() {
+  return path.join(dossierAutostart(), 'cerveau.desktop');
+}
+
+function autostartActif() {
+  try { return fs.existsSync(cheminAutostart()); } catch { return false; }
+}
+
+function definirAutostart(actif) {
+  const fichier = cheminAutostart();
+  try {
+    if (actif) {
+      fs.mkdirSync(dossierAutostart(), { recursive: true });
+      const lanceur = fs.existsSync('/usr/bin/cerveau')
+        ? '/usr/bin/cerveau'
+        : `${process.execPath} ${app.getAppPath()}`;
+      fs.writeFileSync(fichier, `[Desktop Entry]
+Type=Application
+Name=Cerveau
+Comment=Assistant de bureau
+Exec=${lanceur}
+Terminal=false
+X-GNOME-Autostart-enabled=true
+`, { mode: 0o644 });
+    } else if (fs.existsSync(fichier)) {
+      fs.rmSync(fichier, { force: true });
+    }
+    return { ok: true, actif: autostartActif() };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err), actif: autostartActif() };
+  }
+}
+
+ipcMain.handle('app:autostart', () => ({ actif: autostartActif() }));
+ipcMain.handle('app:definir-autostart', (_e, actif) => definirAutostart(Boolean(actif)));
+
+ipcMain.handle('app:verifier-mise-a-jour', async () => {
+  try {
+    const reponse = await fetch(
+      'https://api.github.com/repos/chimprookie-group/cerveau/releases/latest',
+      {
+        headers: { 'user-agent': 'cerveau', accept: 'application/vnd.github+json' },
+        signal: AbortSignal.timeout(8000)
+      }
+    );
+    if (!reponse.ok) throw new Error(`GitHub ${reponse.status}`);
+    const data = await reponse.json();
+    const distante = String(data.tag_name || '').replace(/^v/, '');
+    const actuelle = app.getVersion();
+    const comparer = (a, b) => {
+      const pa = String(a).split('.').map(Number);
+      const pb = String(b).split('.').map(Number);
+      for (let i = 0; i < 3; i += 1) {
+        if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+      }
+      return 0;
+    };
+    return {
+      ok: true,
+      actuelle,
+      distante,
+      aJour: comparer(distante, actuelle) <= 0,
+      url: data.html_url || ''
+    };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('app:ouvrir-url', async (_e, url) => {
+  if (!/^https?:\/\//i.test(String(url || ''))) return { ok: false };
+  await shell.openExternal(String(url));
+  return { ok: true };
+});
 
 ipcMain.handle('app:infos', () => ({
   version: app.getVersion(),

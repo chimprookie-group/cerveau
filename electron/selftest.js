@@ -816,6 +816,32 @@ async function run(mainWindow, deps) {
     && new Set(Object.values(themesUi.accents)).size === 7,
     `${new Set(Object.values(themesUi.fonds)).size} fonds, ${new Set(Object.values(themesUi.accents)).size} accents`);
 
+  // intégration système : autostart et défauts
+  const autoUi = await mainWindow.webContents.executeJavaScript(`(async () => {
+    const avant = await window.cerveau.app.autostart();
+    const on = await window.cerveau.app.definirAutostart(true);
+    const apres = await window.cerveau.app.autostart();
+    const off = await window.cerveau.app.definirAutostart(false);
+    const cfg = await window.cerveau.config.obtenir();
+    return {
+      avant: avant.actif, actif: on.actif, confirme: apres.actif, desactive: off.actif,
+      notifications: cfg.general?.notifications,
+      autostartDefaut: cfg.general?.demarrerAuDemarrage
+    };
+  })()`);
+  verifier('Autostart : activable puis désactivable',
+    autoUi.actif === true && autoUi.confirme === true && autoUi.desactive === false,
+    `${autoUi.actif} → ${autoUi.desactive}`);
+  verifier('Défauts système (notifications on, autostart off)',
+    autoUi.notifications === true && autoUi.autostartDefaut === false,
+    `notifications=${autoUi.notifications}, autostart=${autoUi.autostartDefaut}`);
+
+  const promptSysteme = require('./agent').construireInviteSysteme({ mode: 'code', workspace: '/tmp' }, null);
+  verifier('Capacités système dans l’invite',
+    /Capacités système/.test(promptSysteme)
+    && /plan_taches/.test(promptSysteme)
+    && /lancer_sous_agent/.test(promptSysteme));
+
   // interface des plugins
   const uiPlugins = await mainWindow.webContents.executeJavaScript(`(async () => {
     document.querySelector('#btnReglages').click();

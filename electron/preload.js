@@ -199,6 +199,10 @@ contextBridge.exposeInMainWorld('cerveau', {
     infos: () => ipcRenderer.invoke('app:infos'),
     ouvrirDossierConfig: () => ipcRenderer.invoke('app:ouvrir-dossier-config'),
     ouvrirChemin: (p) => ipcRenderer.invoke('app:ouvrir-chemin', p),
+    autostart: () => ipcRenderer.invoke('app:autostart'),
+    definirAutostart: (actif) => ipcRenderer.invoke('app:definir-autostart', actif),
+    verifierMaj: () => ipcRenderer.invoke('app:verifier-mise-a-jour'),
+    ouvrirUrl: (url) => ipcRenderer.invoke('app:ouvrir-url', url),
     exporterConversation: (payload) => ipcRenderer.invoke('app:exporter-conversation', payload),
     exporterVersCoffre: (payload) => ipcRenderer.invoke('app:exporter-vers-coffre', payload)
   },

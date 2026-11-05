@@ -47,6 +47,10 @@ Clair, **Matrix** (vert terminal), **Capucine** (crème et orange), **Nord** (bl
 arctique) et **Améthyste** (violet profond), à choisir dans
 `Réglages → Apparence` ou en les faisant défiler depuis la palette de commandes.
 
+**Intégration système** — lancement au démarrage, notifications de fin de
+réponse en arrière-plan, vérification des mises à jour depuis À propos, journal
+de crash dans `agent.log`.
+
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
 ![Réglages](docs/04-reglages.png)
@@ -149,7 +153,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.29.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.30.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

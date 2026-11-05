@@ -414,6 +414,22 @@
 
             <div class="champ-reglage">
               <div class="champ-reglage-texte">
+                <label for="reglageAutostart">Lancer au démarrage</label>
+                <p class="champ-reglage-aide">Ouvre Cerveau à l'ouverture de session (autostart du bureau).</p>
+              </div>
+              <input type="checkbox" id="reglageAutostart" class="champ-reglage-controle bascule" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageNotifications">Notifications système</label>
+                <p class="champ-reglage-aide">Prévenir quand une réponse arrive alors que la fenêtre est en arrière-plan.</p>
+              </div>
+              <input type="checkbox" id="reglageNotifications" class="champ-reglage-controle bascule" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
                 <label for="reglageHistorique">Conversations conservées</label>
                 <p class="champ-reglage-aide">Nombre maximum de conversations gardées en mémoire.</p>
               </div>
@@ -1121,6 +1137,14 @@
               <tr><td>Node</td><td id="infoNode">—</td></tr>
               <tr><td>Chrome</td><td id="infoChrome">—</td></tr>
               <tr><td>Configuration</td><td id="infoConfig">—</td></tr>
+              <tr>
+                <td>Mises à jour</td>
+                <td>
+                  <span id="infoMaj">—</span>
+                  <button id="btnVerifierMaj" class="btn-mini">Vérifier</button>
+                  <button id="btnOuvrirMaj" class="btn-mini" hidden>Ouvrir la release</button>
+                </td>
+              </tr>
             </table>
             <div class="apropos-actions">
               <button id="btnDossierConfig" class="btn-secondaire">Ouvrir le dossier de configuration</button>

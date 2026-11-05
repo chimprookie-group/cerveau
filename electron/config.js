@@ -76,7 +76,9 @@ const DEFAULTS = {
     modeDemarrage: 'complet',
     panneauOuvert: true,
     restaurerDerniere: false,
-    historiqueMax: 200
+    historiqueMax: 200,
+    demarrerAuDemarrage: false,  // autostart du bureau
+    notifications: true          // notification système quand la réponse arrive
   },
   agent: {
     maxTours: 25,

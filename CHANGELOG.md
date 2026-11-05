@@ -4,6 +4,21 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.30.0] — 2026-11-05
+
+### Ajouté
+- **Intégration système complétée** :
+  - **Lancer au démarrage** (fichier autostart du bureau), activable dans
+    `Réglages → Général` ;
+  - **Notifications système** quand une réponse arrive alors que la fenêtre est
+    en arrière-plan ;
+  - **Vérification des mises à jour** dans `À propos` (GitHub Releases) avec
+    bouton d'ouverture de la release ;
+  - **Journal de crash** : exceptions et promesses rejetées consignées dans
+    `agent.log` ;
+  - l'invite système liste désormais les capacités (plan, sous-agents,
+    compétences, plugins, MCP, tâches de fond, vision, web, mémoire).
+
 ## [2.29.0] — 2026-11-05
 
 ### Ajouté
