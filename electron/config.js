@@ -81,7 +81,6 @@ const DEFAULTS = {
     notifications: true          // notification système quand la réponse arrive
   },
   agent: {
-    maxTours: 25,
     appelsParalleles: true,
     delaiCommande: 120,
     capSortie: 60

@@ -49,6 +49,10 @@ le survol montre l'aperçu du message et de la réponse, et un clic saute au tou
 affichés, historique progressif, animations en pause quand la fenêtre est
 inactive, et contexte borné pendant les longues tâches.
 
+**Pas de limite de tours** — l'agent enchaîne les outils jusqu'à la fin de la
+tâche ; un garde-fou technique très haut et le bouton d'arrêt restent seuls
+limites.
+
 **Sept thèmes** — **DeepSeek** (sombre neutre, bleu, par défaut), Sombre (cuivré),
 Clair, **Matrix** (vert terminal), **Capucine** (crème et orange), **Nord** (bleu
 arctique) et **Améthyste** (violet profond), à choisir dans
@@ -160,7 +164,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.32.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.33.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

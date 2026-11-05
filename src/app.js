@@ -2175,7 +2175,6 @@ function brancherReglagesAvances() {
   lier('#reglageNotifications', g.notifications, 'general.notifications', (v) => v, true);
   lier('#reglageHistorique', g.historiqueMax, 'general.historiqueMax', (v) => Number(v) || 200, 200);
 
-  lier('#reglageMaxTours', a.maxTours, 'agent.maxTours', (v) => Number(v) || 25, 25);
   lier('#reglageAppelsParalleles', a.appelsParalleles, 'agent.appelsParalleles', (v) => v, true);
   lier('#reglageDelaiCommande', a.delaiCommande, 'agent.delaiCommande', (v) => Number(v) || 120, 120);
   lier('#reglageCapSortie', a.capSortie, 'agent.capSortie', (v) => Number(v) || 60, 60);

@@ -4,6 +4,16 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.33.0] — 2026-11-06
+
+### Modifié
+- **Plus de limite de tours configurable** : l'agent poursuit la tâche jusqu'à ce
+  qu'elle soit réellement finie, comme le harnais de référence. Le réglage
+  « Tours d'outils maximum » est retiré de l'interface et de la configuration.
+- Un **garde-fou de sécurité** très haut (1000 tours) subsiste pour arrêter une
+  boucle folle ; l'utilisateur garde le bouton d'arrêt à tout moment.
+- Les sous-agents conservent leur propre limite, plus courte.
+
 ## [2.32.0] — 2026-11-06
 
 ### Modifié

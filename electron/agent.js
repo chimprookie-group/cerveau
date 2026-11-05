@@ -85,7 +85,9 @@ const memoireMod = require('./memoire');
 const sousagents = require('./sousagents');
 const { gestionnaire: mcp } = require('./mcp');
 
-const MAX_TOURS_DEFAUT = 25;
+// garde-fou technique : la boucle n'a plus de limite visible, seulement un
+// plafond de sécurité très haut (l'utilisateur peut toujours arrêter).
+const MAX_TOURS_SECURITE = 1000;
 
 /**
  * Outils disponibles pour un mode, moins ceux désactivés dans les réglages.
@@ -417,11 +419,10 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
   let derniereErreur = false;
   let outilsFaits = [];
   let verifications = 0;
-  let extensionTours = false;
   let allegeSecours = false;
   let messageContexte = null;
 
-  let maxTours = Math.max(1, Number(limiteTours) || Number(ctx.agentMaxTours) || MAX_TOURS_DEFAUT);
+  let maxTours = Math.max(1, Number(limiteTours) || MAX_TOURS_SECURITE);
 
   /**
    * Demande au modèle si la tâche est réellement terminée. Un petit appel à
@@ -745,17 +746,6 @@ Réponds uniquement par OUI ou NON.`;
     }
     derniereErreur = resultats.some((r) => !r.ok);
 
-    // plan encore en cours à la limite : une extension bornée plutôt qu'un arrêt
-    if (tours >= maxTours && !extensionTours && !signal?.aborted
-        && Array.isArray(planCourant) && planCourant.some((t) => t.statut !== 'termine')) {
-      extensionTours = true;
-      maxTours += 15;
-      emit({
-        type: 'avertissement',
-        message: 'Plan encore en cours à la limite de tours : poursuite exceptionnelle de 15 tours.'
-      });
-    }
-
     // --- réinjection des résultats dans l'historique du fournisseur ---
     if (isAnthropic) {
       const contenuAssistant = [];
@@ -815,7 +805,7 @@ Réponds uniquement par OUI ou NON.`;
     }
   }
 
-  emit({ type: 'erreur', message: `Limite de ${maxTours} tours d'outils atteinte.` });
+  emit({ type: 'erreur', message: `Garde-fou de sécurité atteint (${maxTours} tours d'outils) : arrête et reprends la tâche.` });
   return { texte: texteFinal, outils: outilsExecutes, erreur: 'limite de tours atteinte' };
 }
 
