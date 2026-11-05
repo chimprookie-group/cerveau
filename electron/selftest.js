@@ -775,7 +775,9 @@ async function run(mainWindow, deps) {
       bouton: !!document.querySelector('#btnOuvrirCompetences'),
       zonePlugins: !!document.querySelector('#listePlugins'),
       nouveauPlugin: !!document.querySelector('#btnNouveauPlugin'),
-      rechargerPlugins: !!document.querySelector('#btnRechargerPlugins')
+      rechargerPlugins: !!document.querySelector('#btnRechargerPlugins'),
+      railTours: !!document.querySelector('#navTours'),
+      apercuTours: !!document.querySelector('#tourApercu')
     };
     document.querySelector('#btnFermerReglages2').click();
     return r;
@@ -784,6 +786,8 @@ async function run(mainWindow, deps) {
     uiComp.zone && uiComp.cartes >= 3 && uiComp.bouton, `${uiComp.cartes} carte(s)`);
   verifier('Section Plugins présente',
     uiComp.zonePlugins && uiComp.nouveauPlugin && uiComp.rechargerPlugins);
+  verifier('Navigation entre les tours présente',
+    uiComp.railTours && uiComp.apercuTours);
 
   // interface des plugins
   const uiPlugins = await mainWindow.webContents.executeJavaScript(`(async () => {

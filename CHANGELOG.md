@@ -4,6 +4,15 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.24.0] — 2026-11-05
+
+### Ajouté
+- **Navigation entre les tours**, comme dans l'interface de l'assistant : un rail de
+  points à droite de la conversation, un par échange. Le point actif suit le
+  défilement, le tour en cours clignote pendant le travail, et un survol affiche
+  l'aperçu du message et de la réponse. Un clic fait défiler jusqu'au tour.
+- Le sous-titre d'une conversation affiche désormais « N tour(s) · M message(s) ».
+
 ## [2.23.1] — 2026-11-05
 
 ### Corrigé

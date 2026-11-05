@@ -38,6 +38,10 @@ conservés au redémarrage.
 indique « Réflexion approfondie depuis 12 s ··· », puis « Exécution de <outil> »
 quand un outil tourne, et se fige en « Terminé en … » à la fin.
 
+**Navigation entre les tours** — un rail de points à droite de la conversation,
+un par échange : le point actif suit le défilement, le tour en cours clignote,
+le survol montre l'aperçu du message et de la réponse, et un clic saute au tour.
+
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
 ![Réglages](docs/04-reglages.png)
@@ -140,7 +144,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.23.1-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.24.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

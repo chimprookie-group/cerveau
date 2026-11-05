@@ -2708,19 +2708,24 @@ function majStatistiquesConversation() {
 function afficherConversation() {
   const conv = etat.conversationCourante;
   nettoyerReflexion();
+  brancherRailTours();
   const messages = $('#messages');
   const accueil = $('#accueil');
 
   $('#titreConversation').textContent = conv?.titre || 'Nouvelle conversation';
-  $('#sousTitreConversation').textContent = conv?.messages?.length
-    ? `${conv.messages.filter((m) => m.role === 'user').length} message(s)`
+  const nbTours = conv ? conv.messages.filter((m) => m.role === 'user').length : 0;
+  const sousTitre = conv?.messages?.length
+    ? `${nbTours} tour(s) · ${conv.messages.length} message(s)`
     : 'Prêt à travailler';
+  $('#sousTitreConversation').textContent = sousTitre;
+  $('#sousTitreConversation').title = sousTitre;
   majStatistiquesConversation();
 
   if (!conv || conv.messages.length === 0) {
     accueil.style.display = '';
     messages.hidden = true;
     messages.innerHTML = '';
+    rendreRailTours();
     return;
   }
 
@@ -2728,6 +2733,7 @@ function afficherConversation() {
   messages.hidden = false;
   messages.innerHTML = '';
   for (const m of conv.messages) ajouterMessageDOM(m);
+  rendreRailTours();
   defilerEnBas();
 }
 
@@ -2909,6 +2915,7 @@ function demarrerReflexion() {
   );
 
   $('#messages').append(ligne);
+  $('#navTours')?.lastElementChild?.classList.add('occupe');
   reflexionActive = {
     ligne, texte, debut: Date.now(), label: libelleReflexion(), fige: false, minuteur: null
   };
@@ -2934,6 +2941,7 @@ function figerReflexion(etat = 'termine') {
   const duree = formaterDureeReflexion(Date.now() - r.debut);
   r.ligne.classList.add(etat);
   r.texte.textContent = etat === 'erreur' ? `Interrompu après ${duree}` : `Terminé en ${duree}`;
+  $('#navTours')?.querySelectorAll('.tour-mark.occupe').forEach((n) => n.classList.remove('occupe'));
 }
 
 /** Retire la ligne (nouvelle conversation, changement de discussion…). */
@@ -2941,6 +2949,7 @@ function nettoyerReflexion() {
   if (reflexionActive?.minuteur) clearInterval(reflexionActive.minuteur);
   reflexionActive = null;
   document.querySelectorAll('.reflexion-ligne').forEach((n) => n.remove());
+  $('#navTours')?.querySelectorAll('.tour-mark.occupe').forEach((n) => n.classList.remove('occupe'));
 }
 
 /** Compacte les échanges anciens en un résumé quand le contexte devient gros. */
@@ -3134,6 +3143,115 @@ function basculerEtatEnvoi(enCours) {
 function defilerEnBas() {
   const zone = $('#conversation');
   requestAnimationFrame(() => { zone.scrollTop = zone.scrollHeight; });
+}
+
+/* --------------------- navigation entre les tours ---------------------- */
+
+let railToursBranche = false;
+
+function brancherRailTours() {
+  if (railToursBranche) return;
+  railToursBranche = true;
+  const conv = $('#conversation');
+  if (!conv) return;
+
+  let frame = null;
+  conv.addEventListener('scroll', () => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      majMarqueActive();
+      masquerApercuTour();
+    });
+  }, { passive: true });
+
+  window.addEventListener('resize', majMarqueActive);
+}
+
+function utilisateursConversation() {
+  return [...document.querySelectorAll('#messages .message.utilisateur')];
+}
+
+/** Un point par tour, à droite de la conversation. */
+function rendreRailTours() {
+  const nav = $('#navTours');
+  const messages = $('#messages');
+  if (!nav) return;
+
+  nav.innerHTML = '';
+  const utilisateurs = messages && !messages.hidden ? utilisateursConversation() : [];
+  nav.hidden = utilisateurs.length < 2;
+  if (nav.hidden) {
+    masquerApercuTour();
+    return;
+  }
+
+  utilisateurs.forEach((msg, i) => {
+    const marque = el('button', {
+      class: 'tour-mark',
+      type: 'button',
+      'aria-label': `Aller au tour ${i + 1}`
+    });
+    marque.addEventListener('click', () => {
+      msg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    marque.addEventListener('pointerenter', () => afficherApercuTour(marque, msg));
+    marque.addEventListener('pointerleave', masquerApercuTour);
+    marque.addEventListener('focus', () => afficherApercuTour(marque, msg));
+    marque.addEventListener('blur', masquerApercuTour);
+    nav.append(marque);
+  });
+
+  majMarqueActive();
+}
+
+function majMarqueActive() {
+  const nav = $('#navTours');
+  const conv = $('#conversation');
+  if (!nav || nav.hidden || !conv) return;
+
+  const utilisateurs = utilisateursConversation();
+  const repere = conv.getBoundingClientRect().top + 90;
+  let actif = 0;
+  utilisateurs.forEach((m, i) => {
+    if (m.getBoundingClientRect().top <= repere) actif = i;
+  });
+  [...nav.children].forEach((m, i) => m.classList.toggle('actif', i === actif));
+}
+
+function afficherApercuTour(marque, msg) {
+  const apercu = $('#tourApercu');
+  if (!apercu) return;
+
+  const prompt = (msg.querySelector('.message-corps')?.textContent || '').trim();
+  let suivant = msg.nextElementSibling;
+  let reponse = '';
+  while (suivant) {
+    if (suivant.classList.contains('utilisateur')) break;
+    if (suivant.classList.contains('assistant')) {
+      reponse = (suivant.querySelector('.message-corps')?.textContent || '').trim();
+    }
+    suivant = suivant.nextElementSibling;
+  }
+
+  apercu.innerHTML = '';
+  apercu.append(el('div', {
+    class: 'tour-apercu-prompt',
+    text: prompt || 'Tour sans message'
+  }));
+  if (reponse) {
+    apercu.append(el('div', { class: 'tour-apercu-reponse', text: reponse }));
+  }
+
+  apercu.hidden = false;
+  const r = marque.getBoundingClientRect();
+  apercu.style.left = `${Math.max(8, r.left - apercu.offsetWidth - 16)}px`;
+  apercu.style.top = `${Math.max(8, r.top + r.height / 2 - apercu.offsetHeight / 2)}px`;
+}
+
+function masquerApercuTour() {
+  const apercu = $('#tourApercu');
+  if (apercu) apercu.hidden = true;
 }
 
 /* --------------------- traitement des événements agent ----------------- */
