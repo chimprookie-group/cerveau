@@ -3997,11 +3997,14 @@ const COMMANDES = [
   { id: 'workspace', titre: "Changer d'espace de travail", action: () => choisirWorkspace() },
   { id: 'coffres', titre: 'Gérer les coffres Obsidian', action: () => ouvrirReglages('coffres') },
   { id: 'permissions', titre: 'Régler les permissions', action: () => ouvrirReglages('permissions') },
-  { id: 'theme', titre: 'Basculer le thème clair / sombre', action: async () => {
-      const suivant = (etat.config.ui?.theme || 'sombre') === 'sombre' ? 'clair' : 'sombre';
+  { id: 'theme', titre: 'Changer de thème', action: async () => {
+      const ordre = ['sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste'];
+      const noms = { sombre: 'Sombre', clair: 'Clair', matrix: 'Matrix', capucine: 'Capucine', nord: 'Nord', amethyste: 'Améthyste' };
+      const actuel = etat.config.ui?.theme || 'sombre';
+      const suivant = ordre[(ordre.indexOf(actuel) + 1) % ordre.length];
       await enregistrerConfig({ ui: { theme: suivant } });
       appliquerTheme(suivant);
-      notifier(`Thème ${suivant}.`, 'succes', 1600);
+      notifier(`Thème : ${noms[suivant]}`, 'succes', 1600);
     } },
   { id: 'mode-notes', titre: 'Mode Notes (Obsidian)', action: () => definirMode('notes') },
   { id: 'mode-code', titre: 'Mode Code (terminal, fichiers)', action: () => definirMode('code') },

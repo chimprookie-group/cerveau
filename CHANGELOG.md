@@ -4,6 +4,16 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.28.0] — 2026-11-05
+
+### Ajouté
+- **Six thèmes** : Sombre (cuivré), Clair, **Matrix** (vert terminal sur noir),
+  **Capucine** (crème chaude et orange), **Nord** (bleu arctique) et **Améthyste**
+  (violet profond). Palette complète pour chacun : fonds, bordures, textes,
+  accents, états et ombres.
+- Sélecteur dans `Réglages → Apparence`, application immédiate et mémorisée ;
+  la palette de commandes fait défiler les six thèmes.
+
 ## [2.27.0] — 2026-11-05
 
 ### Retiré

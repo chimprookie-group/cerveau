@@ -49,6 +49,86 @@ body[data-theme="clair"] {
   --ombre: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
+/* Matrix : terminal vert sur fond noir */
+body[data-theme="matrix"] {
+  --fond: #050906;
+  --fond-2: #09110b;
+  --fond-3: #0e1a11;
+  --fond-4: #14261a;
+  --bordure: #1b3322;
+  --bordure-claire: #2a4d33;
+  --texte: #d9ffe5;
+  --texte-2: #86c79a;
+  --texte-3: #527d60;
+  --accent: #39ff88;
+  --accent-clair: #8affb6;
+  --accent-sombre: #12b35a;
+  --succes: #39ff88;
+  --danger: #ff5c68;
+  --alerte: #d4ff5c;
+  --ombre: 0 8px 32px rgba(0, 0, 0, 0.55);
+}
+
+/* Capucine : crème chaude et orange fleur */
+body[data-theme="capucine"] {
+  --fond: #fff8f0;
+  --fond-2: #fdf0e2;
+  --fond-3: #f8e6d2;
+  --fond-4: #f1d9bf;
+  --bordure: #e8d3bd;
+  --bordure-claire: #d9bda1;
+  --texte: #2b1a10;
+  --texte-2: #6b4a33;
+  --texte-3: #9a7356;
+  --accent: #e8590c;
+  --accent-clair: #ff7a2f;
+  --accent-sombre: #b84305;
+  --succes: #2f9e5f;
+  --danger: #c9464f;
+  --alerte: #b8860b;
+  --ombre: 0 8px 32px rgba(80, 40, 10, 0.14);
+}
+
+/* Nord : bleu arctique et gris doux */
+body[data-theme="nord"] {
+  --fond: #2e3440;
+  --fond-2: #343b48;
+  --fond-3: #3b4252;
+  --fond-4: #434c5e;
+  --bordure: #4c566a;
+  --bordure-claire: #5e6a80;
+  --texte: #eceff4;
+  --texte-2: #c3cbd8;
+  --texte-3: #8f9aad;
+  --accent: #88c0d0;
+  --accent-clair: #a9d8e4;
+  --accent-sombre: #5e9fb0;
+  --succes: #a3be8c;
+  --danger: #bf616a;
+  --alerte: #ebcb8b;
+  --ombre: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Améthyste : violet profond */
+body[data-theme="amethyste"] {
+  --fond: #14101d;
+  --fond-2: #1a1526;
+  --fond-3: #221b30;
+  --fond-4: #2b223d;
+  --bordure: #3a2f4f;
+  --bordure-claire: #4b3d66;
+  --texte: #ece6f7;
+  --texte-2: #b8a9d4;
+  --texte-3: #87779f;
+  --accent: #b794f6;
+  --accent-clair: #d2b8ff;
+  --accent-sombre: #8f6bd1;
+  --succes: #6fcf97;
+  --danger: #e06c75;
+  --alerte: #e5c07b;
+  --ombre: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
 * { box-sizing: border-box; }
 
 /* l'attribut hidden doit toujours l'emporter sur les règles display */
@@ -4086,6 +4166,9 @@ body.effets .statut.ok::before {
 body[data-theme="clair"].effets .accueil::before { opacity: 0.3; }
 body[data-theme="clair"].effets .accueil::after { opacity: 0.35; }
 body[data-theme="clair"].effets .entete::after { opacity: 0.35; }
+body[data-theme="capucine"].effets .accueil::before { opacity: 0.25; }
+body[data-theme="capucine"].effets .accueil::after { opacity: 0.3; }
+body[data-theme="capucine"].effets .entete::after { opacity: 0.3; }
 
 /* respect du réglage système « réduire les animations » */
 @media (prefers-reduced-motion: reduce) {

@@ -789,6 +789,30 @@ async function run(mainWindow, deps) {
   verifier('Navigation entre les tours présente',
     uiComp.railTours && uiComp.apercuTours);
 
+  // thèmes : six palettes appliquées distinctement
+  const themesUi = await mainWindow.webContents.executeJavaScript(`(async () => {
+    const valeurs = [...document.querySelectorAll('#choixTheme option')].map((o) => o.value);
+    const fonds = {};
+    const accents = {};
+    for (const v of valeurs) {
+      appliquerTheme(v);
+      await new Promise((r) => setTimeout(r, 30));
+      const s = getComputedStyle(document.body);
+      fonds[v] = s.backgroundColor;
+      accents[v] = s.getPropertyValue('--accent').trim();
+    }
+    appliquerTheme('sombre');
+    return { valeurs, fonds, accents };
+  })()`);
+  verifier('Six thèmes disponibles',
+    themesUi.valeurs.length === 6
+    && ['sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste'].every((t) => themesUi.valeurs.includes(t)),
+    themesUi.valeurs.join(', '));
+  verifier('Thèmes distincts (fonds et accents)',
+    new Set(Object.values(themesUi.fonds)).size >= 5
+    && new Set(Object.values(themesUi.accents)).size === 6,
+    `${new Set(Object.values(themesUi.fonds)).size} fonds, ${new Set(Object.values(themesUi.accents)).size} accents`);
+
   // interface des plugins
   const uiPlugins = await mainWindow.webContents.executeJavaScript(`(async () => {
     document.querySelector('#btnReglages').click();
