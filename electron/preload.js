@@ -19,6 +19,14 @@ contextBridge.exposeInMainWorld('cerveau', {
     lister: (payload) => ipcRenderer.invoke('models:lister', payload)
   },
 
+  plugins: {
+    lister: () => ipcRenderer.invoke('plugins:lister'),
+    recharger: () => ipcRenderer.invoke('plugins:recharger'),
+    ouvrirDossier: () => ipcRenderer.invoke('plugins:ouvrir-dossier'),
+    creer: (payload) => ipcRenderer.invoke('plugins:creer', payload),
+    supprimer: (fichier) => ipcRenderer.invoke('plugins:supprimer', fichier)
+  },
+
   competences: {
     lister: () => ipcRenderer.invoke('competences:lister'),
     ouvrirDossier: () => ipcRenderer.invoke('competences:ouvrir-dossier')

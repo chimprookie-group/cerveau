@@ -73,6 +73,48 @@ simplement.`,
 - Un bug de performance se mesure avant/après, jamais à l'œil.
 - Si la correction est risquée, propose d'abord, applique ensuite.`,
   },
+  'creer-un-plugin': {
+    nom: 'Créer un plugin',
+    description: 'Écrire une extension locale qui ajoute des outils à Cerveau',
+    contenu: `# Créer un plugin
+
+Un plugin est un fichier JavaScript dans \`~/.config/cerveau/plugins/<id>.js\`.
+Il est chargé dans le processus principal et peut ajouter des outils à l'agent.
+
+## Format
+
+\`\`\`js
+module.exports = {
+  nom: 'Mon plugin',
+  description: 'Ce qu’il apporte',
+  outils: [{
+    nom: 'mon_outil',
+    description: 'Ce que fait l’outil',
+    schema: { type: 'object', properties: { texte: { type: 'string' } }, required: ['texte'] },
+    risque: 'lecture',                    // lecture | ecriture | commande
+    executer: async (args, ctx) => ({ resultat: String(args.texte || '') })
+  }]
+};
+\`\`\`
+
+## Règles
+
+- Les outils sont exposés sous \`plugin_<fichier>_<outil>\`.
+- \`risque\` conditionne les permissions : \`lecture\` passe toujours, les autres
+  suivent le mode de permission de l'application.
+- Un plugin s'exécute avec les droits de l'application : ne mets pas de code
+  dangereux, ne lis pas de secrets inutilement.
+- Après création, clique « Recharger » dans Réglages → Agent et outils → Plugins
+  (ou redémarre l'application).
+
+## Méthode
+
+1. Écris le code complet et lisible, avec des commentaires.
+2. Vérifie qu'il ne dépend d'aucun paquet externe non installé.
+3. Donne le code à l'utilisateur pour qu'il le colle dans « Nouveau plugin » :
+   l'agent n'écrit pas directement dans le dossier de configuration.
+4. Propose un nom de fichier court et stable.`,
+  },
   'preparer-une-release': {
     nom: 'Préparer une release',
     description: 'Version, journal, tests, paquet et publication GitHub',

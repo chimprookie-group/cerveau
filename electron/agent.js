@@ -20,6 +20,7 @@ const webtools = require('./webtools');
 const vision = require('./vision');
 const tachesfond = require('./tachesfond');
 const competences = require('./competences');
+const plugins = require('./plugins');
 
 // budget approximatif du contexte envoyé au modèle, en caractères (~4 par jeton)
 const BUDGET_CONTEXTE = 220000;
@@ -93,12 +94,16 @@ const MAX_TOURS_DEFAUT = 25;
  */
 function outilsPourMode(mode, desactives = [], outilsMCP = []) {
   let liste;
+  let outilsPlugins = [];
+  try { outilsPlugins = plugins.outils(); } catch { outilsPlugins = []; }
+
   if (mode === 'notes') {
     liste = [
       ...toolbox.TOOLS,
       ...webtools.OUTILS_WEB,
       ...vision.OUTILS_VISION,
-      ...competences.OUTILS_COMPETENCES
+      ...competences.OUTILS_COMPETENCES,
+      ...outilsPlugins
     ];
   } else if (mode === 'code' || mode === 'github') {
     liste = [
@@ -107,7 +112,8 @@ function outilsPourMode(mode, desactives = [], outilsMCP = []) {
       ...webtools.OUTILS_WEB,
       ...vision.OUTILS_VISION,
       ...tachesfond.OUTILS_TACHES_FOND,
-      ...competences.OUTILS_COMPETENCES
+      ...competences.OUTILS_COMPETENCES,
+      ...outilsPlugins
     ];
   } else {
     liste = [
@@ -117,7 +123,8 @@ function outilsPourMode(mode, desactives = [], outilsMCP = []) {
       ...webtools.OUTILS_WEB,
       ...vision.OUTILS_VISION,
       ...tachesfond.OUTILS_TACHES_FOND,
-      ...competences.OUTILS_COMPETENCES
+      ...competences.OUTILS_COMPETENCES,
+      ...outilsPlugins
     ];
   }
 
@@ -647,6 +654,7 @@ Réponds uniquement par OUI ou NON.`;
       || vision.PAR_NOM.get(appel.nom)
       || tachesfond.PAR_NOM.get(appel.nom)
       || competences.PAR_NOM.get(appel.nom)
+      || plugins.PAR_NOM.get(appel.nom)
       || memoireMod.PAR_NOM.get(appel.nom)
       || outilsDelegation.find((t) => t.nom === appel.nom)
       || outilsMCP.find((t) => t.nom === appel.nom);
@@ -853,8 +861,11 @@ function resumerResultat(nom, res) {
     case 'web_search': return `${res.total} résultat(s) · ${res.moteur}`;
     case 'web_fetch': return `${res.titre || res.url} — ${res.longueurTotale} caractères`;
     default:
-      // outils MCP : la réponse est déjà du texte
+      // outils MCP / plugins : la réponse est déjà du texte ou un petit objet
       if (typeof res === 'string') return res.slice(0, 120).replace(/\s+/g, ' ');
+      if (nom.startsWith('plugin_')) {
+        return `plugin · ${JSON.stringify(res ?? {}).slice(0, 100)}`;
+      }
       return 'Terminé';
   }
 }

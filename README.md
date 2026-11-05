@@ -139,7 +139,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.22.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.23.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -272,6 +272,20 @@ compatible Tavily peut être branché dans les réglages.
 
 Ces deux outils sont **intégrés à l'application** : aucun serveur MCP ni paquet à
 installer. Ils se désactivent un par un dans `Réglages → Agent → Outils`.
+
+### Plugins
+
+Des **extensions JavaScript locales** vivent dans `~/.config/cerveau/plugins/`, un
+fichier par plugin. Chaque plugin expose des outils (`plugin_<fichier>_<outil>`)
+disponibles dans tous les modes. Un exemple est fourni au premier démarrage.
+
+`Réglages → Agent et outils → Plugins` liste les plugins, leurs outils et leurs
+erreurs, et permet de **recharger**, **ouvrir le dossier**, **retirer** ou
+**créer** un plugin (formulaire avec code pré-rempli). Une compétence « Créer un
+plugin » aide l'agent à rédiger le code.
+
+> Un plugin s'exécute avec les droits de l'application : n'installe que du code
+> que tu as lu ou écrit.
 
 ### Compétences
 

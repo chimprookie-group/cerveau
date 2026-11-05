@@ -2167,6 +2167,19 @@ function brancherReglagesAvances() {
 
   $('#btnOuvrirConfig')?.addEventListener('click', () => API.app.ouvrirDossierConfig());
   $('#btnOuvrirCompetences')?.addEventListener('click', () => API.competences.ouvrirDossier());
+
+  $('#btnRechargerPlugins')?.addEventListener('click', async () => {
+    const r = await API.plugins.recharger();
+    await rendrePlugins();
+    if (r.ok) notifier(`${r.total} outil(s) de plugin chargé(s).`, 'succes', 3000);
+    else notifier(r.message || 'Rechargement impossible.', 'erreur', 5000);
+  });
+  $('#btnOuvrirPlugins')?.addEventListener('click', () => API.plugins.ouvrirDossier());
+  $('#btnNouveauPlugin')?.addEventListener('click', ouvrirModalePlugin);
+  $('#btnFermerPlugin')?.addEventListener('click', () => { $('#modalePlugin').hidden = true; });
+  $('#btnAnnulerPlugin')?.addEventListener('click', () => { $('#modalePlugin').hidden = true; });
+  $('#modalePlugin .modale-fond')?.addEventListener('click', () => { $('#modalePlugin').hidden = true; });
+  $('#btnCreerPlugin')?.addEventListener('click', creerPlugin);
   $('#btnReinitialiser2')?.addEventListener('click', async () => {
     if (!confirm('Réinitialiser tous les réglages ? Les clés d\'API et la liste des coffres seront effacées.')) return;
     etat.config = await API.config.reinitialiser();
@@ -2178,6 +2191,100 @@ function brancherReglagesAvances() {
   });
 
   rendreOutilsReglage();
+}
+
+const MODELE_PLUGIN = `module.exports = {
+  nom: 'Mon plugin',
+  description: 'Ce que fait ce plugin',
+
+  outils: [
+    {
+      nom: 'mon_outil',
+      description: 'Décris ce que fait l’outil',
+      schema: {
+        type: 'object',
+        properties: { texte: { type: 'string', description: 'Un texte' } },
+        required: ['texte']
+      },
+      risque: 'lecture',
+      executer: async (args) => ({ resultat: String(args.texte || '').toUpperCase() })
+    }
+  ]
+};`;
+
+/** Liste les plugins chargés (dossier de configuration). */
+async function rendrePlugins() {
+  const zone = $('#listePlugins');
+  if (!zone) return;
+  zone.innerHTML = '';
+
+  let r = { plugins: [] };
+  try { r = await API.plugins.lister(); } catch { /* dossier inaccessible */ }
+
+  const liste = r.plugins || [];
+  if (!liste.length) {
+    zone.append(el('p', { class: 'vide petit', text: 'Aucun plugin installé.' }));
+    return;
+  }
+
+  for (const p of liste) {
+    const carte = el('div', { class: 'competence' },
+      el('div', { class: 'competence-nom', text: `${p.nom}${p.outils ? ` · ${p.outils} outil(s)` : ''}` }),
+      el('div', { class: 'competence-desc', text: p.description || p.fichier }),
+      p.erreur ? el('div', { class: 'competence-erreur', text: p.erreur }) : null,
+      el('button', {
+        class: 'btn-mini danger',
+        text: 'Retirer',
+        title: `Supprimer ${p.fichier}`,
+        onclick: async () => {
+          if (!confirm(`Supprimer le plugin « ${p.nom} » ?`)) return;
+          const res = await API.plugins.supprimer(p.fichier);
+          await rendrePlugins();
+          if (res.ok) notifier(`Plugin « ${p.nom} » supprimé.`, 'succes', 3000);
+          else notifier(res.message || 'Suppression impossible.', 'erreur', 5000);
+        }
+      })
+    );
+    zone.append(carte);
+  }
+}
+
+function ouvrirModalePlugin() {
+  $('#pluginNom').value = '';
+  $('#pluginDescription').value = '';
+  $('#pluginCode').value = MODELE_PLUGIN;
+  $('#pluginErreur').hidden = true;
+  $('#modalePlugin').hidden = false;
+  $('#pluginNom').focus();
+}
+
+async function creerPlugin() {
+  const nom = $('#pluginNom').value.trim();
+  const description = $('#pluginDescription').value.trim();
+  const code = $('#pluginCode').value;
+  const erreur = $('#pluginErreur');
+
+  if (!nom) {
+    erreur.textContent = 'Donne un nom au plugin.';
+    erreur.hidden = false;
+    return;
+  }
+  if (!code.trim()) {
+    erreur.textContent = 'Le code du plugin est vide.';
+    erreur.hidden = false;
+    return;
+  }
+
+  const r = await API.plugins.creer({ nom, description, code });
+  if (!r.ok) {
+    erreur.textContent = r.message || 'Création impossible.';
+    erreur.hidden = false;
+    return;
+  }
+
+  $('#modalePlugin').hidden = true;
+  await rendrePlugins();
+  notifier(`Plugin « ${nom} » créé et chargé (${r.total} outil(s) au total).`, 'succes', 4000);
 }
 
 /** Liste les compétences installées (dossier de configuration). */
@@ -4506,6 +4613,7 @@ function initialiserComportement() {
 function initialiserReglagesAvances() {
   brancherReglagesAvances();
   rendreCompetences();
+  rendrePlugins();
 }
 
 function initialiserPlugins() {

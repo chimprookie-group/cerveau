@@ -56,6 +56,7 @@ const models = require('./models');
 const webtools = require('./webtools');
 const tachesfond = require('./tachesfond');
 const competences = require('./competences');
+const plugins = require('./plugins');
 const { gestionnaire: mcpGestionnaire } = require('./mcp');
 const { Superviseur } = require('./superviseur');
 const { Memoire } = require('./memoire');
@@ -265,6 +266,34 @@ ipcMain.handle('competences:lister', () => {
   } catch (err) {
     return { ok: false, dossier: competences.DOSSIER, competences: [], message: String(err.message || err) };
   }
+});
+
+ipcMain.handle('plugins:lister', () => {
+  try { return { ok: true, ...plugins.charger() }; }
+  catch (err) { return { ok: false, message: String(err.message || err), plugins: [], outils: [] }; }
+});
+
+ipcMain.handle('plugins:recharger', () => {
+  try { return { ok: true, ...plugins.recharger() }; }
+  catch (err) { return { ok: false, message: String(err.message || err), plugins: [], outils: [] }; }
+});
+
+ipcMain.handle('plugins:ouvrir-dossier', async () => {
+  try {
+    plugins.assurerDossier();
+    await shell.openPath(plugins.DOSSIER);
+    return { ok: true, dossier: plugins.DOSSIER };
+  } catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('plugins:creer', (_e, { nom, code, description } = {}) => {
+  try { return { ok: true, ...plugins.ajouter({ nom, code, description }) }; }
+  catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
+ipcMain.handle('plugins:supprimer', (_e, fichier) => {
+  try { return { ok: true, ...plugins.supprimer(fichier) }; }
+  catch (err) { return { ok: false, message: String(err.message || err) }; }
 });
 
 ipcMain.handle('competences:ouvrir-dossier', async () => {

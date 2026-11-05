@@ -503,6 +503,22 @@
             <div id="listeCompetences" class="liste-competences"></div>
             <button id="btnOuvrirCompetences" class="btn-secondaire petit">Ouvrir le dossier</button>
           </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Plugins</h3>
+            <p class="section-reglage-desc">
+              Des extensions JavaScript locales qui ajoutent des outils à l'agent
+              (un fichier = un plugin, dans ~/.config/cerveau/plugins/). Un exemple
+              est fourni. Un plugin s'exécute avec les droits de l'application :
+              n'installe que du code que tu as lu ou écrit.
+            </p>
+            <div id="listePlugins" class="liste-competences"></div>
+            <div class="plugins-actions">
+              <button id="btnRechargerPlugins" class="btn-secondaire petit">Recharger</button>
+              <button id="btnOuvrirPlugins" class="btn-secondaire petit">Ouvrir le dossier</button>
+              <button id="btnNouveauPlugin" class="btn-mini">＋ Nouveau plugin</button>
+            </div>
+          </section>
         </div>
 
         <!-- Tâches planifiées -->
@@ -1369,6 +1385,40 @@
       </div>
       <div class="modale-pied">
         <button id="btnFermerDiff2" class="btn-principal">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE NOUVEAU PLUGIN ══════════════ -->
+  <div id="modalePlugin" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu" role="dialog" aria-modal="true" aria-labelledby="titrePlugin">
+      <div class="modale-entete">
+        <h2 id="titrePlugin">Nouveau plugin</h2>
+        <button id="btnFermerPlugin" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps">
+        <label class="champ">
+          <span>Nom</span>
+          <input type="text" id="pluginNom" placeholder="mon-plugin" />
+        </label>
+        <label class="champ">
+          <span>Description</span>
+          <input type="text" id="pluginDescription" placeholder="Ce qu’il apporte" />
+        </label>
+        <label class="champ">
+          <span>Code JavaScript</span>
+          <textarea id="pluginCode" rows="16" spellcheck="false"></textarea>
+        </label>
+        <p class="aide">
+          Le code est chargé dans le processus principal, avec les droits de
+          l'application. Il est écrit dans le dossier des plugins puis rechargé.
+        </p>
+        <div id="pluginErreur" class="message-test erreur" hidden></div>
+      </div>
+      <div class="modale-pied">
+        <button id="btnAnnulerPlugin" class="btn-secondaire">Annuler</button>
+        <button id="btnCreerPlugin" class="btn-principal">Créer</button>
       </div>
     </div>
   </div>

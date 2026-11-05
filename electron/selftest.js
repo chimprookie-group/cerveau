@@ -9,6 +9,9 @@
 const path = require('node:path');
 
 async function run(mainWindow, deps) {
+  // les plugins locaux sont chargés dynamiquement : on les neutralise pour que
+  // les comptes d'outils restent indépendants de la configuration de la machine
+  process.env.CERVEAU_SANS_PLUGINS = '1';
   const { config, obsidian, app } = deps;
   const resultats = [];
   const erreursConsole = [];
@@ -769,13 +772,18 @@ async function run(mainWindow, deps) {
     const r = {
       zone: !!document.querySelector('#listeCompetences'),
       cartes: document.querySelectorAll('#listeCompetences .competence').length,
-      bouton: !!document.querySelector('#btnOuvrirCompetences')
+      bouton: !!document.querySelector('#btnOuvrirCompetences'),
+      zonePlugins: !!document.querySelector('#listePlugins'),
+      nouveauPlugin: !!document.querySelector('#btnNouveauPlugin'),
+      rechargerPlugins: !!document.querySelector('#btnRechargerPlugins')
     };
     document.querySelector('#btnFermerReglages2').click();
     return r;
   })()`);
   verifier('Compétences affichées dans les réglages',
     uiComp.zone && uiComp.cartes >= 3 && uiComp.bouton, `${uiComp.cartes} carte(s)`);
+  verifier('Section Plugins présente',
+    uiComp.zonePlugins && uiComp.nouveauPlugin && uiComp.rechargerPlugins);
 
   // interface des plugins
   const uiPlugins = await mainWindow.webContents.executeJavaScript(`(async () => {
@@ -1019,6 +1027,23 @@ async function run(mainWindow, deps) {
   verifier('Historique borné avant envoi', /bornHistorique\(conv\.messages/.test(bornageSrc));
   verifier('Borne par nombre et par taille',
     /maxMessages\s*=\s*40/.test(bornageSrc) && /maxCaracteres\s*=\s*120000/.test(bornageSrc));
+
+  // plugins locaux : chargement de l'exemple, outils préfixés
+  try {
+    delete process.env.CERVEAU_SANS_PLUGINS;
+    const pluginsMod = require('./plugins');
+    const rPlug = pluginsMod.recharger();
+    verifier('Plugins : exemple chargé',
+      rPlug.total >= 2 && rPlug.plugins.some((p) => p.id === 'exemple'),
+      `${rPlug.total} outil(s)`);
+    verifier('Plugins : outils préfixés',
+      rPlug.outils.some((o) => o.nom.startsWith('plugin_exemple_')),
+      rPlug.outils.map((o) => o.nom).join(', '));
+    process.env.CERVEAU_SANS_PLUGINS = '1';
+    pluginsMod.recharger();
+  } catch (err) {
+    verifier('Plugins : contrôles', false, String(err.message || err));
+  }
 
   // arrêt propre des serveurs MCP
   const mainSrc = fs2.readFileSync(path.join(racine, 'electron', 'main.js'), 'utf8');

@@ -4,6 +4,26 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.23.0] — 2026-11-05
+
+### Ajouté
+- **Plugins locaux.** Un fichier JavaScript dans `~/.config/cerveau/plugins/` peut
+  ajouter des outils à l'agent (exposés sous `plugin_<fichier>_<outil>`). Un exemple
+  est fourni au premier démarrage ; les outils des plugins sont disponibles dans
+  tous les modes et suivent les permissions habituelles.
+- **Création depuis les réglages** : `Réglages → Agent et outils → Plugins` liste
+  les plugins chargés, affiche leurs erreurs, permet de **recharger**, d'**ouvrir
+  le dossier**, de **retirer** un plugin, et d'en **créer un** via un formulaire
+  pré-rempli (nom, description, code).
+- **Compétence « Créer un plugin »** : l'agent connaît le format et peut rédiger le
+  code à coller dans le formulaire. Il n'écrit pas lui-même dans le dossier de
+  configuration.
+
+### Sécurité
+- Un plugin s'exécute avec les droits de l'application ; le formulaire et la
+  documentation le rappellent. Seuls les fichiers du dossier de configuration sont
+  chargés, et un plugin en erreur n'empêche pas les autres de fonctionner.
+
 ## [2.22.0] — 2026-11-05
 
 ### Ajouté
