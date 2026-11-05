@@ -2757,6 +2757,48 @@ function persisterConversations() {
 
 /* ═══════════════════════════ ENVOI DE MESSAGE ═══════════════════════════ */
 
+/* ═════════════════════ INDICATEUR DE RÉFLEXION ═════════════════════ */
+
+/** Libellé selon le niveau de raisonnement choisi pour le fournisseur. */
+function libelleReflexion() {
+  const id = etat.config?.activeProvider;
+  const effort = etat.effortsSession?.[id];
+  if (effort === 'low') return 'Réflexion rapide';
+  if (effort === 'medium') return 'Réflexion';
+  return 'Réflexion approfondie';
+}
+
+function formaterDureeReflexion(ms) {
+  const secondes = Math.max(0, Math.round(ms / 1000));
+  if (secondes < 60) return `${secondes} s`;
+  const minutes = Math.floor(secondes / 60);
+  const reste = secondes % 60;
+  return `${minutes} min${reste ? ` ${reste} s` : ''}`;
+}
+
+function majHorlogeReflexion(flux) {
+  if (!flux || flux.reflexionFige || !flux.reflexionTexte) return;
+  flux.reflexionTexte.textContent = `${flux.reflexionLabel || 'Réflexion'} depuis `
+    + formaterDureeReflexion(Date.now() - flux.debut);
+}
+
+/** Fige l'indicateur : « Réflexion approfondie · 2 min 27 s ». */
+function figerReflexion(flux, etat = 'termine') {
+  if (!flux || !flux.reflexion) return;
+  if (flux.reflexionFige) return;
+  flux.reflexionFige = true;
+  if (flux.minuteurReflexion) clearInterval(flux.minuteurReflexion);
+  flux.minuteurReflexion = null;
+
+  const duree = formaterDureeReflexion(Date.now() - flux.debut);
+  flux.reflexion.classList.add(etat);
+  if (flux.reflexionTexte) {
+    flux.reflexionTexte.textContent = etat === 'erreur'
+      ? `Interrompu après ${duree}`
+      : `${flux.reflexionLabel || 'Réflexion'} · ${duree}`;
+  }
+}
+
 /** Compacte les échanges anciens en un résumé quand le contexte devient gros. */
 async function compacterSiBesoin(conv) {
   if (!conv || !Array.isArray(conv.messages)) return;
@@ -2846,12 +2888,29 @@ async function envoyerMessage() {
   );
   const zoneOutils = el('div', { class: 'outils-message' });
   const corps = el('div', { class: 'message-corps markdown-corps' });
-  corps.append(el('div', { class: 'indicateur' }, el('span'), el('span'), el('span')));
-  bloc.append(zoneOutils, corps);
+
+  // suivi en direct : voir que l'agent travaille, même pendant une longue réflexion
+  const reflexionTexte = el('span', { class: 'reflexion-texte' });
+  const reflexion = el('div', { class: 'reflexion' },
+    el('span', { class: 'reflexion-roue' }),
+    reflexionTexte,
+    el('span', { class: 'reflexion-points', text: '···' })
+  );
+  bloc.append(reflexion, zoneOutils, corps);
   $('#messages').append(bloc);
   defilerEnBas();
 
-  const etatFlux = { texte: '', outils: [], corps, zoneOutils, bloc };
+  const etatFlux = {
+    texte: '', outils: [], corps, zoneOutils, bloc,
+    debut: Date.now(),
+    reflexion,
+    reflexionTexte,
+    reflexionLabel: libelleReflexion(),
+    reflexionFige: false,
+    minuteurReflexion: null
+  };
+  majHorlogeReflexion(etatFlux);
+  etatFlux.minuteurReflexion = setInterval(() => majHorlogeReflexion(etatFlux), 1000);
   fluxActif = etatFlux;
 
   try {
@@ -2871,6 +2930,7 @@ async function envoyerMessage() {
 
     finaliserMessage(conv, etatFlux, res);
   } catch (err) {
+    figerReflexion(etatFlux, 'erreur');
     corps.textContent = `Erreur : ${err.message || err}`;
     if (!conv.usage) conv.usage = { entree: 0, sortie: 0, appels: 0 };
     conv.usage.statut = 'erreur';
@@ -2888,6 +2948,7 @@ async function envoyerMessage() {
 let fluxActif = null;
 
 function finaliserMessage(conv, etatFlux, res) {
+  figerReflexion(etatFlux, res?.erreur ? 'erreur' : 'termine');
   const texteFinal = etatFlux.texte.trim();
   etatFlux.corps.innerHTML = renduMarkdown.rendre(texteFinal || (res.erreur ? `⚠️ ${res.erreur}` : ''));
   renduMarkdown.embellir(etatFlux.corps);
@@ -2972,6 +3033,8 @@ function traiterEvenementAgent(evt) {
       break;
     }
     case 'outil_debut': {
+      flux.reflexionLabel = `Exécution de ${evt.nom || 'l’outil'}`;
+      majHorlogeReflexion(flux);
       // sépare le texte du tour précédent de celui qui suivra l'appel d'outil
       if (flux.texte && !flux.texte.endsWith('\n\n')) {
         flux.texte = `${flux.texte.replace(/\s+$/, '')}\n\n`;
@@ -3005,6 +3068,8 @@ function traiterEvenementAgent(evt) {
         );
       }
       flux.outils.push({ nom: evt.nom, ok: evt.ok, message: evt.message });
+      flux.reflexionLabel = libelleReflexion();
+      majHorlogeReflexion(flux);
       rafraichirCoffre();
       break;
     }
@@ -3030,6 +3095,7 @@ function traiterEvenementAgent(evt) {
     case 'erreur': {
       const ind = corps.querySelector('.indicateur');
       if (ind) ind.remove();
+      figerReflexion(flux, 'erreur');
       const convErr = etat.conversationCourante;
       if (convErr) {
         if (!convErr.usage) convErr.usage = { entree: 0, sortie: 0, appels: 0 };
@@ -3044,6 +3110,7 @@ function traiterEvenementAgent(evt) {
       break;
     }
     case 'termine': {
+      figerReflexion(flux, 'termine');
       // les serveurs MCP ont pu démarrer pendant la requête
       if ($('#modaleReglages') && !$('#modaleReglages').hidden) rafraichirEtatsMCP();
       break;

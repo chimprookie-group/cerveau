@@ -684,6 +684,64 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .btn-message:hover { background: var(--fond-3); color: var(--texte); border-color: var(--bordure-claire); }
 
 /* Outils / activité */
+.reflexion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 30px;
+  margin: 1px 0 2px;
+  min-height: 16px;
+  font-size: 11.5px;
+  color: var(--texte-3);
+  user-select: none;
+}
+
+.reflexion-roue {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--bordure-claire);
+  border-top-color: var(--accent);
+  animation: tournerReflexion 0.9s linear infinite;
+}
+
+@keyframes tournerReflexion {
+  to { transform: rotate(360deg); }
+}
+
+.reflexion-texte {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reflexion-points {
+  letter-spacing: 2px;
+  animation: pointsReflexion 1.4s ease-in-out infinite;
+}
+
+@keyframes pointsReflexion {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+.reflexion.termine .reflexion-roue {
+  border-color: color-mix(in srgb, var(--succes) 60%, transparent);
+  border-top-color: var(--succes);
+  animation: none;
+}
+
+.reflexion.termine .reflexion-points { display: none; }
+
+.reflexion.erreur { color: var(--danger); }
+.reflexion.erreur .reflexion-roue {
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+  border-top-color: var(--danger);
+  animation: none;
+}
+.reflexion.erreur .reflexion-points { display: none; }
+
 .outils-message { display: flex; flex-direction: column; gap: 4px; padding-left: 30px; margin: 2px 0; }
 
 .outil-ligne {

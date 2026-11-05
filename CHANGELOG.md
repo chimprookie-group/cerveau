@@ -4,6 +4,16 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.20.0] — 2026-11-05
+
+### Ajouté
+- **Indicateur de réflexion en direct.** Pendant une requête, la bulle affiche
+  « Réflexion approfondie depuis 3 s ··· » avec un minuteur qui avance chaque
+  seconde ; le libellé suit le niveau de raisonnement choisi. Il passe à
+  « Exécution de <outil> » pendant un outil, puis se fige à la fin :
+  « Réflexion approfondie · 1 min 12 s ». En cas d'erreur : « Interrompu après … ».
+- L'ancien triple point muet est remplacé par cet indicateur.
+
 ## [2.19.1] — 2026-11-05
 
 ### Corrigé
