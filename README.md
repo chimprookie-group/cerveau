@@ -39,9 +39,9 @@ indique « Réflexion approfondie depuis 12 s ··· », puis « Exécution de <
 quand un outil tourne, et se fige en « Terminé en … » à la fin.
 
 **Cerveau 3D du coffre** — l'onglet « Cerveau » du panneau latéral dessine le coffre
-en volume : silhouette de cerveau, notes en nœuds dorés, liens en fibres et
-particules de flux qui les parcourent. Glisser pour tourner, molette pour zoomer,
-survol pour le titre et les tags, clic pour ouvrir la note.
+en volume : notes en nœuds dorés, liens en fibres et particules de flux qui les
+parcourent, sans contour dessiné. Glisser pour tourner, molette pour zoomer, survol
+pour le titre et les tags, clic pour ouvrir la note.
 
 **Navigation entre les tours** — un rail de points à droite de la conversation,
 un par échange : le point actif suit le défilement, le tour en cours clignote,
@@ -149,7 +149,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.26.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.26.1-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

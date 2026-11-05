@@ -3563,18 +3563,7 @@ function dessinerCerveau3D(temps) {
   ctx.quadraticCurveTo(px(0.53), py(0.94), px(0.535), py(0.86));
   ctx.stroke();
 
-  // liseré lumineux
-  ctx.strokeStyle = 'rgba(255, 190, 90, 0.16)';
-  ctx.lineWidth = 8;
-  ctx.stroke(corps);
-  ctx.strokeStyle = 'rgba(255, 230, 190, 0.55)';
-  ctx.lineWidth = 1.3;
-  ctx.shadowColor = 'rgba(255, 190, 90, 0.8)';
-  ctx.shadowBlur = 10;
-  ctx.stroke(corps);
-  ctx.shadowBlur = 0;
-
-  // tout le réseau reste à l'intérieur du cerveau
+  // tout le réseau reste à l'intérieur du cerveau (sans contour visible)
   ctx.clip(corps);
 
   // projections des notes (utilisées par les liens et le survol)
@@ -3704,14 +3693,8 @@ function dessinerCerveau3D(temps) {
   ctx.arc(coeur.x, coeur.y, 2.4, 0, Math.PI * 2);
   ctx.fill();
 
-  // on sort du masque et on redessine le liseré par-dessus le réseau
+  // on sort du masque : pas de contour, le cerveau n'est fait que du réseau
   ctx.restore();
-  ctx.strokeStyle = 'rgba(255, 230, 190, 0.5)';
-  ctx.lineWidth = 1.1;
-  ctx.shadowColor = 'rgba(255, 190, 90, 0.7)';
-  ctx.shadowBlur = 8;
-  ctx.stroke(corps);
-  ctx.shadowBlur = 0;
 }
 
 function boucleCerveau3D(ts) {

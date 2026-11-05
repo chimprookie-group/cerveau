@@ -4,6 +4,13 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.26.1] — 2026-11-05
+
+### Modifié
+- **Cerveau 3D** : le contour jaune (la silhouette lumineuse) est retiré. Le cerveau
+  n'est plus dessiné que par son réseau de notes, de liens et de particules, toujours
+  confiné à la forme cérébrale.
+
 ## [2.26.0] — 2026-11-05
 
 ### Modifié
