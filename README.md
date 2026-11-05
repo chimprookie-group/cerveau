@@ -34,9 +34,9 @@ Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 dernier appel API (latence, en cours, erreur), cumulés par conversation et
 conservés au redémarrage.
 
-**Réflexion en direct** — pendant une requête, la bulle indique
-« Réflexion approfondie depuis 12 s ··· », puis « Exécution de <outil> » quand un
-outil tourne, et se fige à la fin avec la durée totale.
+**Réflexion en direct** — pendant une requête, une ligne en fin de conversation
+indique « Réflexion approfondie depuis 12 s ··· », puis « Exécution de <outil> »
+quand un outil tourne, et se fige en « Terminé en … » à la fin.
 
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
@@ -139,7 +139,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.20.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.20.1-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

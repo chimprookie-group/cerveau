@@ -4,6 +4,15 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.20.1] — 2026-11-05
+
+### Modifié
+- **L'indicateur de réflexion est placé comme dans l'interface de l'assistant** : une
+  ligne discrète en fin de conversation, sous le dernier message, avec un séparateur
+  fin, une roue animée et un texte scintillant « Réflexion approfondie depuis 3 s ··· ».
+  La bulle de réponse reste vide tant que le modèle n'a rien produit ; la ligne se
+  fige ensuite en « Terminé en 2 min 27 s ».
+
 ## [2.20.0] — 2026-11-05
 
 ### Ajouté

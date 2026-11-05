@@ -684,21 +684,36 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .btn-message:hover { background: var(--fond-3); color: var(--texte); border-color: var(--bordure-claire); }
 
 /* Outils / activité */
-.reflexion {
+.reflexion-ligne {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
   padding-left: 30px;
-  margin: 1px 0 2px;
-  min-height: 16px;
-  font-size: 11.5px;
+  margin-top: 4px;
+  position: relative;
+}
+
+.reflexion-separateur {
+  width: 100%;
+  height: 0.5px;
+  margin-bottom: 2px;
+  background: color-mix(in srgb, var(--bordure) 75%, var(--bordure-claire));
+  opacity: 0.7;
+}
+
+.reflexion-contenu {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  font-size: 12.5px;
   color: var(--texte-3);
   user-select: none;
 }
 
-.reflexion-roue {
-  width: 12px;
-  height: 12px;
+.reflexion-icone {
+  width: 13px;
+  height: 13px;
   flex-shrink: 0;
   border-radius: 50%;
   border: 1.5px solid var(--bordure-claire);
@@ -711,9 +726,25 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 }
 
 .reflexion-texte {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(
+    100deg,
+    var(--texte-3) 0%,
+    var(--texte) 42%,
+    var(--accent-clair) 50%,
+    var(--texte) 58%,
+    var(--texte-3) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmerReflexion 2.6s linear infinite;
+}
+
+@keyframes shimmerReflexion {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
 }
 
 .reflexion-points {
@@ -726,21 +757,34 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   50% { opacity: 1; }
 }
 
-.reflexion.termine .reflexion-roue {
-  border-color: color-mix(in srgb, var(--succes) 60%, transparent);
+/* une fois terminé : plus de scintillement, une ligne discrète */
+.reflexion-ligne.termine .reflexion-icone {
+  border-color: color-mix(in srgb, var(--succes) 55%, transparent);
   border-top-color: var(--succes);
   animation: none;
 }
 
-.reflexion.termine .reflexion-points { display: none; }
+.reflexion-ligne.termine .reflexion-texte {
+  background: none;
+  color: var(--texte-3);
+  animation: none;
+}
 
-.reflexion.erreur { color: var(--danger); }
-.reflexion.erreur .reflexion-roue {
-  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+.reflexion-ligne.termine .reflexion-points { display: none; }
+
+.reflexion-ligne.erreur .reflexion-icone {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
   border-top-color: var(--danger);
   animation: none;
 }
-.reflexion.erreur .reflexion-points { display: none; }
+
+.reflexion-ligne.erreur .reflexion-texte {
+  background: none;
+  color: var(--danger);
+  animation: none;
+}
+
+.reflexion-ligne.erreur .reflexion-points { display: none; }
 
 .outils-message { display: flex; flex-direction: column; gap: 4px; padding-left: 30px; margin: 2px 0; }
 
