@@ -4,6 +4,17 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.19.1] — 2026-11-05
+
+### Corrigé
+- **L'agent s'arrêtait avant la fin et il fallait écrire « continue ».** Quand le
+  modèle terminait son tour sur une réponse coupée (limite de tokens), un plan
+  encore incomplet, un outil en échec ou une simple annonce (« je vais… »), la
+  boucle s'arrêtait. Elle poursuit désormais seule, jusqu'à trois relances, avec
+  une consigne adaptée : reprendre à la coupure, terminer le plan, corriger
+  l'outil. Une réponse normale ne déclenche aucune relance.
+- Les deux morceaux de la réponse sont séparés par un saut de ligne dans la bulle.
+
 ## [2.19.0] — 2026-11-05
 
 ### Ajouté

@@ -864,6 +864,39 @@ async function run(mainWindow, deps) {
   verifier('Modèle sans outils : conversation poursuivie',
     resRepli.texte.includes('Reponse sans outils'), resRepli.texte || '(vide)');
 
+  // poursuite automatique : une réponse coupée ne doit pas arrêter l'agent
+  let toursRelance = 0;
+  const serveurRelance = require('node:http').createServer((req, res) => {
+    if (req.method !== 'POST') { res.writeHead(200); return res.end('ok'); }
+    req.on('data', () => {});
+    req.on('end', () => {
+      toursRelance += 1;
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      if (toursRelance === 1) {
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: 'Début de réponse…' } }] })}\n\n`);
+        res.write('data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\n');
+      } else {
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: ' et fin.' } }] })}\n\n`);
+        res.write('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n');
+      }
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+  });
+  await new Promise((r) => serveurRelance.listen(0, r));
+  const portRelance = serveurRelance.address().port;
+  const resRelance = await agentModule2.run({
+    providerId: 'custom',
+    credentials: { apiKey: 'k', baseUrl: `http://127.0.0.1:${portRelance}/v1`, model: 'coupe' },
+    historique: [{ role: 'user', contenu: 'travail long' }],
+    ctx: { mode: 'complet', vaultPath: null, coffre: null, workspace: os.tmpdir(),
+      permissions: { mode: 'auto' }, confirmer: async () => ({ autorise: true }) },
+    emit: () => {}
+  });
+  serveurRelance.close();
+  verifier('Réponse coupée : poursuite automatique',
+    toursRelance >= 2 && /et fin/.test(resRelance.texte), `${toursRelance} tour(s)`);
+
   // 6undecies. Non-régression des bugs corrigés lors de l'audit
   const tMcp = Date.now();
   const outilsFantome = await mcpMod.gestionnaire.charger([

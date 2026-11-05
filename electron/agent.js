@@ -321,9 +321,12 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
   let texteFinal = '';
   let tours = 0;
   let outilsExecutes = 0;
-  let dejaRelance = false;
   let sansOutils = false;
   let dejaRejeteOutils = false;
+  // poursuite automatique : le modèle s'arrête parfois avant d'avoir fini
+  let relancesAuto = 0;
+  let planCourant = null;
+  let derniereErreur = false;
 
   const maxTours = Math.max(1, Number(limiteTours) || Number(ctx.agentMaxTours) || MAX_TOURS_DEFAUT);
 
@@ -394,18 +397,77 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
 
     texteFinal += texteTour;
 
+    const reponseCoupee = /^(length|max_tokens)$/i.test(String(raison || ''));
+
+    // Un appel d'outil coupé par la limite de tokens est incomplet : l'exécuter
+    // pourrait écrire un fichier à moitié. On le jette et on demande de refaire.
+    if (reponseCoupee && outilsDemandes.length && relancesAuto < 3 && !signal?.aborted) {
+      relancesAuto += 1;
+      if (texteTour.trim()) {
+        messages.push(isAnthropic
+          ? { role: 'assistant', content: [{ type: 'text', text: texteTour }] }
+          : { role: 'assistant', content: texteTour });
+        texteFinal += '\n\n';
+        emit({ type: 'texte', delta: '\n\n' });
+      }
+      const consigne = "Ta réponse a été coupée pendant la préparation des outils : les appels incomplets n'ont pas été exécutés. Recommence-les entièrement, un par un si nécessaire.";
+      messages.push(isAnthropic
+        ? { role: 'user', content: [{ type: 'text', text: consigne }] }
+        : { role: 'user', content: consigne });
+      continue;
+    }
+
     if (!outilsDemandes.length) {
-      // Certains modèles terminent leur boucle d'outils sans rédiger de synthèse.
-      // On relance une fois, sans outils, pour obtenir une vraie réponse.
-      if (!texteFinal.trim() && outilsExecutes > 0 && !dejaRelance) {
-        dejaRelance = true;
-        const invite = isAnthropic
-          ? { role: 'user', content: [{ type: 'text', text: 'Rédige maintenant ta réponse finale à partir des résultats obtenus.' }] }
-          : { role: 'user', content: 'Rédige maintenant ta réponse finale à partir des résultats obtenus.' };
-        messages.push(invite);
-        sansOutils = true;
+      const texte = texteFinal.trim();
+      const tronque = reponseCoupee;
+      const planIncomplet = Array.isArray(planCourant)
+        && planCourant.some((t) => t.statut !== 'termine');
+      const promesseSansSuite = outilsExecutes > 0 && texte.length > 0 && texte.length < 160
+        && /(je vais|prochaine étape|ensuite|il reste|à suivre|poursuivre)/i.test(texte);
+
+      // Le modèle s'arrête parfois avant la fin (réponse coupée, plan non
+      // terminé, outil en échec, simple annonce). On poursuit automatiquement
+      // au lieu d'obliger l'utilisateur à écrire « continue ».
+      const doitContinuer = tronque || planIncomplet || derniereErreur || promesseSansSuite
+        || (!texte && outilsExecutes > 0);
+
+      if (doitContinuer && relancesAuto < 3 && !signal?.aborted) {
+        relancesAuto += 1;
+
+        // le modèle doit voir ce qu'il vient de dire pour reprendre au bon endroit
+        if (texteTour.trim()) {
+          messages.push(isAnthropic
+            ? { role: 'assistant', content: [{ type: 'text', text: texteTour }] }
+            : { role: 'assistant', content: texteTour });
+
+          // sépare visuellement les deux morceaux dans la bulle
+          texteFinal += '\n\n';
+          emit({ type: 'texte', delta: '\n\n' });
+        }
+
+        let consigne;
+        if (tronque) {
+          consigne = "Ta réponse précédente a été coupée par la limite de tokens. Reprends exactement là où tu t'es arrêté, sans répéter ce qui précède.";
+        } else if (planIncomplet) {
+          const restantes = planCourant.filter((t) => t.statut !== 'termine').length;
+          consigne = `Ton plan n'est pas terminé (${restantes} tâche(s) restante(s)). Poursuis avec les outils jusqu'au bout, puis vérifie le résultat. Ne demande pas à l'utilisateur de dire « continue ».`;
+        } else if (derniereErreur) {
+          consigne = "Le dernier outil a échoué. Lis l'erreur, corrige l'approche et poursuis la tâche jusqu'au bout.";
+        } else if (!texte) {
+          consigne = 'Rédige maintenant ta réponse finale à partir des résultats obtenus.';
+        } else {
+          consigne = "La tâche ne semble pas terminée : poursuis avec les outils jusqu'au bout, puis vérifie le résultat. Ne demande pas à l'utilisateur de dire « continue ».";
+        }
+
+        messages.push(isAnthropic
+          ? { role: 'user', content: [{ type: 'text', text: consigne }] }
+          : { role: 'user', content: consigne });
+
+        // on garde les outils, sauf si le modèle les a explicitement refusés
+        if (!dejaRejeteOutils) sansOutils = false;
         continue;
       }
+
       emit({ type: 'fin', raison });
       return { texte: texteFinal, outils: outilsExecutes };
     }
@@ -441,6 +503,9 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
       try {
         const res = await outil.executer(appel.arguments || {}, ctx);
         outilsExecutes += 1;
+        if (appel.nom === 'plan_taches' && Array.isArray(res?.taches)) {
+          planCourant = res.taches;
+        }
         // une image (voir_image) est jointe au modèle, jamais sérialisée en base64
         const image = res && res.image && res.image.dataUrl ? res.image : null;
         const texte = JSON.stringify(image ? { ...res, image: '(jointe au modèle)' } : res, null, 2)
@@ -471,6 +536,7 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
         resultats.push(await executerUn(appel));
       }
     }
+    derniereErreur = resultats.some((r) => !r.ok);
 
     // --- réinjection des résultats dans l'historique du fournisseur ---
     if (isAnthropic) {

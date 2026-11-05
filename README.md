@@ -135,7 +135,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.19.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.19.1-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -287,6 +287,9 @@ demande (`charger_competence`) et peut enregistrer une nouvelle procédure
   échanges anciens sont résumés par le modèle et réinjectés ; l'historique reste
   affiché, seul l'envoi est allégé.
 - **Réessais automatiques** sur les erreurs passagères (429, 5xx) avant le flux.
+- **Poursuite automatique** : si le modèle s'arrête avant la fin (réponse coupée,
+  plan incomplet, outil en échec), l'agent reprend seul au lieu d'attendre que
+  l'utilisateur écrive « continue ».
 
 ### Voir les images
 
