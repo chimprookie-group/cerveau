@@ -845,13 +845,6 @@ ipcMain.handle('diag:outils', async () => {
     }
   }
 
-  // ZIMREAPER, s'il est installé
-  const cheminsZim = [
-    path.join(os.homedir(), 'Applications', 'ZimReaper-0.1.0-x86_64.AppImage'),
-    path.join(os.homedir(), '.local', 'bin', 'zimreaper')
-  ];
-  const zim = cheminsZim.find((p) => { try { return require('node:fs').existsSync(p); } catch { return false; } });
-
   const outils = [
     { id: 'git', nom: 'Git', present: git.present, version: git.version,
       requis: true, paquet: 'git', usage: 'Projets, commits, différences' },
@@ -860,10 +853,7 @@ ipcMain.handle('diag:outils', async () => {
     { id: 'node', nom: 'Node.js', present: node.present, version: node.version,
       requis: true, paquet: 'nodejs', usage: 'Serveurs MCP (git, sqlite, mémoire…)' },
     { id: 'npm', nom: 'npm', present: npm.present, version: npm.version,
-      requis: true, paquet: 'npm', usage: 'Installation des serveurs MCP via npx' },
-    { id: 'zimreaper', nom: 'ZIMREAPER', present: Boolean(zim), version: zim ? 'installé' : null,
-      requis: false, paquet: null, chemin: zim || null,
-      usage: 'Navigateur piloté par l’agent (21 outils)' }
+      requis: true, paquet: 'npm', usage: 'Installation des serveurs MCP via npx' }
   ];
 
   const manquants = outils.filter((o) => o.requis && !o.present);

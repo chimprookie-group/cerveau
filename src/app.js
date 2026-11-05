@@ -1691,16 +1691,6 @@ const EXEMPLES_MCP = [
     desc: 'Référence du protocole, pour tester',
     commande: 'npx',
     arguments: ['-y', '@modelcontextprotocol/server-everything']
-  },
-  {
-    nom: 'zimreaper',
-    titre: 'Navigateur piloté (ZIMREAPER)',
-    desc: '21 outils : clic réel, saisie, réseau, captures',
-    commande: 'zimreaper',
-    // nécessite ZIMREAPER installé : voir le champ « commande »
-    arguments: ['mcp', '--launch'],
-    variablesEnv: { ZIMREAPER_HOME: '$HOME/.zimreaper', ZIMREAPER_LOG: 'warn' },
-    note: 'Installez ZIMREAPER (AppImage ou compilation) puis remplacez la commande par son chemin complet.'
   }
 ];
 
@@ -2045,7 +2035,10 @@ const OUTILS_CONNUS = [
   { nom: 'commiter_et_pousser', famille: 'GitHub' }, { nom: 'lister_depots_github', famille: 'GitHub' },
   { nom: 'lister_pull_requests', famille: 'GitHub' }, { nom: 'details_pull_request', famille: 'GitHub' },
   { nom: 'creer_pull_request', famille: 'GitHub' }, { nom: 'lister_issues', famille: 'GitHub' },
-  { nom: 'etat_ci', famille: 'GitHub' }
+  { nom: 'etat_ci', famille: 'GitHub' },
+  // Les outils web sont intégrés (DuckDuckGo + lecture de page), sans clé ni
+  // serveur MCP : ils se règlent comme les autres, ici.
+  { nom: 'web_search', famille: 'Web' }, { nom: 'web_fetch', famille: 'Web' }
 ];
 
 function rendreOutilsReglage() {

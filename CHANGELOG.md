@@ -4,6 +4,17 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.14.3] — 2026-11-05
+
+### Modifié
+- **L'exemple MCP « Navigateur piloté (ZIMREAPER) » est retiré.** ZIMREAPER n'a pas de
+  release binaire, pèse 97 Mo et devait être compilé à la main : l'exemple ne menait
+  nulle part. Pour le web, Cerveau s'appuie sur ses outils intégrés, sans clé ni
+  installation : `web_search` (DuckDuckGo) et `web_fetch` (lecture de page).
+- **Les outils web apparaissent dans `Réglages → Agent → Outils`**, avec la même
+  possibilité de les désactiver un par un que les autres outils.
+- Le diagnostic des outils système ne cherche plus ZIMREAPER.
+
 ## [2.14.2] — 2026-11-05
 
 ### Corrigé

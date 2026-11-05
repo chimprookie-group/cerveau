@@ -109,7 +109,6 @@ Facultatifs, non inclus :
 | Outil | Pourquoi | Comment |
 |---|---|---|
 | `obsidian` | Ouvrir les notes dans Obsidian | `pacman -S obsidian` |
-| ZIMREAPER | Navigateur piloté par l'agent (21 outils MCP) | [à compiler](https://github.com/Mr-Destroyer/ZIMREAPER) — aucune release binaire n'est publiée |
 
 ---
 
@@ -128,7 +127,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.14.2-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.14.3-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -258,6 +257,9 @@ tourne avec `pipefail`, donc un `npm test | tail` renvoie bien le code d'échec 
 compatible Tavily peut être branché dans les réglages.
 
 `web_fetch` — récupère une page et la convertit en texte lisible.
+
+Ces deux outils sont **intégrés à l'application** : aucun serveur MCP ni paquet à
+installer. Ils se désactivent un par un dans `Réglages → Agent → Outils`.
 
 ### Plugins externes (MCP)
 

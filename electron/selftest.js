@@ -1314,14 +1314,15 @@ async function run(mainWindow, deps) {
     ghMod.changerBranche = origChanger;
   }
 
-  // 6quatervicies. Exemple ZIMREAPER (navigateur piloté via MCP)
+  // 6quatervicies. ZIMREAPER retiré : le web passe par les outils intégrés
   const appSrcZim = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
-  verifier('Exemple ZIMREAPER proposé', /nom: 'zimreaper'/.test(appSrcZim));
-  verifier('ZIMREAPER lancé en mode mcp', /arguments: \['mcp', '--launch'\]/.test(appSrcZim));
-  verifier('ZIMREAPER avec son dossier d\'état',
-    /ZIMREAPER_HOME/.test(appSrcZim) && /ZIMREAPER_LOG/.test(appSrcZim));
-  verifier('Exemple ZIMREAPER porte une note d\'installation',
-    /Installez ZIMREAPER/.test(appSrcZim));
+  const mainSrcZim = fs2.readFileSync(path.join(racine, 'electron', 'main.js'), 'utf8');
+  const readmeZim = fs2.readFileSync(path.join(racine, 'README.md'), 'utf8');
+  verifier('Exemple ZIMREAPER retiré de l\'interface', !/zimreaper/i.test(appSrcZim));
+  verifier('Diagnostic ZIMREAPER retiré', !/zimreaper/i.test(mainSrcZim));
+  verifier('Documentation ZIMREAPER retirée', !/zimreaper/i.test(readmeZim));
+  verifier('Outils web visibles dans les réglages',
+    /nom: 'web_search', famille: 'Web'/.test(appSrcZim) && /nom: 'web_fetch', famille: 'Web'/.test(appSrcZim));
   verifier('Les variables d\'exemple développent $HOME',
     /variablesEnv: Object\.fromEntries/.test(appSrcZim));
 
@@ -1329,7 +1330,7 @@ async function run(mainWindow, deps) {
   const diag = await mainWindow.webContents.executeJavaScript(
     `window.cerveau.diag.outils()`);
   verifier('Diagnostic : structure complète',
-    Array.isArray(diag.outils) && diag.outils.length >= 5, `${diag.outils?.length} outils`);
+    Array.isArray(diag.outils) && diag.outils.length >= 4, `${diag.outils?.length} outils`);
   verifier('Diagnostic : git détecté',
     diag.outils.some((o) => o.id === 'git' && o.present === true));
   verifier('Diagnostic : gh détecté',
