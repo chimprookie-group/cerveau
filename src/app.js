@@ -277,6 +277,7 @@ async function demarrer() {
   }
   afficherConversations();
   ajusterHauteurSaisie();
+  restaurerBrouillon();
 
   synchroniserHauteurEntete();
 
@@ -2678,6 +2679,7 @@ function nouvelleConversation({ silencieux = false } = {}) {
   etat.conversationCourante = conv;
   afficherConversation();
   afficherConversations();
+  restaurerBrouillon();
   // sans cela, une conversation créée puis fermée aussitôt serait perdue
   persisterConversations();
   if (!silencieux) $('#saisie').focus();
@@ -2836,6 +2838,14 @@ function ajouterMessageDOM(m) {
         onclick: () => exporterVersCoffre(m.contenu)
       })
     );
+    const estDerniere = etat.conversationCourante
+      && etat.conversationCourante.messages[etat.conversationCourante.messages.length - 1] === m;
+    if (estDerniere) {
+      actions.append(el('button', {
+        class: 'btn-message', text: 'Régénérer',
+        onclick: () => regenererReponse()
+      }));
+    }
     bloc.append(actions);
   }
 
@@ -2898,9 +2908,11 @@ function chargerConversation(id) {
   etat.conversationCourante = conv;
   afficherConversation();
   afficherConversations();
+  restaurerBrouillon();
 }
 
 function supprimerConversation(id) {
+  effacerBrouillon(id);
   etat.conversations = etat.conversations.filter((c) => c.id !== id);
   if (etat.conversationCourante?.id === id) {
     if (etat.conversations.length) chargerConversation(etat.conversations[0].id);
@@ -3035,13 +3047,48 @@ async function compacterSiBesoin(conv) {
   } catch { /* en cas d'échec, l'historique reste simplement tronqué */ }
 }
 
-async function envoyerMessage() {
-  const saisie = $('#saisie');
-  const texte = saisie.value.trim();
-  if (!texte || etat.enCours) return;
+let minuteurBrouillon = null;
 
+function cleBrouillon(id) {
+  return `cerveau.brouillon.${id}`;
+}
+
+function sauverBrouillon() {
+  const conv = etat.conversationCourante;
+  const saisie = $('#saisie');
+  if (!conv || !saisie) return;
+  const valeur = saisie.value;
+  clearTimeout(minuteurBrouillon);
+  minuteurBrouillon = setTimeout(() => {
+    try {
+      if (valeur.trim()) localStorage.setItem(cleBrouillon(conv.id), valeur);
+      else localStorage.removeItem(cleBrouillon(conv.id));
+    } catch { /* quota dépassé */ }
+  }, 250);
+}
+
+function restaurerBrouillon() {
+  const conv = etat.conversationCourante;
+  const saisie = $('#saisie');
+  if (!conv || !saisie) return;
+  try { saisie.value = localStorage.getItem(cleBrouillon(conv.id)) || ''; } catch { saisie.value = ''; }
+  ajusterHauteurSaisie();
+}
+
+function effacerBrouillon(id) {
+  try { localStorage.removeItem(cleBrouillon(id)); } catch { /* ignore */ }
+}
+
+async function envoyerMessage(options = {}) {
+  const regenerer = options?.regenerer === true;
+  if (etat.enCours) return;
+
+  const saisie = $('#saisie');
   const conv = etat.conversationCourante;
   if (!conv) return;
+
+  let texte = saisie.value.trim();
+  if (!regenerer && !texte) return;
 
   const providerId = etat.config.activeProvider;
   const modele = etat.modelesSession[providerId] || etat.config.providers?.[providerId]?.model || '';
@@ -3052,21 +3099,33 @@ async function envoyerMessage() {
     return;
   }
 
+  if (regenerer) {
+    const dernierUser = [...conv.messages].reverse().find((m) => m.role === 'user');
+    if (!dernierUser) {
+      notifier('Rien à régénérer dans cette conversation.', 'info', 2500);
+      return;
+    }
+    texte = dernierUser.contenu;
+    if (conv.messages[conv.messages.length - 1]?.role === 'assistant') conv.messages.pop();
+  }
+
   // contexte trop gros : on résume les échanges anciens avant d'envoyer
   await compacterSiBesoin(conv);
 
-  // message utilisateur
-  const contenuComplet = composerMessage(texte);
-  const images = imagesJointes();
-  conv.messages.push({
-    role: 'user',
-    contenu: contenuComplet,
-    // conservées pour que le modèle les voie vraiment, et pour l'historique
-    ...(images.length ? { images } : {})
-  });
-  conv.date = Date.now();
-  if (conv.titre === 'Nouvelle conversation') {
-    conv.titre = texte.slice(0, 60) + (texte.length > 60 ? '…' : '');
+  if (!regenerer) {
+    // message utilisateur
+    const contenuComplet = composerMessage(texte);
+    const images = imagesJointes();
+    conv.messages.push({
+      role: 'user',
+      contenu: contenuComplet,
+      // conservées pour que le modèle les voie vraiment, et pour l'historique
+      ...(images.length ? { images } : {})
+    });
+    conv.date = Date.now();
+    if (conv.titre === 'Nouvelle conversation') {
+      conv.titre = texte.slice(0, 60) + (texte.length > 60 ? '…' : '');
+    }
   }
   conv.fournisseur = providerId;
   if (!conv.usage) conv.usage = { entree: 0, sortie: 0, appels: 0 };
@@ -3074,10 +3133,14 @@ async function envoyerMessage() {
   conv.usage.fournisseur = NOMS_FOURNISSEURS[providerId] || providerId;
   conv.usage.modele = modele;
   majStatistiquesConversation();
-  saisie.value = '';
-  piecesJointes = [];
-  rendrePieces();
-  ajusterHauteurSaisie();
+
+  if (!regenerer) {
+    saisie.value = '';
+    piecesJointes = [];
+    rendrePieces();
+    ajusterHauteurSaisie();
+    effacerBrouillon(conv.id);
+  }
   afficherConversation();
   afficherConversations();
 
@@ -3141,6 +3204,14 @@ async function envoyerMessage() {
 
 let fluxActif = null;
 
+function regenererReponse() {
+  if (etat.enCours) {
+    notifier('Une requête est déjà en cours.', 'info', 2500);
+    return;
+  }
+  envoyerMessage({ regenerer: true });
+}
+
 function replierOutils(zoneOutils) {
   if (!zoneOutils || !zoneOutils.children.length) return;
   if (zoneOutils.closest('details.details-travail')) return;
@@ -3186,6 +3257,10 @@ function finaliserMessage(conv, etatFlux, res) {
       el('button', {
         class: 'btn-message', text: 'Vers une note…',
         onclick: () => exporterVersCoffre(texteFinal)
+      }),
+      el('button', {
+        class: 'btn-message', text: 'Régénérer',
+        onclick: () => regenererReponse()
       })
     );
     etatFlux.bloc.append(actions);
@@ -3208,7 +3283,16 @@ function basculerEtatEnvoi(enCours) {
 
 function defilerEnBas() {
   const zone = $('#conversation');
-  requestAnimationFrame(() => { zone.scrollTop = zone.scrollHeight; });
+  requestAnimationFrame(() => { zone.scrollTop = zone.scrollHeight; majBoutonRetourBas(); });
+}
+
+function majBoutonRetourBas() {
+  const zone = $('#conversation');
+  const bouton = $('#btnRetourBas');
+  const messages = $('#messages');
+  if (!zone || !bouton) return;
+  const distance = zone.scrollHeight - zone.scrollTop - zone.clientHeight;
+  bouton.hidden = !messages || messages.hidden || distance < 280;
 }
 
 /* --------------------- navigation entre les tours ---------------------- */
@@ -3227,9 +3311,12 @@ function brancherRailTours() {
     frame = requestAnimationFrame(() => {
       frame = null;
       majMarqueActive();
+      majBoutonRetourBas();
       masquerApercuTour();
     });
   }, { passive: true });
+
+  $('#btnRetourBas')?.addEventListener('click', () => defilerEnBas());
 
   window.addEventListener('resize', majMarqueActive);
 }
@@ -4274,7 +4361,10 @@ function brancherEvenements() {
 
   // saisie
   const saisie = $('#saisie');
-  saisie.addEventListener('input', ajusterHauteurSaisie);
+  saisie.addEventListener('input', () => {
+    ajusterHauteurSaisie();
+    sauverBrouillon();
+  });
   saisie.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
       e.preventDefault();

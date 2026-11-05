@@ -42,6 +42,9 @@ quand un outil tourne, et se fige en « Terminé en … » à la fin.
 un par échange : le point actif suit le défilement, le tour en cours clignote,
 le survol montre l'aperçu du message et de la réponse, et un clic saute au tour.
 
+**Confort de rédaction** — brouillons conservés par conversation, bouton
+« Régénérer » sous la dernière réponse, et retour en bas dès qu'on remonte le fil.
+
 **Sept thèmes** — **DeepSeek** (sombre neutre, bleu, par défaut), Sombre (cuivré),
 Clair, **Matrix** (vert terminal), **Capucine** (crème et orange), **Nord** (bleu
 arctique) et **Améthyste** (violet profond), à choisir dans
@@ -153,7 +156,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.30.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.31.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

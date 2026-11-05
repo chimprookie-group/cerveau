@@ -712,6 +712,32 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   pointer-events: none;
 }
 
+.retour-bas {
+  position: absolute;
+  right: 22px;
+  bottom: 14px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--bordure-claire);
+  background: var(--fond-2);
+  color: var(--texte-2);
+  font-size: 14px;
+  box-shadow: var(--ombre);
+  z-index: 6;
+  transition: color 0.12s, border-color 0.12s, transform 0.12s;
+}
+
+.retour-bas:hover {
+  color: var(--texte);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.retour-bas[hidden] { display: none; }
+
 .tour-apercu-prompt {
   font-size: 11.5px;
   color: var(--texte-2);

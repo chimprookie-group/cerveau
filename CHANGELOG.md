@@ -4,6 +4,16 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.31.0] — 2026-11-05
+
+### Ajouté
+- **Régénérer la dernière réponse** : un bouton sous la dernière réponse relance
+  la même demande et remplace l'ancienne réponse, sans dupliquer la question.
+- **Brouillons persistants** : le texte en cours d'écriture est conservé par
+  conversation (stockage local) et restauré quand on y revient.
+- **Bouton « Revenir en bas »** : apparaît quand on remonte dans le fil et ramène
+  à la dernière réponse.
+
 ## [2.30.0] — 2026-11-05
 
 ### Ajouté

@@ -777,7 +777,10 @@ async function run(mainWindow, deps) {
       nouveauPlugin: !!document.querySelector('#btnNouveauPlugin'),
       rechargerPlugins: !!document.querySelector('#btnRechargerPlugins'),
       railTours: !!document.querySelector('#navTours'),
-      apercuTours: !!document.querySelector('#tourApercu')
+      apercuTours: !!document.querySelector('#tourApercu'),
+      boutonBas: !!document.querySelector('#btnRetourBas'),
+      brouillon: typeof sauverBrouillon === 'function' && typeof restaurerBrouillon === 'function',
+      regenerer: typeof regenererReponse === 'function'
     };
     document.querySelector('#btnFermerReglages2').click();
     return r;
@@ -788,6 +791,8 @@ async function run(mainWindow, deps) {
     uiComp.zonePlugins && uiComp.nouveauPlugin && uiComp.rechargerPlugins);
   verifier('Navigation entre les tours présente',
     uiComp.railTours && uiComp.apercuTours);
+  verifier('Brouillons, régénération et retour en bas présents',
+    uiComp.boutonBas && uiComp.brouillon && uiComp.regenerer);
 
   // thème par défaut puis palettes appliquées distinctement
   const themeDefaut = await mainWindow.webContents.executeJavaScript('document.body.dataset.theme');
