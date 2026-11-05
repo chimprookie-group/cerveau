@@ -34,6 +34,10 @@ Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 
 ![Réglages](docs/04-reglages.png)
 
+**Effets visuels** — halo animé derrière l'accueil, grille fine, lueurs des contrôles
+actifs. Discrets, désactivables dans *Apparence*, et coupés automatiquement si le
+système demande de réduire les animations.
+
 **Agent et outils** — 44 outils en mode complet (20 en notes, 30 en code),
 désactivables un par un.
 
@@ -127,7 +131,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.15.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.16.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

@@ -3603,3 +3603,203 @@ html[data-panneau="superpose"] #principal { position: relative; }
   :root { --largeur-sidebar: 230px; }
   .selecteur-mode { display: none; }
 }
+
+/* ═══════════════ EFFETS FUTURISTES (désactivables) ═══════════════
+   Halo animé derrière le logo d'accueil, grille en perspective, liseré
+   lumineux sous l'en-tête, lueurs sur les contrôles actifs. Tout est en
+   transform/opacity pour rester fluide, et se coupe avec
+   « Réglages → Apparence → Effets visuels » ou prefers-reduced-motion. */
+
+@keyframes effetsTourner {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes effetsDeriver {
+  0%   { transform: translate3d(-2%, 0, 0) scale(1); opacity: 0.5; }
+  50%  { transform: translate3d(2%, -2%, 0) scale(1.06); opacity: 0.72; }
+  100% { transform: translate3d(-1%, 1%, 0) scale(1.02); opacity: 0.55; }
+}
+
+@keyframes effetsGrille {
+  to { background-position: 0 34px, 34px 0; }
+}
+
+@keyframes effetsBalayage {
+  from { background-position: -45% 0; }
+  to   { background-position: 145% 0; }
+}
+
+@keyframes effetsHalo {
+  0%, 100% { box-shadow: 0 0 0 1px var(--bordure), 0 10px 28px color-mix(in srgb, var(--accent) 24%, transparent); }
+  50%      { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--bordure)), 0 12px 38px color-mix(in srgb, var(--accent) 42%, transparent); }
+}
+
+@keyframes effetsReflet {
+  0%, 62%   { transform: translateX(-130%); }
+  84%, 100% { transform: translateX(130%); }
+}
+
+@keyframes effetsPouls {
+  0%, 100% { box-shadow: 0 0 4px var(--succes); }
+  50%      { box-shadow: 0 0 8px var(--succes), 0 0 16px color-mix(in srgb, var(--succes) 55%, transparent); }
+}
+
+body.effets .accueil {
+  position: relative;
+}
+
+/* halo multicolore qui dérive lentement derrière l'accueil */
+body.effets .accueil::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  left: -70px;
+  right: -70px;
+  height: 340px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 52% at 50% 38%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 72%),
+    radial-gradient(36% 44% at 28% 58%, color-mix(in srgb, #4fd1c5 16%, transparent), transparent 72%),
+    radial-gradient(36% 44% at 72% 56%, color-mix(in srgb, #7c5cff 14%, transparent), transparent 72%);
+  filter: blur(22px);
+  animation: effetsDeriver 18s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+/* grille fine, estompée aux bords, qui glisse vers le bas */
+body.effets .accueil::after {
+  content: '';
+  position: absolute;
+  inset: 0 -24px;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--texte) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--texte) 8%, transparent) 1px, transparent 1px);
+  background-size: 34px 34px, 34px 34px;
+  -webkit-mask-image: radial-gradient(62% 58% at 50% 42%, #000 12%, transparent 78%);
+  mask-image: radial-gradient(62% 58% at 50% 42%, #000 12%, transparent 78%);
+  opacity: 0.55;
+  animation: effetsGrille 26s linear infinite;
+}
+
+body.effets .accueil > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* anneau lumineux en rotation autour du logo d'accueil */
+body.effets .accueil-logo:not(.petit) {
+  position: relative;
+  overflow: visible;
+  animation: effetsHalo 4.6s ease-in-out infinite;
+}
+
+body.effets .accueil-logo:not(.petit) img {
+  border-radius: inherit;
+}
+
+body.effets .accueil-logo:not(.petit)::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  border-radius: 25px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--accent) 90%, #fff) 70deg,
+    color-mix(in srgb, #6ee7ff 80%, transparent) 150deg,
+    transparent 230deg,
+    transparent 360deg
+  );
+  filter: blur(9px);
+  opacity: 0.6;
+  animation: effetsTourner 7.5s linear infinite;
+  will-change: transform;
+}
+
+/* liseré lumineux qui balaie le bas de l'en-tête */
+body.effets .entete {
+  position: relative;
+}
+
+body.effets .entete::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--accent) 35%,
+    color-mix(in srgb, #6ee7ff 75%, transparent) 50%,
+    var(--accent) 65%,
+    transparent 100%
+  );
+  background-size: 45% 100%;
+  background-repeat: no-repeat;
+  opacity: 0.55;
+  animation: effetsBalayage 7s linear infinite;
+}
+
+/* contrôles actifs : lueur discrète */
+body.effets .mode-btn.actif {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 0 14px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+body.effets .suggestion {
+  transition: background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.2s;
+}
+
+body.effets .suggestion:hover {
+  box-shadow:
+    0 10px 26px color-mix(in srgb, var(--accent) 16%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* reflet qui traverse le bouton d'envoi */
+body.effets .btn-envoyer:not(:disabled) {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+body.effets .btn-envoyer:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.38) 45%, transparent 65%);
+  transform: translateX(-130%);
+  animation: effetsReflet 5s ease-in-out infinite;
+}
+
+/* pastille de connexion qui respire */
+body.effets .statut.ok::before {
+  animation: effetsPouls 2.6s ease-in-out infinite;
+}
+
+/* thème clair : mêmes effets, plus discrets */
+body[data-theme="clair"].effets .accueil::before { opacity: 0.3; }
+body[data-theme="clair"].effets .accueil::after { opacity: 0.35; }
+body[data-theme="clair"].effets .entete::after { opacity: 0.35; }
+
+/* respect du réglage système « réduire les animations » */
+@media (prefers-reduced-motion: reduce) {
+  body.effets .accueil::before,
+  body.effets .accueil::after,
+  body.effets .accueil-logo:not(.petit),
+  body.effets .accueil-logo:not(.petit)::before,
+  body.effets .entete::after,
+  body.effets .btn-envoyer:not(:disabled)::after,
+  body.effets .statut.ok::before {
+    animation: none !important;
+  }
+}

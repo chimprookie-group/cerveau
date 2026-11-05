@@ -241,6 +241,7 @@ async function demarrer() {
 
   appliquerTheme(etat.config.ui?.theme || 'sombre');
   appliquerEchelle(etat.config.ui?.fontScale || 1);
+  appliquerEffets(etat.config.ui?.effets !== false);
 
   if (etat.config.ui?.sidebarOpen === false) $('#sidebar').classList.add('repliee');
   if (etat.config.ui?.obsidianPanelOpen === false) $('#panneauObsidian').classList.add('replie');
@@ -304,6 +305,11 @@ function cleConfiguree() {
 
 function appliquerTheme(theme) {
   document.body.dataset.theme = theme;
+}
+
+/** Active ou coupe les effets visuels (halo, grille, lueurs). */
+function appliquerEffets(actif) {
+  document.body.classList.toggle('effets', actif !== false);
 }
 
 function appliquerEchelle(valeur) {
@@ -3806,6 +3812,11 @@ function brancherEvenements() {
     await enregistrerConfig({ ui: { theme: e.target.value } });
   });
 
+  $('#reglageEffets')?.addEventListener('change', async (e) => {
+    appliquerEffets(e.target.checked);
+    await enregistrerConfig({ ui: { effets: e.target.checked } });
+  });
+
   $('#echellePolice').addEventListener('input', (e) => {
     const v = Number(e.target.value) / 100;
     $('#valeurEchelle').textContent = `${e.target.value} %`;
@@ -4240,6 +4251,8 @@ function ouvrirReglages(onglet = null) {
   const autoGh = $('#autoGithub');
   if (autoGh) autoGh.checked = etat.config.permissions?.autoGithub === true;
   $('#choixTheme').value = etat.config.ui?.theme || 'sombre';
+  const effetsReglage = $('#reglageEffets');
+  if (effetsReglage) effetsReglage.checked = etat.config.ui?.effets !== false;
   const echelle = Math.round((etat.config.ui?.fontScale || 1) * 100);
   $('#echellePolice').value = String(echelle);
   $('#valeurEchelle').textContent = `${echelle} %`;

@@ -4,6 +4,17 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.16.0] — 2026-11-05
+
+### Ajouté
+- **Effets visuels futuristes, discrets et désactivables.** Halo multicolore qui
+  dérive derrière l'accueil, grille fine estompée, anneau lumineux en rotation autour
+  du logo, liseré qui balaie le bas de l'en-tête, lueur des contrôles actifs, reflet
+  qui traverse le bouton d'envoi et pastille de connexion qui respire.
+- Nouveau réglage **Apparence → Effets visuels**, activé par défaut. Les animations
+  se coupent automatiquement si le système demande de les réduire
+  (`prefers-reduced-motion`), et restent plus discrètes en thème clair.
+
 ## [2.15.0] — 2026-11-05
 
 ### Ajouté

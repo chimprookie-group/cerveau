@@ -45,7 +45,8 @@ const DEFAULTS = {
     theme: 'sombre',
     fontScale: 1,
     sidebarOpen: true,
-    obsidianPanelOpen: true
+    obsidianPanelOpen: true,
+    effets: true             // halo animé, grille, lueurs (désactivable)
   },
   conversations: [], // historique léger (id, titre, date, messages)
   systemPrompt: '',
