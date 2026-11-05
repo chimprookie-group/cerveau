@@ -2705,6 +2705,9 @@ function majStatistiquesConversation() {
   }
 }
 
+// conversations dont on a déjà chargé l'historique complet à l'écran
+const convDeplies = new Set();
+
 function afficherConversation() {
   const conv = etat.conversationCourante;
   nettoyerReflexion();
@@ -2732,7 +2735,20 @@ function afficherConversation() {
   accueil.style.display = 'none';
   messages.hidden = false;
   messages.innerHTML = '';
-  for (const m of conv.messages) ajouterMessageDOM(m);
+
+  // les très longues discussions sont rendues par tranches : le chargement
+  // reste instantané, et un bouton permet de remonter le fil
+  const toutAfficher = convDeplies.has(conv.id);
+  const debut = toutAfficher ? 0 : Math.max(0, conv.messages.length - 80);
+  if (debut > 0) {
+    messages.append(el('button', {
+      class: 'btn-charger-plus',
+      type: 'button',
+      text: `Charger les ${debut} messages plus tôt`,
+      onclick: () => { convDeplies.add(conv.id); afficherConversation(); }
+    }));
+  }
+  for (const m of conv.messages.slice(debut)) ajouterMessageDOM(m);
   rendreRailTours();
   defilerEnBas();
 }
@@ -2757,7 +2773,10 @@ function ajouterMessageDOM(m) {
         el('span', { text: `${o.nom} — ${o.message || ''}` })
       ));
     }
-    bloc.append(outils);
+    bloc.append(el('details', { class: 'details-travail' },
+      el('summary', {}, `Détails du travail · ${m.outils.length} étape(s)`),
+      outils
+    ));
   }
 
   const corps = el('div', { class: 'message-corps markdown-corps' });
@@ -3088,9 +3107,22 @@ async function envoyerMessage() {
 
 let fluxActif = null;
 
+function replierOutils(zoneOutils) {
+  if (!zoneOutils || !zoneOutils.children.length) return;
+  if (zoneOutils.closest('details.details-travail')) return;
+  const nombre = zoneOutils.querySelectorAll('.outil-ligne').length;
+  const details = el('details', { class: 'details-travail' },
+    el('summary', {}, `Détails du travail · ${nombre} étape(s)`)
+  );
+  zoneOutils.replaceWith(details);
+  details.append(zoneOutils);
+  details.open = false;
+}
+
 function finaliserMessage(conv, etatFlux, res) {
   etatFlux.bloc.hidden = false;
   figerReflexion(res?.erreur ? 'erreur' : 'termine');
+  replierOutils(etatFlux.zoneOutils);
   const texteFinal = etatFlux.texte.trim();
   etatFlux.corps.innerHTML = renduMarkdown.rendre(texteFinal || (res.erreur ? `⚠️ ${res.erreur}` : ''));
   renduMarkdown.embellir(etatFlux.corps);
@@ -3254,7 +3286,22 @@ function masquerApercuTour() {
   if (apercu) apercu.hidden = true;
 }
 
-/* --------------------- traitement des événements agent ----------------- */
+/* ------------------ rendu différé du texte en streaming ------------------ */
+
+/**
+ * Re-rendre le Markdown à chaque jeton coûte cher. On regroupe les deltas sur
+ * une frame : le rendu reste fluide et le processeur respire.
+ */
+function planifierRenduTexte(flux) {
+  if (flux.renduTextePrevu) return;
+  flux.renduTextePrevu = true;
+  requestAnimationFrame(() => {
+    flux.renduTextePrevu = false;
+    if (!flux.bloc?.isConnected) return;
+    flux.corps.innerHTML = renduMarkdown.rendre(flux.texte);
+    defilerEnBas();
+  });
+}
 
 /* --------------------- traitement des événements agent ----------------- */
 
@@ -3290,8 +3337,7 @@ function traiterEvenementAgent(evt) {
       if (ind) ind.remove();
       flux.bloc.hidden = false;
       flux.texte += evt.delta;
-      corps.innerHTML = renduMarkdown.rendre(flux.texte);
-      defilerEnBas();
+      planifierRenduTexte(flux);
       break;
     }
     case 'outil_debut': {
@@ -3303,7 +3349,7 @@ function traiterEvenementAgent(evt) {
       // sépare le texte du tour précédent de celui qui suivra l'appel d'outil
       if (flux.texte && !flux.texte.endsWith('\n\n')) {
         flux.texte = `${flux.texte.replace(/\s+$/, '')}\n\n`;
-        corps.innerHTML = renduMarkdown.rendre(flux.texte);
+        planifierRenduTexte(flux);
       }
       const ligne = el('div', {
         class: 'outil-ligne en-cours',
@@ -3998,8 +4044,8 @@ const COMMANDES = [
   { id: 'coffres', titre: 'Gérer les coffres Obsidian', action: () => ouvrirReglages('coffres') },
   { id: 'permissions', titre: 'Régler les permissions', action: () => ouvrirReglages('permissions') },
   { id: 'theme', titre: 'Changer de thème', action: async () => {
-      const ordre = ['sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste'];
-      const noms = { sombre: 'Sombre', clair: 'Clair', matrix: 'Matrix', capucine: 'Capucine', nord: 'Nord', amethyste: 'Améthyste' };
+      const ordre = ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste'];
+      const noms = { deepseek: 'DeepSeek', sombre: 'Sombre', clair: 'Clair', matrix: 'Matrix', capucine: 'Capucine', nord: 'Nord', amethyste: 'Améthyste' };
       const actuel = etat.config.ui?.theme || 'sombre';
       const suivant = ordre[(ordre.indexOf(actuel) + 1) % ordre.length];
       await enregistrerConfig({ ui: { theme: suivant } });

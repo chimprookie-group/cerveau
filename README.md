@@ -42,10 +42,10 @@ quand un outil tourne, et se fige en « Terminé en … » à la fin.
 un par échange : le point actif suit le défilement, le tour en cours clignote,
 le survol montre l'aperçu du message et de la réponse, et un clic saute au tour.
 
-**Six thèmes** — Sombre (cuivré), Clair, **Matrix** (vert terminal), **Capucine**
-(crème et orange), **Nord** (bleu arctique) et **Améthyste** (violet profond), à
-choisir dans `Réglages → Apparence` ou en les faisant défiler depuis la palette
-de commandes.
+**Sept thèmes** — **DeepSeek** (sombre neutre, bleu, par défaut), Sombre (cuivré),
+Clair, **Matrix** (vert terminal), **Capucine** (crème et orange), **Nord** (bleu
+arctique) et **Améthyste** (violet profond), à choisir dans
+`Réglages → Apparence` ou en les faisant défiler depuis la palette de commandes.
 
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
@@ -149,7 +149,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.28.1-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.29.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

@@ -42,7 +42,7 @@ const DEFAULTS = {
     autoGithub: false        // en mode auto, autoriser PR/issues sans demander
   },
   ui: {
-    theme: 'sombre',
+    theme: 'deepseek',
     fontScale: 1,
     sidebarOpen: true,
     obsidianPanelOpen: true,
@@ -124,6 +124,16 @@ function load() {
     raw = {};
   }
   cache = deepMerge(structuredClone(DEFAULTS), raw);
+
+  // apparence par défaut « DeepSeek » : bascule unique des anciens thèmes
+  if (!cache.ui.themeMigre) {
+    if (cache.ui.theme === 'sombre' || cache.ui.theme === 'clair') {
+      cache.ui.theme = 'deepseek';
+    }
+    cache.ui.themeMigre = true;
+    save();
+  }
+
   return cache;
 }
 

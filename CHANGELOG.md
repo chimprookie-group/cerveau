@@ -4,6 +4,23 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.29.0] — 2026-11-05
+
+### Ajouté
+- **Thème « DeepSeek » par défaut** : sombre neutre, accents bleus — la nouvelle
+  apparence de départ. Les anciens thèmes Sombre/Clair basculent une seule fois
+  vers ce thème ; les six autres restent disponibles.
+- **Détails du travail repliés** : après un tour, les étapes d'outils sont rangées
+  dans un bloc « Détails du travail · N étape(s) », dépliable, pour une
+  conversation plus lisible.
+- **Historique progressif** : au-delà de 80 messages, la conversation s'affiche
+  par tranche avec « Charger les N messages plus tôt ».
+
+### Modifié
+- Le texte en streaming n'est plus re-rendu à chaque jeton mais une fois par
+  frame : moins de processeur, affichage toujours fluide.
+- L'anneau de focus du compositeur et les couleurs d'outils suivent le thème.
+
 ## [2.28.1] — 2026-11-05
 
 ### Corrigé
