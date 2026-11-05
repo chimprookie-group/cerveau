@@ -34,7 +34,7 @@ Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 
 ![Réglages](docs/04-reglages.png)
 
-**Agent et outils** — 39 outils en mode complet (19 en notes, 25 en code),
+**Agent et outils** — 44 outils en mode complet (20 en notes, 30 en code),
 désactivables un par un.
 
 ![Outils](docs/05-outils.png)
@@ -127,7 +127,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.14.3-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.15.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -260,6 +260,20 @@ compatible Tavily peut être branché dans les réglages.
 
 Ces deux outils sont **intégrés à l'application** : aucun serveur MCP ni paquet à
 installer. Ils se désactivent un par un dans `Réglages → Agent → Outils`.
+
+### Voir les images
+
+`voir_image` — ouvre une capture d'écran, un schéma ou une photo du coffre ou de
+l'espace de travail et la montre au modèle (PNG, JPEG, WebP, GIF, 4 Mo max). Pratique
+pour « corrige ce rendu », « lis ce graphique » ou « compare ces deux maquettes ».
+
+### Tâches de fond
+
+`lancer_tache_fond` démarre un serveur de développement, un build ou une suite de tests
+sans bloquer la conversation. `lister_taches_fond`, `sortie_tache_fond` et
+`arreter_tache_fond` suivent la sortie et arrêtent le processus **avec ses enfants**.
+Les processus apparaissent dans le panneau **Travail**, avec leur sortie et un bouton
+d'arrêt ; ils sont tués à la fermeture de l'application.
 
 ### Plugins externes (MCP)
 

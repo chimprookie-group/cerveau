@@ -4,6 +4,24 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.15.0] — 2026-11-05
+
+### Ajouté
+- **Vision : l'agent peut ouvrir une image.** Nouvel outil `voir_image` (PNG, JPEG,
+  WebP, GIF, 4 Mo max) : il lit une capture, un schéma ou une photo du coffre ou de
+  l'espace de travail et la joint au modèle. Anthropic reçoit un bloc image dans le
+  résultat d'outil ; les fournisseurs compatibles OpenAI un message image juste après.
+- **Processus en arrière-plan.** `lancer_tache_fond` démarre un serveur, un build ou
+  une suite de tests sans bloquer la conversation. `lister_taches_fond`,
+  `sortie_tache_fond` et `arreter_tache_fond` permettent de suivre la sortie et
+  d'arrêter le processus avec tous ses enfants. Le panneau **Travail** affiche les
+  processus, leur sortie et un bouton d'arrêt ; tout est tué à la fermeture de
+  l'application.
+- Les deux apparaissent dans `Réglages → Agent → Outils` et se désactivent un par un.
+
+### Modifié
+- Le mode complet expose **44 outils** (20 en notes, 30 en code).
+
 ## [2.14.3] — 2026-11-05
 
 ### Modifié

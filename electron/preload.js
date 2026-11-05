@@ -19,6 +19,17 @@ contextBridge.exposeInMainWorld('cerveau', {
     lister: (payload) => ipcRenderer.invoke('models:lister', payload)
   },
 
+  taches: {
+    lister: () => ipcRenderer.invoke('taches:lister'),
+    sortie: (id, depuis) => ipcRenderer.invoke('taches:sortie', id, depuis),
+    arreter: (id) => ipcRenderer.invoke('taches:arreter', id),
+    surEvenement: (cb) => {
+      const h = (_e, data) => cb(data);
+      ipcRenderer.on('taches:evenement', h);
+      return () => ipcRenderer.removeListener('taches:evenement', h);
+    }
+  },
+
   coffre: {
     choisir: () => ipcRenderer.invoke('coffre:choisir'),
     ajouterChemin: (p) => ipcRenderer.invoke('coffre:ajouter-chemin', p),

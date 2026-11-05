@@ -48,6 +48,8 @@ async function run(mainWindow, deps) {
       panneau: !!q('#panneauObsidian'),
       modaleReglages: !!q('#modaleReglages'),
       fournisseurs: document.querySelectorAll('.carte-fournisseur').length,
+      tachesFond: !!q('#tachesFond'),
+      apiTaches: typeof window.cerveau?.taches,
       selecteur: document.querySelectorAll('#btnModele').length,
       modele: document.querySelectorAll('#modeleLibelle').length,
       statut: q('#statutFournisseur')?.textContent || '',
@@ -72,6 +74,8 @@ async function run(mainWindow, deps) {
   verifier('Panneau présent', ui.panneau);
   verifier('Modale réglages présente', ui.modaleReglages);
   verifier('Cartes fournisseurs rendues', ui.fournisseurs >= 3, `${ui.fournisseurs} cartes`);
+  verifier('Zone des processus de fond présente', ui.tachesFond);
+  verifier('API tâches de fond exposée', ui.apiTaches === 'object', ui.apiTaches);
   verifier('Déclencheur de modèle présent', ui.selecteur === 1);
   verifier('Libellé de modèle présent', ui.modele === 1);
   verifier('Rendu Markdown opérationnel', ui.markdown);
@@ -589,6 +593,53 @@ async function run(mainWindow, deps) {
   verifier('2 outils web enregistrés', webtoolsMod.OUTILS_WEB.length === 2,
     webtoolsMod.OUTILS_WEB.map((t) => t.nom).join(', '));
 
+  // vision : lire une image et la joindre au modèle
+  const visionMod = require('./vision');
+  verifier('Outil vision enregistré',
+    visionMod.OUTILS_VISION.length === 1 && visionMod.PAR_NOM.has('voir_image'));
+
+  const dossierVision = fs2.mkdtempSync(path.join(os.tmpdir(), 'cerveau-vision-'));
+  const pngPixel = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64'
+  );
+  fs2.writeFileSync(path.join(dossierVision, 'pixel.png'), pngPixel);
+
+  let resVision = null;
+  try {
+    resVision = await visionMod.PAR_NOM.get('voir_image')
+      .executer({ chemin: 'pixel.png' }, { workspace: dossierVision });
+  } catch { /* échec signalé plus bas */ }
+  verifier('Vision : image lue et jointe',
+    Boolean(resVision?.image?.dataUrl?.startsWith('data:image/png;base64,')));
+
+  let refusVision = false;
+  try {
+    await visionMod.PAR_NOM.get('voir_image')
+      .executer({ chemin: '../evasion.png' }, { workspace: dossierVision });
+  } catch { refusVision = true; }
+  verifier('Vision : chemin hors périmètre refusé', refusVision);
+  fs2.rmSync(dossierVision, { recursive: true, force: true });
+
+  const agentVue = require('./agent');
+  const outilsComplet = agentVue.outilsPourMode('complet');
+  verifier('Vision et tâches de fond disponibles en mode complet',
+    outilsComplet.some((t) => t.nom === 'voir_image')
+    && outilsComplet.some((t) => t.nom === 'lancer_tache_fond'));
+  verifier('Vision disponible en mode notes',
+    agentVue.outilsPourMode('notes').some((t) => t.nom === 'voir_image'));
+
+  // tâches de fond : lancer, lire la sortie, code de sortie
+  const tfMod = require('./tachesfond');
+  verifier('Tâches de fond : 4 outils', tfMod.OUTILS_TACHES_FOND.length === 4);
+  const tacheTest = tfMod.gestionnaire.lancer({
+    commande: 'echo bonjour-cerveau', cwd: os.tmpdir(), nom: 'autotest'
+  });
+  await new Promise((r) => setTimeout(r, 900));
+  const sortieTest = tfMod.gestionnaire.sortir({ id: tacheTest.id, depuis: 0 });
+  verifier('Tâches de fond : sortie capturée', /bonjour-cerveau/.test(sortieTest.sortie));
+  verifier('Tâches de fond : code de sortie 0', sortieTest.code === 0, String(sortieTest.code));
+
   const html = webtoolsMod.htmlVersTexte('<html><body><h1>Titre</h1><p>Un <b>texte</b> &amp; plus</p><script>x()</script></body></html>');
   verifier('Conversion HTML → texte', html.includes('Titre') && html.includes('&') && !html.includes('x()'),
     JSON.stringify(html.slice(0, 60)));
@@ -657,8 +708,8 @@ async function run(mainWindow, deps) {
   const agentTools = require('./agent');
   const nbComplet = agentMod.outilsPourMode('complet', [], []).length;
   const nbNotes = agentMod.outilsPourMode('notes', [], []).length;
-  verifier('Mode complet expose 39 outils', nbComplet === 39, `${nbComplet} outils`);
-  verifier('Mode notes expose 19 outils', nbNotes === 19, `${nbNotes} outils`);
+  verifier('Mode complet expose 44 outils', nbComplet === 44, `${nbComplet} outils`);
+  verifier('Mode notes expose 20 outils', nbNotes === 20, `${nbNotes} outils`);
 
   // 6decies. Les outils ne dépendent ni du fournisseur ni du modèle
   const agentModule2 = require('./agent');
@@ -667,16 +718,16 @@ async function run(mainWindow, deps) {
     compteParMode[m] = agentModule2.outilsPourMode(m, [], []).length;
   }
   verifier('Outils indépendants du fournisseur',
-    compteParMode.complet === 39 && compteParMode.notes === 19,
+    compteParMode.complet === 44 && compteParMode.notes === 20,
     JSON.stringify(compteParMode));
 
   const avecMCP = agentModule2.outilsPourMode('complet', [], [
     { nom: 'mcp_demo_x', description: 'd', schema: { type: 'object', properties: {} }, risque: 'lecture' }
   ]);
-  verifier('Outils MCP ajoutés à tous les modes', avecMCP.length === 40, `${avecMCP.length} outils`);
+  verifier('Outils MCP ajoutés à tous les modes', avecMCP.length === 45, `${avecMCP.length} outils`);
 
   const filtres = agentModule2.outilsPourMode('complet', ['executer_commande', 'creer_note'], []);
-  verifier('Désactivation respectée après bascule', filtres.length === 37
+  verifier('Désactivation respectée après bascule', filtres.length === 42
     && !filtres.some((t) => t.nom === 'executer_commande'), `${filtres.length} outils`);
 
   // un modèle qui refuse les outils doit déclencher un repli, pas un abandon

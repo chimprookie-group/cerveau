@@ -54,6 +54,7 @@ const codetools = require('./codetools');
 const github = require('./github');
 const models = require('./models');
 const webtools = require('./webtools');
+const tachesfond = require('./tachesfond');
 const { gestionnaire: mcpGestionnaire } = require('./mcp');
 const { Superviseur } = require('./superviseur');
 const { Memoire } = require('./memoire');
@@ -1490,6 +1491,19 @@ ipcMain.handle('app:exporter-vers-coffre', async (_e, { chemin, markdown }) => {
   return { ok: true, ...r };
 });
 
+/* --------------------------- IPC : tâches de fond ----------------------- */
+
+tachesfond.gestionnaire.on('change', (tache) => {
+  try { mainWindow?.webContents.send('taches:evenement', tache); } catch { /* fenêtre fermée */ }
+});
+
+ipcMain.handle('taches:lister', () => tachesfond.gestionnaire.lister());
+ipcMain.handle('taches:sortie', (_e, id, depuis) => tachesfond.gestionnaire.sortir({ id, depuis }));
+ipcMain.handle('taches:arreter', (_e, id) => {
+  try { return tachesfond.gestionnaire.arreter(id); }
+  catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
 /* ------------------------------ cycle de vie --------------------------- */
 
 const instanceUnique = app.requestSingleInstanceLock();
@@ -1576,11 +1590,13 @@ app.on('before-quit', () => {
 
 app.on('will-quit', () => {
   try { mcpGestionnaire.arreterTout(); } catch { /* ignore */ }
+  try { tachesfond.gestionnaire.arreterTout(); } catch { /* ignore */ }
 });
 
 // Filet de sécurité si le processus se termine brutalement
 process.on('exit', () => {
   try { mcpGestionnaire.arreterTout(); } catch { /* ignore */ }
+  try { tachesfond.gestionnaire.arreterTout(); } catch { /* ignore */ }
 });
 
 process.on('SIGINT', () => {

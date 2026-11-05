@@ -17,6 +17,8 @@ const toolbox = require('./tools');
 const codetools = require('./codetools');
 const githubtools = require('./githubtools');
 const webtools = require('./webtools');
+const vision = require('./vision');
+const tachesfond = require('./tachesfond');
 const memoireMod = require('./memoire');
 const sousagents = require('./sousagents');
 const { gestionnaire: mcp } = require('./mcp');
@@ -30,15 +32,24 @@ const MAX_TOURS_DEFAUT = 25;
  */
 function outilsPourMode(mode, desactives = [], outilsMCP = []) {
   let liste;
-  if (mode === 'notes') liste = [...toolbox.TOOLS, ...webtools.OUTILS_WEB];
-  else if (mode === 'code' || mode === 'github') {
-    liste = [...codetools.OUTILS_CODE, ...githubtools.OUTILS_GITHUB, ...webtools.OUTILS_WEB];
+  if (mode === 'notes') {
+    liste = [...toolbox.TOOLS, ...webtools.OUTILS_WEB, ...vision.OUTILS_VISION];
+  } else if (mode === 'code' || mode === 'github') {
+    liste = [
+      ...codetools.OUTILS_CODE,
+      ...githubtools.OUTILS_GITHUB,
+      ...webtools.OUTILS_WEB,
+      ...vision.OUTILS_VISION,
+      ...tachesfond.OUTILS_TACHES_FOND
+    ];
   } else {
     liste = [
       ...toolbox.TOOLS,
       ...codetools.OUTILS_CODE,
       ...githubtools.OUTILS_GITHUB,
-      ...webtools.OUTILS_WEB
+      ...webtools.OUTILS_WEB,
+      ...vision.OUTILS_VISION,
+      ...tachesfond.OUTILS_TACHES_FOND
     ];
   }
 
@@ -373,6 +384,8 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
         || codetools.PAR_NOM.get(appel.nom)
         || githubtools.PAR_NOM.get(appel.nom)
         || webtools.PAR_NOM.get(appel.nom)
+        || vision.PAR_NOM.get(appel.nom)
+        || tachesfond.PAR_NOM.get(appel.nom)
         || memoireMod.PAR_NOM.get(appel.nom)
         || outilsDelegation.find((t) => t.nom === appel.nom)
         || outilsMCP.find((t) => t.nom === appel.nom);
@@ -395,8 +408,11 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
       try {
         const res = await outil.executer(appel.arguments || {}, ctx);
         outilsExecutes += 1;
-        const texte = JSON.stringify(res, null, 2).slice(0, 24000);
-        resultats.push({ appel, ok: true, resultat: texte });
+        // une image (voir_image) est jointe au modèle, jamais sérialisée en base64
+        const image = res && res.image && res.image.dataUrl ? res.image : null;
+        const texte = JSON.stringify(image ? { ...res, image: '(jointe au modèle)' } : res, null, 2)
+          .slice(0, 24000);
+        resultats.push({ appel, ok: true, resultat: texte, image });
         emit({ type: 'outil_resultat', nom: appel.nom, ok: true, message: resumerResultat(appel.nom, res) });
       } catch (err) {
         const msg = String(err?.message || err);
@@ -420,12 +436,17 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
       messages.push({ role: 'assistant', content: contenuAssistant });
       messages.push({
         role: 'user',
-        content: resultats.map((r) => ({
-          type: 'tool_result',
-          tool_use_id: r.appel.id,
-          content: r.resultat,
-          is_error: !r.ok
-        }))
+        content: resultats.map((r) => {
+          if (!r.image) {
+            return { type: 'tool_result', tool_use_id: r.appel.id, content: r.resultat, is_error: !r.ok };
+          }
+          const d = decomposerDataUrl(r.image.dataUrl);
+          const blocs = [{ type: 'text', text: r.resultat }];
+          if (d) {
+            blocs.push({ type: 'image', source: { type: 'base64', media_type: d.mime, data: d.base64 } });
+          }
+          return { type: 'tool_result', tool_use_id: r.appel.id, content: blocs, is_error: !r.ok };
+        })
       });
     } else {
       openaiMessages.push({
@@ -442,6 +463,18 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
           role: 'tool',
           tool_call_id: r.appel.id,
           content: r.resultat
+        });
+      }
+      // OpenAI n'accepte pas d'image dans un message « tool » : on joint les
+      // images dans un message utilisateur juste après les résultats.
+      const imagesOutils = resultats.filter((r) => r.image).map((r) => r.image);
+      if (imagesOutils.length) {
+        openaiMessages.push({
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Image(s) ouverte(s) par les outils ci-dessus :' },
+            ...imagesOutils.map((img) => ({ type: 'image_url', image_url: { url: img.dataUrl } }))
+          ]
         });
       }
     }
@@ -505,6 +538,13 @@ function resumerResultat(nom, res) {
     case 'creer_pull_request': return `PR créée : ${res.url}`;
     case 'lister_issues': return `${res.total} issue(s) · ${res.depot}`;
     case 'etat_ci': return `${res.total} exécution(s)`;
+    // --- vision et tâches de fond ---
+    case 'voir_image': return `${res.nom} — ${res.taille_ko} Ko`;
+    case 'lancer_tache_fond': return `tâche lancée : ${res.id} · ${res.nom}`;
+    case 'lister_taches_fond': return `${res.total} tâche(s) · ${res.en_cours} en cours`;
+    case 'sortie_tache_fond':
+      return `${res.statut}${res.code != null ? ` (code ${res.code})` : ''} · ${res.sortie.length} caractère(s)`;
+    case 'arreter_tache_fond': return res.ok ? 'arrêt demandé' : res.message;
     // --- web ---
     case 'deleguer_tache': return `sous-agent : ${String(res.resultat || '').slice(0, 80)}`;
     case 'deleguer_parallelle': return `${res.aboutis}/${res.lances} sous-agent(s)`;

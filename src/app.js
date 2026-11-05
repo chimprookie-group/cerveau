@@ -2038,7 +2038,12 @@ const OUTILS_CONNUS = [
   { nom: 'etat_ci', famille: 'GitHub' },
   // Les outils web sont intégrés (DuckDuckGo + lecture de page), sans clé ni
   // serveur MCP : ils se règlent comme les autres, ici.
-  { nom: 'web_search', famille: 'Web' }, { nom: 'web_fetch', famille: 'Web' }
+  { nom: 'web_search', famille: 'Web' }, { nom: 'web_fetch', famille: 'Web' },
+  { nom: 'voir_image', famille: 'Vision' },
+  { nom: 'lancer_tache_fond', famille: 'Tâches de fond' },
+  { nom: 'lister_taches_fond', famille: 'Tâches de fond' },
+  { nom: 'sortie_tache_fond', famille: 'Tâches de fond' },
+  { nom: 'arreter_tache_fond', famille: 'Tâches de fond' }
 ];
 
 function rendreOutilsReglage() {
@@ -3372,6 +3377,78 @@ function rendrePlan(taches) {
   }
 }
 
+/* ═════════════════════ TÂCHES EN ARRIÈRE-PLAN ═════════════════════ */
+
+let tachesFond = [];
+
+const LIBELLES_TACHE_FOND = {
+  en_cours: 'en cours',
+  termine: 'terminé',
+  echec: 'échec',
+  arrete: 'arrêté'
+};
+
+async function rafraichirTachesFond() {
+  try {
+    const r = await API.taches.lister();
+    tachesFond = r.taches || [];
+  } catch {
+    tachesFond = [];
+  }
+  rendreTachesFond();
+}
+
+function rendreTachesFond() {
+  const zone = $('#tachesFond');
+  if (!zone) return;
+  zone.innerHTML = '';
+
+  if (!tachesFond.length) {
+    zone.append(el('p', { class: 'vide petit', text: 'Aucun processus lancé.' }));
+    return;
+  }
+
+  for (const t of tachesFond) {
+    const actions = el('div', { class: 'tache-fond-actions' },
+      el('button', {
+        class: 'btn-mini', text: 'Sortie', title: 'Voir la sortie du processus',
+        onclick: () => ouvrirSortieTache(t.id)
+      }),
+      t.statut === 'en_cours'
+        ? el('button', {
+            class: 'btn-mini danger', text: 'Arrêter', title: 'Arrêter le processus et ses enfants',
+            onclick: async () => {
+              await API.taches.arreter(t.id);
+              await rafraichirTachesFond();
+            }
+          })
+        : null
+    );
+
+    zone.append(el('div', { class: `tache-fond ${t.statut}` },
+      el('span', { class: 'tache-fond-etat', text: LIBELLES_TACHE_FOND[t.statut] || t.statut }),
+      el('div', { class: 'tache-fond-corps' },
+        el('div', { class: 'tache-fond-nom', text: t.nom }),
+        el('div', { class: 'tache-fond-cmd', text: t.commande, title: t.commande })
+      ),
+      actions
+    ));
+  }
+}
+
+async function ouvrirSortieTache(id) {
+  try {
+    const r = await API.taches.sortie(id, 0);
+    $('#titreSortieTache').textContent = `Sortie · ${r.nom || r.id}`;
+    const contenu = $('#sortieTacheContenu');
+    contenu.textContent = (r.tronquee ? '… (début tronqué)\n' : '') + (r.sortie || '(aucune sortie)');
+    contenu.scrollTop = contenu.scrollHeight;
+    $('#modaleSortieTache').hidden = false;
+  } catch (err) {
+    notifier(`Sortie indisponible : ${err.message}`, 'erreur', 4000);
+  }
+}
+
 /* ═══════════════════════════ PALETTE DE COMMANDES ═══════════════════════════ */
 
 const COMMANDES = [
@@ -3569,6 +3646,10 @@ async function regenerer() {
 /* ═══════════════════════════ ÉVÉNEMENTS UI ═══════════════════════════ */
 
 function brancherEvenements() {
+  // processus en arrière-plan : l'état est poussé par le processus principal
+  API.taches?.surEvenement?.(() => rafraichirTachesFond());
+  rafraichirTachesFond();
+
   // saisie
   const saisie = $('#saisie');
   saisie.addEventListener('input', ajusterHauteurSaisie);
@@ -3756,6 +3837,11 @@ function brancherEvenements() {
   $('#btnRefuserAction').addEventListener('click', () => repondreConfirmation(false));
   $('#modaleConfirmation .modale-fond').addEventListener('click', () => repondreConfirmation(false));
 
+  // sortie d'un processus de fond
+  $('#btnFermerSortieTache')?.addEventListener('click', () => { $('#modaleSortieTache').hidden = true; });
+  $('#btnFermerSortieTache2')?.addEventListener('click', () => { $('#modaleSortieTache').hidden = true; });
+  $('#modaleSortieTache .modale-fond')?.addEventListener('click', () => { $('#modaleSortieTache').hidden = true; });
+
   // export
   $('#btnExporter').addEventListener('click', exporterConversation);
   $('#btnPalette')?.addEventListener('click', ouvrirPalette);
@@ -3833,6 +3919,7 @@ function basculerPanneauObsidian() {
 function actifOngletPanneau(nom) {
   $$('.onglet-panneau').forEach((x) => x.classList.toggle('actif', x.dataset.panneau === nom));
   $$('.volet-panneau').forEach((v) => v.classList.toggle('actif', v.id === `panneau-${nom}`));
+  if (nom === 'travail') rafraichirTachesFond();
   if ($('#panneauObsidian').classList.contains('replie')) basculerPanneauObsidian();
 }
 

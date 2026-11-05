@@ -247,6 +247,13 @@
               <p class="vide">Aucune tâche en cours.</p>
             </div>
           </div>
+
+          <div class="plan-section">
+            <div class="section-titre">Processus en arrière-plan</div>
+            <div id="tachesFond" class="taches-fond">
+              <p class="vide petit">Aucun processus lancé.</p>
+            </div>
+          </div>
         </div>
 
         <div class="volet-panneau actif" id="panneau-note">
@@ -1332,6 +1339,23 @@
       </div>
       <div class="modale-pied">
         <button id="btnFermerDiff2" class="btn-principal">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE SORTIE DE TÂCHE ══════════════ -->
+  <div id="modaleSortieTache" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu" role="dialog" aria-modal="true" aria-labelledby="titreSortieTache">
+      <div class="modale-entete">
+        <h2 id="titreSortieTache">Sortie du processus</h2>
+        <button id="btnFermerSortieTache" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps">
+        <pre id="sortieTacheContenu" class="arguments diff-contenu"></pre>
+      </div>
+      <div class="modale-pied">
+        <button id="btnFermerSortieTache2" class="btn-principal">Fermer</button>
       </div>
     </div>
   </div>
