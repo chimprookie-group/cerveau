@@ -845,7 +845,9 @@ async function run(mainWindow, deps) {
   verifier('Capacités système dans l’invite',
     /Capacités système/.test(promptSysteme)
     && /plan_taches/.test(promptSysteme)
-    && /lancer_sous_agent/.test(promptSysteme));
+    && /lancer_sous_agent/.test(promptSysteme)
+    && /Raisonnement et qualité/.test(promptSysteme)
+    && /solution la plus simple/.test(promptSysteme));
 
   // interface des plugins
   const uiPlugins = await mainWindow.webContents.executeJavaScript(`(async () => {

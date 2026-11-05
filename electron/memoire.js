@@ -165,14 +165,21 @@ class Memoire {
    * Les entrées les plus utilisées et les plus récentes passent en premier,
    * et le total est plafonné pour ne pas noyer la consigne de l'utilisateur.
    */
-  async blocPourInvite() {
+  async blocPourInvite(requete = '') {
     await this.charger();
     if (!this.entrees.length) return '';
 
-    const triees = [...this.entrees].sort((a, b) => {
-      const score = (x) => (x.usage || 0) * 1e12 + (x.majLe || x.creeLe || 0);
-      return score(b) - score(a);
-    });
+    // pertinence par rapport à la demande, puis usage et fraîcheur
+    const mots = new Set(
+      (String(requete).toLowerCase().match(/[\p{L}\p{N}_-]{3,}/gu) || [])
+    );
+    const score = (x) => {
+      const texte = String(x.texte || '').toLowerCase();
+      let communs = 0;
+      for (const m of mots) if (texte.includes(m)) communs += 1;
+      return communs * 1e15 + (x.usage || 0) * 1e12 + (x.majLe || x.creeLe || 0);
+    };
+    const triees = [...this.entrees].sort((a, b) => score(b) - score(a));
 
     const groupes = { preference: [], projet: [], decision: [], fait: [] };
     for (const e of triees) (groupes[e.categorie] || groupes.fait).push(e);

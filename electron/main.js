@@ -339,12 +339,15 @@ ipcMain.handle('agent:resumer', async (_e, { texte } = {}) => {
       messages: [{
         role: 'user',
         content: "Tu résumes une conversation pour libérer de la place dans la fenêtre de contexte.\n"
-          + 'Écris en français un résumé dense et factuel (300 mots maximum) qui conserve :\n'
-          + "- la demande et les objectifs de l'utilisateur ;\n"
-          + '- les décisions prises et les préférences exprimées ;\n'
-          + '- les fichiers créés ou modifiés et les commandes importantes ;\n'
-          + '- les problèmes ouverts et ce qui reste à faire.\n'
-          + "N'invente rien, pas de formule de politesse.\n\nConversation :\n" + contenu
+          + 'Écris en français un résumé dense et factuel (300 mots maximum), en sections courtes, qui conserve :\n'
+          + "- la demande initiale et les objectifs, avec les contraintes ;\n"
+          + '- les décisions prises, les préférences exprimées et le style demandé ;\n'
+          + '- les fichiers créés ou modifiés (chemins exacts) et les commandes importantes ;\n'
+          + '- les résultats de tests ou de vérifications, et les erreurs rencontrées avec leur solution ;\n'
+          + '- les faits durables appris sur l’utilisateur ou le projet ;\n'
+          + '- ce qui reste à faire, dans l’ordre.\n'
+          + 'Conserve les identifiants, chemins, URL et noms tels quels. '
+          + "N'invente rien, pas de formule de politesse, pas de répétition.\n\nConversation :\n" + contenu
       }],
       tools: [],
       maxTokens: 700,

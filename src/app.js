@@ -139,6 +139,10 @@ function identifiant(prefixe = 'id') {
 
 /* --------------------------- rendu Markdown --------------------------- */
 
+// cache du HTML rendu : éviter de re-rendre les mêmes messages à chaque
+// va-et-vient entre conversations
+const cacheHtmlMessages = new WeakMap();
+
 const renduMarkdown = (() => {
   if (window.marked) {
     marked.setOptions({ gfm: true, breaks: true, headerIds: false, mangle: false });
@@ -231,6 +235,10 @@ const renduMarkdown = (() => {
 /* ═══════════════════════════ INITIALISATION ═══════════════════════════ */
 
 async function demarrer() {
+  // les animations s'arrêtent quand la fenêtre n'est pas active
+  window.addEventListener('blur', () => document.body.classList.add('fenetre-inactive'));
+  window.addEventListener('focus', () => document.body.classList.remove('fenetre-inactive'));
+
   etat.config = await API.config.obtenir();
   etat.conversations = etat.config.conversations || [];
 
@@ -2819,7 +2827,12 @@ function ajouterMessageDOM(m) {
   if (estUtilisateur) {
     corps.textContent = m.contenu;
   } else {
-    corps.innerHTML = renduMarkdown.rendre(m.contenu);
+    let html = cacheHtmlMessages.get(m);
+    if (!html) {
+      html = renduMarkdown.rendre(m.contenu);
+      cacheHtmlMessages.set(m, html);
+    }
+    corps.innerHTML = html;
     renduMarkdown.embellir(corps);
   }
   bloc.append(corps);

@@ -160,6 +160,16 @@ function construireInviteSysteme(ctx, stats) {
     "- Ne prétends jamais avoir exécuté quelque chose que tu n'as pas exécuté.",
     "- Si un outil échoue, lis l'erreur et adapte-toi ; ne répète pas la même commande à l'identique.",
     '',
+    'Raisonnement et qualité :',
+    "- Reformule la demande et ses contraintes ; si une ambiguïté change le résultat, pose une question courte.",
+    "- Donne d'abord le résultat, puis les détails utiles. Pas de préambule, pas de répétition.",
+    "- Préfère la solution la plus simple qui marche ; n'ajoute pas de fonctionnalités non demandées.",
+    "- Pour le code : lis avant d'écrire, touche le moins de choses possible, respecte le style existant et vérifie avec les tests ou un essai réel.",
+    "- Pour un fait récent ou incertain, vérifie avec la recherche web plutôt que d'inventer, et cite la source.",
+    "- Ne divulgue jamais de secret (clé, jeton) et ne l'écris pas dans un fichier.",
+    "- Pour une action risquée (suppression, push, force), explique et demande confirmation.",
+    "- Termine par ce que tu as réellement fait et vérifié, sans prétendre.",
+    '',
     'Capacités système :',
     '- plan_taches pour structurer une tâche longue, lancer_sous_agent pour déléguer une exploration.',
     '- compétences (lister_competences, charger_competence) pour les procédures, plugins locaux pour des outils supplémentaires, serveurs MCP pour les services externes.',
@@ -332,7 +342,8 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
   // la mémoire de long terme enrichit l'invite système
   if (ctx.memoire) {
     try {
-      ctx.blocMemoire = await ctx.memoire.blocPourInvite();
+      const dernierUtilisateur = [...historique].reverse().find((m) => m.role === 'user');
+      ctx.blocMemoire = await ctx.memoire.blocPourInvite(dernierUtilisateur?.contenu || '');
     } catch { ctx.blocMemoire = ''; }
   }
 

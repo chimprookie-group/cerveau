@@ -4,6 +4,21 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.32.0] — 2026-11-06
+
+### Modifié
+- **Intelligence** : l'invite système gagne des règles de raisonnement et de
+  qualité (reformuler, répondre d'abord le résultat, solution la plus simple,
+  vérifier réellement, citer le web, protéger les secrets, confirmer les actions
+  risquées).
+- **Mémoire de long terme** classée aussi par **pertinence** avec la demande
+  (mots-clés), en plus de l'usage et de la fraîcheur.
+- **Résumé de compaction** plus précis : chemins exacts, commandes, résultats de
+  tests, erreurs et solutions, décisions, suite du travail.
+- **Performance** : le HTML des messages déjà rendus est mémorisé (cache) lors
+  des va-et-vient entre conversations ; les animations sont suspendues quand la
+  fenêtre est inactive.
+
 ## [2.31.0] — 2026-11-05
 
 ### Ajouté
