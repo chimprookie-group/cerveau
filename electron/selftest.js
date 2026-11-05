@@ -1937,7 +1937,7 @@ async function run(mainWindow, deps) {
   }
 
   // pas de doublon de déclaration de fonction
-  const nomsFonctions = [...appSrcAudit.matchAll(/^function ([a-zA-Z][a-zA-Z0-9_]*)\s*\(/gm)]
+  const nomsFonctions = [...appSrcAudit.matchAll(/^(?:async )?function ([a-zA-Z][a-zA-Z0-9_]*)\s*\(/gm)]
     .map((m) => m[1]);
   const doublons = nomsFonctions.filter((n, i) => nomsFonctions.indexOf(n) !== i);
   verifier('Cohérence : aucune fonction déclarée deux fois',

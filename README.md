@@ -128,7 +128,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.14.1-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.14.2-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -164,8 +164,11 @@ Tes réglages restent dans `~/.config/cerveau/` — supprime ce dossier pour rep
 | OpenAI | `https://api.openai.com/v1` | gpt-4o, gpt-4o-mini |
 | Compatible | `http://localhost:1234/v1` | autant que tu veux |
 
-Colle ta clé → **Enregistrer** → **Tester la connexion**.
+Colle ta clé, puis **Entrée** ou **Enregistrer**. **Tester la connexion** enregistre
+d'abord la carte, inutile donc de cliquer sur Enregistrer avant.
 
+> Un serveur local (LM Studio, Ollama, vLLM) n'a pas besoin de clé : renseigne
+> seulement l'URL de base.
 > La clé est chiffrée en AES-256-GCM dans `~/.config/cerveau/config.json` (permissions `600`).
 > Elle n'est jamais affichée en clair et ne sort que vers l'API du fournisseur choisi.
 

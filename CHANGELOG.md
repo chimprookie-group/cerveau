@@ -4,6 +4,26 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.14.2] — 2026-11-05
+
+### Corrigé
+- **Une clé d'API collée pouvait disparaître avant d'être enregistrée.** Un simple
+  changement de thème, de permission ou de modèle redessine les cartes fournisseurs :
+  la clé saisie dans le champ était effacée sans avoir été sauvegardée. Les valeurs en
+  cours de saisie sont désormais conservées lors d'un redessin, et la touche **Entrée**
+  enregistre la carte.
+- **« Tester la connexion » ignorait la clé qui venait d'être collée.** Le test lisait
+  la configuration enregistrée, pas le champ : il répondait « Aucune clé d'API
+  enregistrée » alors que la clé était sous les yeux. Le test enregistre maintenant la
+  carte avant d'interroger le fournisseur.
+- **Les modèles détectés disparaissaient au redémarrage.** « Détecter » interrogeait
+  l'API et affichait les modèles, mais ne les gardait qu'en mémoire. Ils sont
+  désormais conservés dans `providers[x].modelesDecouverts` et rechargés au démarrage.
+- **Un serveur local se voyait réclamer une clé.** Le fournisseur « Compatible
+  OpenAI (local / autre) » fonctionne sans clé quand l'URL est renseignée (LM Studio,
+  Ollama, vLLM) : le chat, le test, les tâches planifiées et les objectifs ne le
+  bloquent plus, et l'en-tête `Authorization` n'est plus envoyé vide.
+
 ## [2.14.1] — 2026-11-04
 
 ### Corrigé

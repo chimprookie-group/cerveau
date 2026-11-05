@@ -216,6 +216,15 @@ function ctxPermissions() {
   return cfg.permissions;
 }
 
+/**
+ * Un fournisseur « Compatible OpenAI » local (LM Studio, Ollama, vLLM…)
+ * fonctionne sans clé : une URL de base suffit. Les fournisseurs publics,
+ * eux, en exigent une.
+ */
+function fournisseurSansCle(id, creds) {
+  return id === 'custom' && Boolean(String(creds?.baseUrl || '').trim());
+}
+
 /* ------------------------- IPC : configuration ------------------------- */
 
 ipcMain.handle('config:obtenir', () => config.getConfig());
@@ -232,7 +241,9 @@ ipcMain.handle('config:reinitialiser', () => config.resetConfig());
 
 ipcMain.handle('providers:tester', async (_e, id, modeleChoisi) => {
   const creds = config.getProviderCredentials(id, modeleChoisi);
-  if (!creds?.apiKey) return { ok: false, message: "Aucune clé d'API enregistrée." };
+  if (!creds?.apiKey && !fournisseurSansCle(id, creds)) {
+    return { ok: false, message: "Aucune clé d'API enregistrée." };
+  }
   if (!creds.model) return { ok: false, message: 'Aucun modèle défini.' };
   const debut = Date.now();
   try {
@@ -410,7 +421,9 @@ function obtenirPlanificateur() {
 async function executerTachePlanifiee(tache) {
   const cfg = config.getConfig({ revealKeys: true });
   const creds = config.getProviderCredentials(cfg.activeProvider);
-  if (!creds?.apiKey) throw new Error('Aucune clé d’API configurée.');
+  if (!creds?.apiKey && !fournisseurSansCle(cfg.activeProvider, creds)) {
+    throw new Error('Aucune clé d’API configurée.');
+  }
 
   const coffre = coffreActif();
   const ctx = {
@@ -635,7 +648,7 @@ async function jouerTour(id, { annoncer = true } = {}) {
   const cfg = config.getConfig({ revealKeys: true });
   const coffre = coffreActif();
   const contexte = contexteObjectif(cfg);
-  if (!contexte.credentials?.apiKey) {
+  if (!contexte.credentials?.apiKey && !fournisseurSansCle(cfg.activeProvider, contexte.credentials)) {
     return { ok: false, message: 'Aucune clé d’API configurée.' };
   }
 
@@ -1362,7 +1375,7 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
   const creds = config.getProviderCredentials(pid, modeleSession);
   const modeEffectif = mode || cfg.mode || 'complet';
 
-  if (!creds?.apiKey) {
+  if (!creds?.apiKey && !fournisseurSansCle(pid, creds)) {
     const msg = `Aucune clé d'API configurée pour « ${pid} ». Ouvre les réglages pour en ajouter une.`;
     event.sender.send('agent:evenement', { type: 'erreur', message: msg });
     return { ok: false, erreur: msg };

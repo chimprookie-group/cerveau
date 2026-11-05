@@ -226,7 +226,9 @@
     );
     corps.append(fil);
 
-    if (!p.hasKey) {
+    // un serveur local n'a pas besoin de clé
+    const sansCle = pid === 'custom' && Boolean(String(p.baseUrl || '').trim());
+    if (!p.hasKey && !sansCle) {
       corps.append(el('div', { class: 'menu-avertissement' },
         el('span', { text: 'Aucune clé d’API pour ce fournisseur.' }),
         el('button', {

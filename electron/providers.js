@@ -173,13 +173,15 @@ async function* streamOpenAI({ apiKey, baseUrl, model, messages, tools, signal, 
   }
   if (typeof temperature === 'number') body.temperature = temperature;
 
+  // Un serveur local (LM Studio, Ollama, vLLM…) n'a pas de clé : envoyer
+  // « Authorization: Bearer » vide ferait rejeter certains serveurs.
+  const entetes = { 'content-type': 'application/json' };
+  if (apiKey) entetes.authorization = `Bearer ${apiKey}`;
+
   const res = await fetch(url, {
     method: 'POST',
     signal,
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${apiKey}`
-    },
+    headers: entetes,
     body: JSON.stringify(body)
   });
 

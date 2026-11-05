@@ -24,10 +24,10 @@ const DEFAULTS = {
   vaults: [], // [{ id, name, path }]
   activeVaultId: null,
   providers: {
-    anthropic: { apiKey: '', baseUrl: 'https://api.anthropic.com', model: 'claude-sonnet-4-5', modeles: [] },
-    deepseek: { apiKey: '', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat', modeles: [] },
-    openai: { apiKey: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o', modeles: [] },
-    custom: { apiKey: '', baseUrl: '', model: '', modeles: [] }
+    anthropic: { apiKey: '', baseUrl: 'https://api.anthropic.com', model: 'claude-sonnet-4-5', modeles: [], modelesDecouverts: [] },
+    deepseek: { apiKey: '', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat', modeles: [], modelesDecouverts: [] },
+    openai: { apiKey: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o', modeles: [], modelesDecouverts: [] },
+    custom: { apiKey: '', baseUrl: '', model: '', modeles: [], modelesDecouverts: [] }
   },
   activeProvider: 'anthropic',
   workspace: null,           // dossier de travail pour le mode Code

@@ -341,7 +341,8 @@ function modelesDe(id) {
 
   // modèles de l'utilisateur d'abord (ce sont ceux qu'il a choisis)
   for (const m of p.modeles || []) ajouter(typeof m === 'string' ? m : m?.id, 'perso');
-  // puis les découverts
+  // puis les découverts, conservés d'une session à l'autre
+  for (const m of p.modelesDecouverts || []) ajouter(m, 'decouvert');
   for (const m of etat.modelesDecouverts[id] || []) ajouter(m, 'decouvert');
   // puis les intégrés
   for (const m of MODELES[id] || []) ajouter(m.id, 'integre');
@@ -354,6 +355,11 @@ function rafraichirModeles() {
   window.cerveauModele?.rendre?.();
 }
 
+/** Un serveur local « Compatible OpenAI » n'exige pas de clé. */
+function fournisseurSansCle(id, p) {
+  return id === 'custom' && Boolean(String(p?.baseUrl || '').trim());
+}
+
 function majStatutFournisseur() {
   const id = etat.config.activeProvider;
   const p = etat.config.providers?.[id];
@@ -361,7 +367,7 @@ function majStatutFournisseur() {
   const nom = NOMS_FOURNISSEURS[id] || id;
   const modele = etat.modelesSession[id] || p?.model || 'modèle ?';
   statut.className = 'statut';
-  if (p?.hasKey) {
+  if (p?.hasKey || fournisseurSansCle(id, p)) {
     statut.classList.add('ok');
     statut.textContent = `${nom} · ${modele}`;
     $('#infoContexte').textContent = `Coffre : ${etat.config.vaults?.find((v) => v.id === etat.config.activeVaultId)?.name || 'aucun'}`;
@@ -374,17 +380,32 @@ function majStatutFournisseur() {
 
 function rendreCartesFournisseurs() {
   const conteneur = $('#listeFournisseurs');
+
+  // Conserve les valeurs saisies mais pas encore enregistrées : un simple
+  // changement de thème (ou un test de connexion) redessine les cartes et
+  // effaçait la clé d'API que l'utilisateur venait de coller.
+  const saisies = new Map();
+  for (const input of conteneur.querySelectorAll('input[data-provider][data-champ]')) {
+    if (input.value) saisies.set(`${input.dataset.provider}:${input.dataset.champ}`, input.value);
+  }
+  const saisie = (id, champ) => saisies.get(`${id}:${champ}`);
+
   conteneur.innerHTML = '';
   const cfg = etat.config;
 
   for (const id of Object.keys(NOMS_FOURNISSEURS)) {
     const p = cfg.providers?.[id] || { apiKey: '', baseUrl: '', model: '', hasKey: false };
-    const carte = el('div', { class: `carte-fournisseur${id === cfg.activeProvider ? ' actif' : ''}` });
+    const carte = el('div', {
+      class: `carte-fournisseur${id === cfg.activeProvider ? ' actif' : ''}`,
+      'data-provider-id': id
+    });
 
     const entete = el('div', { class: 'carte-entete' },
       el('div', { class: 'carte-titre' },
         NOMS_FOURNISSEURS[id],
-        p.hasKey ? el('span', { class: 'badge ok', text: 'clé enregistrée' }) : el('span', { class: 'badge', text: 'non configuré' })
+        p.hasKey ? el('span', { class: 'badge ok', text: 'clé enregistrée' })
+          : fournisseurSansCle(id, p) ? el('span', { class: 'badge ok', text: 'sans clé (local)' })
+          : el('span', { class: 'badge', text: 'non configuré' })
       ),
       el('button', {
         class: 'btn-mini',
@@ -402,6 +423,7 @@ function rendreCartesFournisseurs() {
       el('span', { text: "Clé d'API" }),
       el('input', {
         type: 'password',
+        value: saisie(id, 'apiKey') || '',
         placeholder: p.hasKey ? '•••••••• (laisser vide pour conserver)' : 'sk-…',
         'data-champ': 'apiKey',
         'data-provider': id
@@ -412,7 +434,7 @@ function rendreCartesFournisseurs() {
       el('span', { text: 'URL de base' }),
       el('input', {
         type: 'text',
-        value: p.baseUrl || PLACEHOLDERS[id] || '',
+        value: saisie(id, 'baseUrl') || p.baseUrl || PLACEHOLDERS[id] || '',
         placeholder: PLACEHOLDERS[id] || '',
         'data-champ': 'baseUrl',
         'data-provider': id
@@ -423,12 +445,22 @@ function rendreCartesFournisseurs() {
       el('span', { text: 'Modèle par défaut' }),
       el('input', {
         type: 'text',
-        value: p.model || '',
+        value: saisie(id, 'model') || p.model || '',
         placeholder: MODELES[id]?.[0]?.id || 'nom-du-modèle',
         'data-champ': 'model',
         'data-provider': id
       })
     );
+
+    // Entrée enregistre la carte : on colle souvent une clé puis on valide
+    // au clavier, sans cliquer sur « Enregistrer ».
+    for (const champ of [champCle, champUrl, champModele]) {
+      champ.querySelector('input').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        sauverFournisseur(id);
+      });
+    }
 
     grille.append(champCle, champUrl, champModele);
 
@@ -440,9 +472,10 @@ function rendreCartesFournisseurs() {
       el('div', { class: 'zone-modeles-actions' },
         el('button', {
           class: 'btn-mini',
+          'data-detecter': '',
           text: '⟳ Détecter',
           title: "Interroger le fournisseur pour lister ses modèles",
-          onclick: (e) => detecterModeles(id, e.target, zoneModeles)
+          onclick: () => detecterModeles(id)
         })
       )
     );
@@ -474,9 +507,9 @@ function rendreCartesFournisseurs() {
     carte._listeModeles = listeModeles;
 
     const actions = el('div', { class: 'actions-fournisseur' });
-    const btnEnregistrer = el('button', { class: 'btn-secondaire', text: 'Enregistrer', onclick: () => sauverFournisseur(id) });
-    const btnTester = el('button', { class: 'btn-mini', text: 'Tester la connexion', onclick: () => testerFournisseur(id, resultat) });
     const resultat = el('span', { class: 'message-test' });
+    const btnEnregistrer = el('button', { class: 'btn-secondaire', text: 'Enregistrer', onclick: () => sauverFournisseur(id) });
+    const btnTester = el('button', { class: 'btn-mini', text: 'Tester la connexion', onclick: () => testerFournisseur(id) });
     actions.append(btnEnregistrer, btnTester, resultat);
 
     carte.append(entete, grille, actions);
@@ -2200,7 +2233,7 @@ function rendreListeModeles(id, conteneur) {
   const p = etat.config.providers?.[id] || {};
   const persos = (p.modeles || []).map((m) => (typeof m === 'string' ? m : m?.id)).filter(Boolean);
   const integres = (MODELES[id] || []).map((m) => m.id);
-  const decouverts = etat.modelesDecouverts[id] || [];
+  const decouverts = [...new Set([...(p.modelesDecouverts || []), ...(etat.modelesDecouverts[id] || [])])];
   const defaut = p.model || '';
 
   const ligne = (nom, source) => {
@@ -2301,26 +2334,86 @@ async function ajouterModele(id, zone) {
   notifier(`Modèle « ${nom} » ajouté.`, 'succes', 2200);
 }
 
+/** Valeurs actuellement saisies dans la carte d'un fournisseur. */
+function valeursFournisseur(id) {
+  const valeurs = {};
+  for (const input of $$(`input[data-provider="${id}"][data-champ]`)) {
+    const champ = input.dataset.champ;
+    const valeur = input.value.trim();
+    // une clé vide signifie « inchangé » ; l'URL et le modèle, eux, peuvent
+    // être légitimement vidés.
+    if (champ === 'apiKey' && valeur === '') continue;
+    valeurs[champ] = valeur;
+  }
+  return valeurs;
+}
+
+async function sauverFournisseur(id, { silencieux = false } = {}) {
+  const valeurs = valeursFournisseur(id);
+
+  // La clé est re-chiffrée côté processus principal ; on vide le champ avant
+  // le redessin pour qu'elle ne revienne pas en clair dans l'interface.
+  const champCle = document.querySelector(`input[data-champ="apiKey"][data-provider="${id}"]`);
+  if (champCle) champCle.value = '';
+
+  await enregistrerConfig({ providers: { [id]: valeurs } });
+
+  if (!silencieux) notifier(`Fournisseur ${NOMS_FOURNISSEURS[id]} enregistré.`, 'succes');
+  rendreCartesFournisseurs();
+  rafraichirModeles();
+  majStatutFournisseur();
+  return etat.config.providers?.[id] || null;
+}
+
+async function testerFournisseur(id) {
+  // On enregistre d'abord la carte : sans cela, une clé collée mais pas
+  // encore enregistrée n'était pas utilisée et le test répondait « Aucune
+  // clé d'API enregistrée », comme si elle avait été perdue.
+  await sauverFournisseur(id, { silencieux: true });
+
+  const cible = document.querySelector(`.carte-fournisseur[data-provider-id="${id}"] .message-test`);
+  if (!cible) return;
+  cible.textContent = 'Test en cours…';
+  cible.className = 'message-test';
+
+  const champ = document.querySelector(`input[data-champ="model"][data-provider="${id}"]`);
+  const modele = champ?.value.trim() || null;
+  const res = await API.config.testerFournisseur(id, modele);
+
+  // la carte a pu être redessinée pendant l'appel
+  const cibleFinale = document.querySelector(`.carte-fournisseur[data-provider-id="${id}"] .message-test`) || cible;
+  cibleFinale.textContent = res.ms ? `${res.message} (${res.ms} ms)` : res.message;
+  cibleFinale.className = `message-test ${res.ok ? 'ok' : 'erreur'}`;
+}
+
 /** Interroge le fournisseur pour découvrir ses modèles. */
-async function detecterModeles(id, bouton, zone) {
+async function detecterModeles(id) {
+  // La détection s'appuie sur la clé et l'URL saisies : on les enregistre
+  // d'abord pour qu'elles ne soient pas perdues au prochain redessin.
+  await sauverFournisseur(id, { silencieux: true });
+
   const p = etat.config.providers?.[id] || {};
   const urlInput = document.querySelector(`input[data-champ="baseUrl"][data-provider="${id}"]`);
   const baseUrl = urlInput?.value.trim() || p.baseUrl || '';
-  const cleInput = document.querySelector(`input[data-champ="apiKey"][data-provider="${id}"]`);
-  const apiKey = cleInput?.value.trim() || '';
 
   if (!baseUrl) {
     return notifier("Renseigne d'abord l'URL de base.", 'erreur', 3000);
   }
 
-  const texte = bouton.textContent;
-  bouton.disabled = true;
-  bouton.textContent = '⟳ …';
+  const bouton = document.querySelector(`.carte-fournisseur[data-provider-id="${id}"] button[data-detecter]`);
+  const texte = bouton?.textContent || '';
+  if (bouton) {
+    bouton.disabled = true;
+    bouton.textContent = '⟳ …';
+  }
 
-  const r = await API.models.lister({ providerId: id, baseUrl, apiKey });
+  // la clé enregistrée est lue côté processus principal
+  const r = await API.models.lister({ providerId: id, baseUrl });
 
-  bouton.disabled = false;
-  bouton.textContent = texte;
+  if (bouton) {
+    bouton.disabled = false;
+    bouton.textContent = texte;
+  }
 
   if (!r.ok) {
     return notifier(r.message, 'erreur', 7000);
@@ -2330,38 +2423,9 @@ async function detecterModeles(id, bouton, zone) {
   }
 
   etat.modelesDecouverts[id] = r.modeles;
-  rendreCartesFournisseurs();
-  rafraichirModeles();
+  // la liste est conservée en configuration : elle survit au redémarrage
+  await enregistrerConfig({ providers: { [id]: { modelesDecouverts: r.modeles } } });
   notifier(`${r.total} modèle(s) détecté(s). Clique sur ★ pour en choisir un par défaut.`, 'succes', 5000);
-}
-
-async function sauverFournisseur(id) {
-  const patch = { providers: { [id]: {} } };
-  // on ne touche pas à `modeles` : il est géré par la zone multi-modèles
-  for (const input of $$(`input[data-provider="${id}"][data-champ]`)) {
-    const champ = input.dataset.champ;
-    const valeur = input.value.trim();
-    if (champ === 'apiKey' && valeur === '') continue; // vide = inchangé
-    patch.providers[id][champ] = valeur;
-  }
-  await enregistrerConfig(patch);
-  notifier(`Fournisseur ${NOMS_FOURNISSEURS[id]} enregistré.`, 'succes');
-  $$(`input[data-provider="${id}"]`).forEach((i) => {
-    if (i.dataset.champ === 'apiKey') i.value = '';
-  });
-  rendreCartesFournisseurs();
-  rafraichirModeles();
-  majStatutFournisseur();
-}
-
-async function testerFournisseur(id, cible) {
-  cible.textContent = 'Test en cours…';
-  cible.className = 'message-test';
-  const champ = document.querySelector(`input[data-champ="model"][data-provider="${id}"]`);
-  const modele = champ?.value.trim() || null;
-  const res = await API.config.testerFournisseur(id, modele);
-  cible.textContent = res.ms ? `${res.message} (${res.ms} ms)` : res.message;
-  cible.className = `message-test ${res.ok ? 'ok' : 'erreur'}`;
 }
 
 async function enregistrerConfig(patch) {
