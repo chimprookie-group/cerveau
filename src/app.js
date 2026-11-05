@@ -2971,6 +2971,14 @@ function finaliserMessage(conv, etatFlux, res) {
   etatFlux.corps.innerHTML = renduMarkdown.rendre(texteFinal || (res.erreur ? `⚠️ ${res.erreur}` : ''));
   renduMarkdown.embellir(etatFlux.corps);
 
+  // une erreur en cours de route ne doit pas rester invisible sous un texte partiel
+  if (res?.erreur && texteFinal) {
+    etatFlux.bloc.append(el('div', {
+      class: 'message-erreur',
+      text: `⚠️ Arrêt : ${res.erreur}`
+    }));
+  }
+
   if (texteFinal) {
     conv.messages.push({
       role: 'assistant',

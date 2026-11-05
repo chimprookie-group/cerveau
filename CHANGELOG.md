@@ -4,6 +4,24 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.21.1] — 2026-11-05
+
+### Corrigé
+- **Arrêt silencieux au milieu d'une longue tâche.** Le contexte envoyé au modèle
+  grossissait à chaque appel d'outil (plus de 2 millions de jetons cumulés sur 42
+  appels dans la conversation concernée), sans allègement : le fournisseur pouvait
+  refuser la requête, et l'erreur restait invisible sous le texte partiel.
+  - les anciens résultats d'outils sont **allégés** au-delà d'un budget de contexte
+    (les plus récents restent intacts) ;
+  - une **erreur de contexte** du fournisseur déclenche un allègement plus agressif
+    et **un nouvel essai automatique** ;
+  - le modèle qui annonce une action au lieu de l'exécuter (« je nettoie… je
+    vérifie… ») est relancé, même quand son texte est long ;
+  - l'erreur d'arrêt est désormais **affichée dans la bulle**, plus seulement dans
+    une notification fugace.
+- **Journal de diagnostic** : `~/.config/cerveau/agent.log` conserve les 200
+  dernières fins de requête (modèle, erreur, nombre d'outils, taille de la réponse).
+
 ## [2.21.0] — 2026-11-05
 
 ### Corrigé

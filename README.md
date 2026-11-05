@@ -139,7 +139,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.21.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.21.1-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -297,6 +297,11 @@ demande (`charger_competence`) et peut enregistrer une nouvelle procédure
 - **Vérification de fin de tâche** : après un tour qui a exécuté des outils, un
   appel court demande au modèle si la demande est réellement satisfaite ; s'il
   répond non, l'agent poursuit. Une seule vérification par demande.
+- **Contexte borné pendant l'exécution** : les anciens résultats d'outils sont
+  allégés au-delà d'un budget, et une erreur de contexte du fournisseur déclenche
+  un allègement puis un nouvel essai.
+- **Journal de diagnostic** : `~/.config/cerveau/agent.log` garde les 200 dernières
+  fins de requête (modèle, erreur, outils, taille).
 
 ### Voir les images
 

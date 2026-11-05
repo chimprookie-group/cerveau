@@ -943,6 +943,39 @@ async function run(mainWindow, deps) {
     verifs === 1 && toursVerif >= 3 && /Travail terminé/.test(resVerif.texte),
     `${toursVerif} tour(s), ${verifs} vérification(s)`);
 
+  // contexte refusé par le fournisseur : allègement puis nouvel essai
+  let essaisContexte = 0;
+  const serveurContexte = require('node:http').createServer((req, res) => {
+    if (req.method !== 'POST') { res.writeHead(200); return res.end('ok'); }
+    req.on('data', () => {});
+    req.on('end', () => {
+      essaisContexte += 1;
+      if (essaisContexte === 1) {
+        res.writeHead(400, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ error: { message: 'maximum context length is 32768 tokens' } }));
+      }
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: 'Réponse après allègement.' } }] })}\n\n`);
+      res.write('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n');
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+  });
+  await new Promise((r) => serveurContexte.listen(0, r));
+  const portContexte = serveurContexte.address().port;
+  const resContexte = await agentModule2.run({
+    providerId: 'custom',
+    credentials: { apiKey: 'k', baseUrl: `http://127.0.0.1:${portContexte}/v1`, model: 'contexte' },
+    historique: [{ role: 'user', contenu: 'test contexte' }],
+    ctx: { mode: 'complet', vaultPath: null, coffre: null, workspace: os.tmpdir(),
+      permissions: { mode: 'auto' }, confirmer: async () => ({ autorise: true }) },
+    emit: () => {}
+  });
+  serveurContexte.close();
+  verifier('Contexte refusé : allègement et nouvel essai',
+    essaisContexte >= 2 && /Réponse après allègement/.test(resContexte.texte),
+    `${essaisContexte} essai(s)`);
+
   // 6undecies. Non-régression des bugs corrigés lors de l'audit
   const tMcp = Date.now();
   const outilsFantome = await mcpMod.gestionnaire.charger([

@@ -227,6 +227,24 @@ function fournisseurSansCle(id, creds) {
   return id === 'custom' && Boolean(String(creds?.baseUrl || '').trim());
 }
 
+/* ------------------------- journal de l'agent -------------------------- */
+
+/**
+ * Journal court des fins de requête, pour diagnostiquer un arrêt inexpliqué.
+ * Fichier : ~/.config/cerveau/agent.log (200 dernières lignes).
+ */
+function journaliserAgent(ligne) {
+  try {
+    const fichier = path.join(app.getPath('userData'), 'agent.log');
+    let lignes = [];
+    try {
+      lignes = fs.readFileSync(fichier, 'utf8').split('\n').filter(Boolean).slice(-199);
+    } catch { /* premier passage */ }
+    lignes.push(`${new Date().toISOString()} · ${ligne}`);
+    fs.writeFileSync(fichier, `${lignes.join('\n')}\n`, { mode: 0o600 });
+  } catch { /* le journal ne doit jamais gêner une requête */ }
+}
+
 /* ------------------------- IPC : configuration ------------------------- */
 
 ipcMain.handle('config:obtenir', () => config.getConfig());
@@ -1455,6 +1473,9 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
   generationEnCours = new AbortController();
 
   const emit = (evt) => {
+    if (evt?.type === 'erreur') {
+      journaliserAgent(`erreur · ${pid} · ${creds.model} · ${String(evt.message || '').slice(0, 300)}`);
+    }
     if (!event.sender.isDestroyed()) event.sender.send('agent:evenement', evt);
   };
 
@@ -1514,6 +1535,10 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
       emit,
       signal: generationEnCours.signal
     });
+    journaliserAgent(
+      `fin · ${pid} · ${creds.model} · ${res.erreur ? `erreur : ${String(res.erreur).slice(0, 200)}` : 'ok'}`
+      + ` · ${res.outils || 0} outil(s) · ${res.texte ? res.texte.length : 0} car.`
+    );
     emit({ type: 'termine', ...res });
     return { ok: !res.erreur, ...res };
   } catch (err) {

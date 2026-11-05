@@ -20,6 +20,66 @@ const webtools = require('./webtools');
 const vision = require('./vision');
 const tachesfond = require('./tachesfond');
 const competences = require('./competences');
+
+// budget approximatif du contexte envoyé au modèle, en caractères (~4 par jeton)
+const BUDGET_CONTEXTE = 220000;
+
+/** Taille approximative des messages en caractères. */
+function tailleMessages(messages) {
+  let total = 0;
+  for (const m of messages) {
+    if (typeof m.content === 'string') total += m.content.length;
+    else if (Array.isArray(m.content)) {
+      for (const b of m.content) {
+        if (typeof b.text === 'string') total += b.text.length;
+        if (typeof b.content === 'string') total += b.content.length;
+        else if (Array.isArray(b.content)) {
+          for (const c of b.content) if (typeof c.text === 'string') total += c.text.length;
+        }
+      }
+    }
+  }
+  return total;
+}
+
+/**
+ * Allège les anciens résultats d'outils quand le contexte devient trop gros.
+ * Les derniers résultats restent intacts : ce sont eux qui servent au travail
+ * en cours. Renvoie true si quelque chose a été modifié.
+ */
+function allegerMessages(messages, isAnthropic, { budget = BUDGET_CONTEXTE, garder = 6 } = {}) {
+  if (tailleMessages(messages) <= budget) return false;
+
+  const indices = [];
+  messages.forEach((m, i) => {
+    if (!isAnthropic && m.role === 'tool') indices.push(i);
+    else if (isAnthropic && m.role === 'user' && Array.isArray(m.content)
+      && m.content.some((b) => b.type === 'tool_result')) indices.push(i);
+  });
+
+  const aAlleger = indices.slice(0, Math.max(0, indices.length - garder));
+  let modifie = false;
+  const marque = '[résultat antérieur allégé pour libérer du contexte]';
+
+  for (const i of aAlleger) {
+    const m = messages[i];
+    if (!isAnthropic) {
+      if (typeof m.content === 'string' && !m.content.startsWith(marque)) {
+        m.content = marque;
+        modifie = true;
+      }
+    } else {
+      for (const b of m.content) {
+        if (b.type !== 'tool_result') continue;
+        if (Array.isArray(b.content)) b.content = [{ type: 'text', text: marque }];
+        else b.content = marque;
+        modifie = true;
+      }
+    }
+    if (tailleMessages(messages) <= budget * 0.6) break;
+  }
+  return modifie;
+}
 const memoireMod = require('./memoire');
 const sousagents = require('./sousagents');
 const { gestionnaire: mcp } = require('./mcp');
@@ -330,6 +390,8 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
   let outilsFaits = [];
   let verifications = 0;
   let extensionTours = false;
+  let allegeSecours = false;
+  let messageContexte = null;
 
   let maxTours = Math.max(1, Number(limiteTours) || Number(ctx.agentMaxTours) || MAX_TOURS_DEFAUT);
 
@@ -385,6 +447,11 @@ Réponds uniquement par OUI ou NON.`;
     let raison = 'end_turn';
     const debutFlux = Date.now();
 
+    // garde-fou : ne jamais envoyer un contexte démesuré au fournisseur
+    if (allegerMessages(messages, isAnthropic)) {
+      emit({ type: 'avertissement', message: 'Contexte volumineux : anciens résultats d\'outils allégés.' });
+    }
+
     const flux = providers.stream({
       providerId,
       apiKey: credentials.apiKey,
@@ -418,6 +485,15 @@ Réponds uniquement par OUI ou NON.`;
             rejetOutils = evt.message;
             break;
           }
+
+          // contexte trop gros : on allège et on réessaie une fois
+          const erreurContexte = /context|too many tokens|maximum.*token|token.*limit|too long|exceed|payload too large|longueur|contexte|413/i.test(evt.message);
+          if (erreurContexte && !allegeSecours) {
+            allegeSecours = true;
+            messageContexte = evt.message;
+            break;
+          }
+
           emit({ type: 'erreur', message: evt.message });
           return { texte: texteFinal + texteTour, outils: outilsExecutes, erreur: evt.message };
         } else if (evt.type === 'fin') {
@@ -425,6 +501,20 @@ Réponds uniquement par OUI ou NON.`;
           if (evt.usage) emit({ type: 'usage', usage: evt.usage, ms: Date.now() - debutFlux });
         }
       }
+      // Contexte refusé pour sa taille : on allège fortement et on réessaie.
+      if (messageContexte) {
+        allegerMessages(messages, isAnthropic, {
+          budget: Math.round(BUDGET_CONTEXTE * 0.4),
+          garder: 2
+        });
+        messageContexte = null;
+        emit({
+          type: 'avertissement',
+          message: 'Contexte trop volumineux pour le fournisseur : historique allégé, nouvel essai.'
+        });
+        continue;
+      }
+
       // Le modèle a refusé les outils : on réessaie immédiatement sans eux.
       if (rejetOutils) {
         sansOutils = true;
@@ -470,8 +560,11 @@ Réponds uniquement par OUI ou NON.`;
       const tronque = reponseCoupee;
       const planIncomplet = Array.isArray(planCourant)
         && planCourant.some((t) => t.statut !== 'termine');
-      const promesseSansSuite = outilsExecutes > 0 && texte.length > 0 && texte.length < 160
-        && /(je vais|prochaine étape|ensuite|il reste|à suivre|poursuivre)/i.test(texte);
+      // le modèle annonce souvent la suite au lieu de l'exécuter : on regarde
+      // la fin du texte, même s'il est long
+      const finTexte = texte.slice(-300);
+      const promesseSansSuite = outilsExecutes > 0
+        && /je (vais|continue|poursuis|vérifie|termine|nettoie|lance|corrige|refais|teste|génère|prépare)/i.test(finTexte);
 
       // Le modèle s'arrête parfois avant la fin (réponse coupée, plan non
       // terminé, outil en échec, simple annonce). On poursuit automatiquement
