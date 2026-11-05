@@ -301,6 +301,8 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
           // le sous-agent n'hérite pas de la mémoire d'écriture ni de la délégation
           memoire: ctxParent.memoire,
           desactiverSousAgents: true,
+          // pas de vérification de fin : un sous-agent doit rester rapide
+          verificationDesactivee: true,
           mode: 'code',
           presets: [],
           blocMemoire: ''
@@ -424,6 +426,12 @@ La demande est-elle entièrement satisfaite et vérifiée (fichiers écrits, com
 Réponds uniquement par OUI ou NON.`;
 
     let verdict = '';
+    // un modèle lent ne doit pas immobiliser la conversation
+    const controleur = new AbortController();
+    const minuteur = setTimeout(() => controleur.abort(), 20000);
+    const surAbandon = () => controleur.abort();
+    signal?.addEventListener('abort', surAbandon, { once: true });
+
     try {
       for await (const evt of providers.stream({
         providerId,
@@ -434,13 +442,16 @@ Réponds uniquement par OUI ou NON.`;
         tools: [],
         maxTokens: 40,
         temperature: 0,
-        signal
+        signal: controleur.signal
       })) {
         if (evt.type === 'texte') verdict += evt.delta;
         if (evt.type === 'erreur' || evt.type === 'fin') break;
       }
     } catch {
       return { termine: true };   // vérification impossible : on ne bloque pas
+    } finally {
+      clearTimeout(minuteur);
+      signal?.removeEventListener('abort', surAbandon);
     }
 
     const reponse = verdict.trim().toUpperCase();
@@ -486,20 +497,22 @@ Réponds uniquement par OUI ou NON.`;
         } else if (evt.type === 'outil') {
           outilsDemandes.push(evt);
         } else if (evt.type === 'erreur') {
+          // Contexte trop gros : on allège et on réessaie une fois. Ce contrôle
+          // passe avant le refus des outils, car un message peut mentionner les
+          // deux (« tool call arguments too long… »).
+          const erreurContexte = /context|too many tokens|maximum.*token|token.*limit|too long|exceed|payload too large|longueur|contexte|413/i.test(evt.message);
+          if (erreurContexte && !allegeSecours) {
+            allegeSecours = true;
+            messageContexte = evt.message;
+            break;
+          }
+
           // Certains modèles refusent tout appel d'outil : on le signale une fois,
           // puis on continue sans outils plutôt que d'abandonner la conversation.
           const refuseOutils = /tool|function|capab|support|not supported|unsupported|invalid.*schema/i.test(evt.message)
             && !sansOutils;
           if (refuseOutils) {
             rejetOutils = evt.message;
-            break;
-          }
-
-          // contexte trop gros : on allège et on réessaie une fois
-          const erreurContexte = /context|too many tokens|maximum.*token|token.*limit|too long|exceed|payload too large|longueur|contexte|413/i.test(evt.message);
-          if (erreurContexte && !allegeSecours) {
-            allegeSecours = true;
-            messageContexte = evt.message;
             break;
           }
 
@@ -620,7 +633,8 @@ Réponds uniquement par OUI ou NON.`;
 
       // Dernier filet : le modèle a peut-être conclu trop tôt. On lui demande
       // de vérifier, une seule fois, que la demande est réellement satisfaite.
-      if (!dejaRejeteOutils && outilsExecutes > 0 && verifications < 1 && !signal?.aborted) {
+      if (!dejaRejeteOutils && !ctx.verificationDesactivee && outilsExecutes > 0
+          && verifications < 1 && !signal?.aborted) {
         verifications += 1;
         emit({ type: 'verification', phase: 'debut' });
         const verdict = await verifierDemande(texteFinal);

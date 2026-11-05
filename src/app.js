@@ -644,7 +644,6 @@ function imagesJointes() {
 }
 
 function initialiserPieces() {
-  const zone = $('#zoneSaisie');
   const depot = document.querySelector('.principal');
 
   // glisser-déposer sur toute la zone principale
@@ -2096,32 +2095,40 @@ const OUTILS_CONNUS = [
   { nom: 'arreter_tache_fond', famille: 'Tâches de fond' }
 ];
 
+function ajouterLigneOutil(zone, o, desactives) {
+  const actif = !desactives.includes(o.nom);
+  zone.append(el('label', { class: 'outil-reglage' },
+    el('input', {
+      type: 'checkbox',
+      class: 'champ-reglage-controle bascule',
+      checked: actif ? '' : null,
+      onchange: async (e) => {
+        const liste = new Set(etat.config.outilsDesactives || []);
+        if (e.target.checked) liste.delete(o.nom);
+        else liste.add(o.nom);
+        await enregistrerConfig({ outilsDesactives: [...liste] });
+        notifier(e.target.checked ? `${o.nom} activé.` : `${o.nom} désactivé.`, 'info', 1800);
+      }
+    }),
+    el('span', { class: 'outil-reglage-nom', text: o.nom }),
+    el('span', { class: 'outil-reglage-famille', text: o.famille })
+  ));
+}
+
 function rendreOutilsReglage() {
   const zone = $('#reglageOutils');
   if (!zone) return;
   zone.innerHTML = '';
   const desactives = etat.config.outilsDesactives || [];
 
-  for (const o of OUTILS_CONNUS) {
-    const actif = !desactives.includes(o.nom);
-    const ligne = el('label', { class: 'outil-reglage' },
-      el('input', {
-        type: 'checkbox',
-        class: 'champ-reglage-controle bascule',
-        checked: actif ? '' : null,
-        onchange: async (e) => {
-          const liste = new Set(etat.config.outilsDesactives || []);
-          if (e.target.checked) liste.delete(o.nom);
-          else liste.add(o.nom);
-          await enregistrerConfig({ outilsDesactives: [...liste] });
-          notifier(e.target.checked ? `${o.nom} activé.` : `${o.nom} désactivé.`, 'info', 1800);
-        }
-      }),
-      el('span', { class: 'outil-reglage-nom', text: o.nom }),
-      el('span', { class: 'outil-reglage-famille', text: o.famille })
-    );
-    zone.append(ligne);
-  }
+  for (const o of OUTILS_CONNUS) ajouterLigneOutil(zone, o, desactives);
+
+  // outils apportés par les plugins locaux (chargés dynamiquement)
+  API.plugins.lister().then((r) => {
+    for (const o of r.outils || []) {
+      ajouterLigneOutil(zone, { nom: o.nom, famille: 'Plugin' }, desactives);
+    }
+  }).catch(() => { /* pas de plugins */ });
 }
 
 let initialiserReglagesAvancesBranche = false;
@@ -2284,6 +2291,7 @@ async function creerPlugin() {
 
   $('#modalePlugin').hidden = true;
   await rendrePlugins();
+  rendreOutilsReglage();
   notifier(`Plugin « ${nom} » créé et chargé (${r.total} outil(s) au total).`, 'succes', 4000);
 }
 
@@ -4620,13 +4628,6 @@ function initialiserPlugins() {
   brancherPlugins();
   rendreServeursMCP();
   rendreExemplesMCP();
-  const rw = etat.config.rechercheWeb || {};
-  const moteur = $('#moteurRecherche');
-  if (moteur) moteur.value = rw.moteur || 'duckduckgo';
-  const url = $('#urlRecherche');
-  if (url) url.value = rw.urlBase || '';
-  const cle = $('#cleRecherche');
-  if (cle) cle.value = rw.cle ? '••••••••' : '';
 }
 
 function initialiserDispositionPanneau() {

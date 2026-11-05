@@ -4,6 +4,21 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.23.1] — 2026-11-05
+
+### Corrigé
+- **Vérification de fin de tâche** : délai de 20 s, pour qu'un modèle lent ne
+  bloque pas la conversation ; elle est désactivée dans les sous-agents, qui
+  doivent rester rapides.
+- **Outils des plugins dans « Outils disponibles »** : on peut les désactiver
+  individuellement sans retirer le plugin, et la liste se met à jour après une
+  création.
+- Nettoyage : code mort des anciens réglages de recherche, variable inutilisée.
+
+### Modifié
+- README : les 47 outils annoncés sont ceux de base ; les plugins ajoutent leurs
+  propres outils (2 dans l'exemple fourni).
+
 ## [2.23.0] — 2026-11-05
 
 ### Ajouté

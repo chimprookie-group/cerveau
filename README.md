@@ -46,7 +46,8 @@ quand un outil tourne, et se fige en « Terminé en … » à la fin.
 actifs. Discrets, désactivables dans *Apparence*, et coupés automatiquement si le
 système demande de réduire les animations.
 
-**Agent et outils** — 47 outils en mode complet (23 en notes, 33 en code),
+**Agent et outils** — 47 outils de base en mode complet (23 en notes, 33 en code,
+plus les outils des plugins locaux),
 désactivables un par un.
 
 ![Outils](docs/05-outils.png)
@@ -139,7 +140,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.23.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.23.1-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
