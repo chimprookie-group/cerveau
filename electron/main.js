@@ -55,6 +55,7 @@ const github = require('./github');
 const models = require('./models');
 const webtools = require('./webtools');
 const tachesfond = require('./tachesfond');
+const competences = require('./competences');
 const { gestionnaire: mcpGestionnaire } = require('./mcp');
 const { Superviseur } = require('./superviseur');
 const { Memoire } = require('./memoire');
@@ -239,6 +240,80 @@ ipcMain.handle('config:mettre-a-jour', (_e, patch) => {
 });
 
 ipcMain.handle('config:reinitialiser', () => config.resetConfig());
+
+ipcMain.handle('competences:lister', () => {
+  try {
+    return { ok: true, dossier: competences.DOSSIER, competences: competences.lister() };
+  } catch (err) {
+    return { ok: false, dossier: competences.DOSSIER, competences: [], message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('competences:ouvrir-dossier', async () => {
+  try {
+    competences.assurerDossier();
+    await shell.openPath(competences.DOSSIER);
+    return { ok: true, dossier: competences.DOSSIER };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+/**
+ * Résume une conversation pour la compaction du contexte. Renvoie un texte
+ * court ; en cas d'échec, l'appelant garde simplement l'historique tronqué.
+ */
+ipcMain.handle('agent:resumer', async (_e, { texte } = {}) => {
+  const cfg = config.getConfig({ revealKeys: true });
+  const creds = config.getProviderCredentials(cfg.activeProvider);
+  if (!creds?.apiKey && !fournisseurSansCle(cfg.activeProvider, creds)) {
+    return { ok: false, message: "Aucune clé d'API configurée." };
+  }
+
+  const contenu = String(texte || '').slice(0, 120000);
+  if (!contenu.trim()) return { ok: false, message: 'Rien à résumer.' };
+
+  const controleur = new AbortController();
+  const minuteur = setTimeout(() => controleur.abort(), 25000);
+  try {
+    let resume = '';
+    const flux = providers.stream({
+      providerId: cfg.activeProvider,
+      apiKey: creds.apiKey,
+      baseUrl: creds.baseUrl,
+      model: creds.model,
+      messages: [{
+        role: 'user',
+        content: "Tu résumes une conversation pour libérer de la place dans la fenêtre de contexte.\n"
+          + 'Écris en français un résumé dense et factuel (300 mots maximum) qui conserve :\n'
+          + "- la demande et les objectifs de l'utilisateur ;\n"
+          + '- les décisions prises et les préférences exprimées ;\n'
+          + '- les fichiers créés ou modifiés et les commandes importantes ;\n'
+          + '- les problèmes ouverts et ce qui reste à faire.\n'
+          + "N'invente rien, pas de formule de politesse.\n\nConversation :\n" + contenu
+      }],
+      tools: [],
+      maxTokens: 700,
+      temperature: 0.2,
+      signal: controleur.signal
+    });
+
+    for await (const evt of flux) {
+      if (evt.type === 'texte') resume += evt.delta;
+      if (evt.type === 'erreur') return { ok: false, message: evt.message };
+      if (evt.type === 'fin') break;
+    }
+
+    resume = resume.trim();
+    if (!resume) return { ok: false, message: 'Le fournisseur a renvoyé un résumé vide.' };
+    return { ok: true, resume: resume.slice(0, 6000) };
+  } catch (err) {
+    const msg = err?.name === 'AbortError' ? 'Résumé interrompu (délai dépassé).' : String(err.message || err);
+    return { ok: false, message: msg };
+  } finally {
+    clearTimeout(minuteur);
+  }
+});
 
 ipcMain.handle('providers:tester', async (_e, id, modeleChoisi) => {
   const creds = config.getProviderCredentials(id, modeleChoisi);
@@ -437,6 +512,7 @@ async function executerTachePlanifiee(tache) {
     systemPrompt: cfg.systemPrompt || '',
     outilsDesactives: cfg.outilsDesactives || [],
     agentMaxTours: cfg.agent?.maxTours,
+    appelsParalleles: cfg.agent?.appelsParalleles !== false,
     agentCapSortie: cfg.agent?.capSortie,
     temperature: cfg.temperature,
     presets: cfg.presetsComportement || [],
@@ -677,6 +753,7 @@ async function jouerTour(id, { annoncer = true } = {}) {
         systemPrompt: cfg.systemPrompt || '',
         outilsDesactives: cfg.outilsDesactives || [],
         agentMaxTours: cfg.agent?.maxTours,
+    appelsParalleles: cfg.agent?.appelsParalleles !== false,
         agentCapSortie: cfg.agent?.capSortie,
         temperature: cfg.temperature,
         presets: cfg.presetsComportement || [],
@@ -916,6 +993,7 @@ function contexteSuperviseur(cfg) {
         confirmer: params.confirmer,
         outilsDesactives: cfg.outilsDesactives || [],
         agentMaxTours: cfg.agent?.maxTours,
+    appelsParalleles: cfg.agent?.appelsParalleles !== false,
         agentCapSortie: cfg.agent?.capSortie,
         temperature: cfg.temperature,
         presets: cfg.presetsComportement || [],
@@ -1359,7 +1437,7 @@ ipcMain.handle('github:ouvrir-url', async (_e, url) => {
 
 /* --------------------------- IPC : agent ------------------------------- */
 
-ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, modeles }) => {
+ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, modeles, resume }) => {
   const coffre = coffreActif();
   const cfg = config.getConfig({ revealKeys: true });
   const pid = providerId || cfg.activeProvider;
@@ -1382,6 +1460,7 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
 
   const ctx = {
     mode: modeEffectif,
+    resume: typeof resume === 'string' ? resume : '',
     vaultPath: coffre?.path || null,
     coffre,
     workspace: cfg.workspace || null,
@@ -1390,6 +1469,7 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
     systemPrompt: cfg.systemPrompt || '',
     outilsDesactives: Array.isArray(cfg.outilsDesactives) ? cfg.outilsDesactives : [],
     agentMaxTours: cfg.agent?.maxTours,
+    appelsParalleles: cfg.agent?.appelsParalleles !== false,
     agentCapSortie: cfg.agent?.capSortie,
     rechercheWeb: cfg.rechercheWeb || {},
     serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],

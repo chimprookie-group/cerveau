@@ -4,6 +4,29 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.19.0] — 2026-11-05
+
+### Ajouté
+- **Compétences** : des procédures réutilisables dans
+  `~/.config/cerveau/competences/<id>/SKILL.md`. Trois sont installées (revue de
+  code, diagnostic de bug, préparation de release). L'invite n'annonce que le nom et
+  la description ; l'agent charge le détail avec `charger_competence`, et peut
+  enregistrer une nouvelle procédure avec `enregistrer_competence`. Section dédiée
+  dans `Réglages → Agent et outils`.
+- **Outils en lecture exécutés en parallèle.** Le réglage « Appels d'outils en
+  parallèle » existait mais n'était pas appliqué : trois lectures prennent désormais
+  le temps d'une seule (355 ms au lieu de ~900 ms dans le test).
+- **Compactage du contexte.** Au-delà de 24 messages ou 60 000 caractères, les
+  échanges anciens sont résumés par le modèle ; le résumé est conservé et réinjecté
+  dans l'invite, l'historique complet reste affiché.
+- **Réessais automatiques** sur 408/429/5xx, avec temporisation, avant le début du
+  flux : une surcharge passagère du fournisseur ne fait plus échouer la requête.
+
+### Modifié
+- Invite système enrichie d'une **méthode de travail** : vérifier avant d'agir,
+  vérifier après une modification, ne jamais prétendre avoir exécuté une action.
+- 47 outils en mode complet (23 en notes, 33 en code).
+
 ## [2.18.0] — 2026-11-05
 
 ### Corrigé

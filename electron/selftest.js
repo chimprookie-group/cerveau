@@ -51,6 +51,7 @@ async function run(mainWindow, deps) {
       tachesFond: !!q('#tachesFond'),
       statTokens: !!q('#statTokens'),
       statApi: !!q('#statApi'),
+      statContexte: !!q('#statContexte'),
       effets: document.body.classList.contains('effets'),
       reglageEffets: !!q('#reglageEffets'),
       apiTaches: typeof window.cerveau?.taches,
@@ -81,6 +82,7 @@ async function run(mainWindow, deps) {
   verifier('Zone des processus de fond présente', ui.tachesFond);
   verifier('Statistiques de jetons présentes', ui.statTokens);
   verifier('Indicateur API présent', ui.statApi);
+  verifier('Indicateur de contexte compacté présent', ui.statContexte);
   verifier('Effets visuels actifs par défaut', ui.effets);
   verifier('Réglage des effets visuels présent', ui.reglageEffets);
   verifier('API tâches de fond exposée', ui.apiTaches === 'object', ui.apiTaches);
@@ -731,6 +733,50 @@ async function run(mainWindow, deps) {
     verifier('MCP : contrôles avancés', false, String(err.message || err));
   }
 
+  // compétences : procédures réutilisables chargées à la demande
+  try {
+    const compMod = require('./competences');
+    const listeComp = compMod.lister();
+    verifier('Compétences : procédures installées', listeComp.length >= 3, `${listeComp.length}`);
+
+    let lue = null;
+    try { lue = compMod.lire('revue-de-code'); } catch { /* signalé plus bas */ }
+    verifier('Compétences : contenu lisible', Boolean(lue && lue.contenu.length > 100),
+      lue ? `${lue.contenu.length} caractères` : 'illisible');
+
+    let refusComp = false;
+    try { compMod.lire('../../etc/passwd'); } catch { refusComp = true; }
+    verifier('Compétences : chemin hors dossier refusé', refusComp);
+
+    const promptComp = require('./agent').construireInviteSysteme(
+      { mode: 'notes', competences: listeComp }, null);
+    verifier('Compétences annoncées dans le prompt',
+      /Compétences disponibles/.test(promptComp) && promptComp.includes('revue-de-code'));
+
+    const promptResume = require('./agent').construireInviteSysteme(
+      { mode: 'notes', resume: 'RÉSUMÉ TEST 42' }, null);
+    verifier('Résumé compacté repris dans le prompt',
+      promptResume.includes('Résumé des échanges précédents') && promptResume.includes('RÉSUMÉ TEST 42'));
+  } catch (err) {
+    verifier('Compétences : contrôles', false, String(err.message || err));
+  }
+
+  const uiComp = await mainWindow.webContents.executeJavaScript(`(async () => {
+    document.querySelector('#btnReglages').click();
+    await new Promise(r => setTimeout(r, 250));
+    document.querySelector('.nav-reglage[data-reglage="agents"]').click();
+    await new Promise(r => setTimeout(r, 500));
+    const r = {
+      zone: !!document.querySelector('#listeCompetences'),
+      cartes: document.querySelectorAll('#listeCompetences .competence').length,
+      bouton: !!document.querySelector('#btnOuvrirCompetences')
+    };
+    document.querySelector('#btnFermerReglages2').click();
+    return r;
+  })()`);
+  verifier('Compétences affichées dans les réglages',
+    uiComp.zone && uiComp.cartes >= 3 && uiComp.bouton, `${uiComp.cartes} carte(s)`);
+
   // interface des plugins
   const uiPlugins = await mainWindow.webContents.executeJavaScript(`(async () => {
     document.querySelector('#btnReglages').click();
@@ -759,8 +805,8 @@ async function run(mainWindow, deps) {
   const agentTools = require('./agent');
   const nbComplet = agentMod.outilsPourMode('complet', [], []).length;
   const nbNotes = agentMod.outilsPourMode('notes', [], []).length;
-  verifier('Mode complet expose 44 outils', nbComplet === 44, `${nbComplet} outils`);
-  verifier('Mode notes expose 20 outils', nbNotes === 20, `${nbNotes} outils`);
+  verifier('Mode complet expose 47 outils', nbComplet === 47, `${nbComplet} outils`);
+  verifier('Mode notes expose 23 outils', nbNotes === 23, `${nbNotes} outils`);
 
   // 6decies. Les outils ne dépendent ni du fournisseur ni du modèle
   const agentModule2 = require('./agent');
@@ -769,16 +815,16 @@ async function run(mainWindow, deps) {
     compteParMode[m] = agentModule2.outilsPourMode(m, [], []).length;
   }
   verifier('Outils indépendants du fournisseur',
-    compteParMode.complet === 44 && compteParMode.notes === 20,
+    compteParMode.complet === 47 && compteParMode.notes === 23,
     JSON.stringify(compteParMode));
 
   const avecMCP = agentModule2.outilsPourMode('complet', [], [
     { nom: 'mcp_demo_x', description: 'd', schema: { type: 'object', properties: {} }, risque: 'lecture' }
   ]);
-  verifier('Outils MCP ajoutés à tous les modes', avecMCP.length === 45, `${avecMCP.length} outils`);
+  verifier('Outils MCP ajoutés à tous les modes', avecMCP.length === 48, `${avecMCP.length} outils`);
 
   const filtres = agentModule2.outilsPourMode('complet', ['executer_commande', 'creer_note'], []);
-  verifier('Désactivation respectée après bascule', filtres.length === 42
+  verifier('Désactivation respectée après bascule', filtres.length === 45
     && !filtres.some((t) => t.nom === 'executer_commande'), `${filtres.length} outils`);
 
   // un modèle qui refuse les outils doit déclencher un repli, pas un abandon
@@ -839,7 +885,7 @@ async function run(mainWindow, deps) {
 
   // historique borné
   const bornageSrc = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
-  verifier('Historique borné avant envoi', /bornHistorique\(conv\.messages\)/.test(bornageSrc));
+  verifier('Historique borné avant envoi', /bornHistorique\(conv\.messages/.test(bornageSrc));
   verifier('Borne par nombre et par taille',
     /maxMessages\s*=\s*40/.test(bornageSrc) && /maxCaracteres\s*=\s*120000/.test(bornageSrc));
 

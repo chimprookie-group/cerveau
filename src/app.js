@@ -2086,6 +2086,9 @@ const OUTILS_CONNUS = [
   // Les outils web sont intégrés (DuckDuckGo + lecture de page), sans clé ni
   // serveur MCP : ils se règlent comme les autres, ici.
   { nom: 'web_search', famille: 'Web' }, { nom: 'web_fetch', famille: 'Web' },
+  { nom: 'lister_competences', famille: 'Compétences' },
+  { nom: 'charger_competence', famille: 'Compétences' },
+  { nom: 'enregistrer_competence', famille: 'Compétences' },
   { nom: 'voir_image', famille: 'Vision' },
   { nom: 'lancer_tache_fond', famille: 'Tâches de fond' },
   { nom: 'lister_taches_fond', famille: 'Tâches de fond' },
@@ -2163,6 +2166,7 @@ function brancherReglagesAvances() {
   if (chemin) chemin.textContent = etat.config.configPath || '~/.config/cerveau/config.json';
 
   $('#btnOuvrirConfig')?.addEventListener('click', () => API.app.ouvrirDossierConfig());
+  $('#btnOuvrirCompetences')?.addEventListener('click', () => API.competences.ouvrirDossier());
   $('#btnReinitialiser2')?.addEventListener('click', async () => {
     if (!confirm('Réinitialiser tous les réglages ? Les clés d\'API et la liste des coffres seront effacées.')) return;
     etat.config = await API.config.reinitialiser();
@@ -2174,6 +2178,29 @@ function brancherReglagesAvances() {
   });
 
   rendreOutilsReglage();
+}
+
+/** Liste les compétences installées (dossier de configuration). */
+async function rendreCompetences() {
+  const zone = $('#listeCompetences');
+  if (!zone) return;
+  zone.innerHTML = '';
+
+  let r = { competences: [] };
+  try { r = await API.competences.lister(); } catch { /* dossier inaccessible */ }
+
+  const liste = r.competences || [];
+  if (!liste.length) {
+    zone.append(el('p', { class: 'vide petit', text: 'Aucune compétence installée.' }));
+    return;
+  }
+
+  for (const c of liste) {
+    zone.append(el('div', { class: 'competence' },
+      el('div', { class: 'competence-nom', text: c.nom }),
+      el('div', { class: 'competence-desc', text: c.description || '' })
+    ));
+  }
 }
 
 /* ═══════════════════════════ COMPORTEMENT ═══════════════════════════ */
@@ -2555,6 +2582,12 @@ function majStatistiquesConversation() {
   }
   api.textContent = 'API · prête';
   api.title = 'Aucune requête envoyée dans cette conversation';
+
+  const compacte = $('#statContexte');
+  if (compacte) {
+    compacte.hidden = !conv?.resume;
+    compacte.title = conv?.resume || '';
+  }
 }
 
 function afficherConversation() {
@@ -2724,6 +2757,36 @@ function persisterConversations() {
 
 /* ═══════════════════════════ ENVOI DE MESSAGE ═══════════════════════════ */
 
+/** Compacte les échanges anciens en un résumé quand le contexte devient gros. */
+async function compacterSiBesoin(conv) {
+  if (!conv || !Array.isArray(conv.messages)) return;
+  const deja = conv.compacteJusqua || 0;
+  const restants = conv.messages.slice(deja);
+  const taille = restants.reduce((n, m) => n + String(m.contenu || '').length, 0);
+  if (restants.length < 24 || taille < 60000) return;
+
+  const aResumer = restants.slice(0, restants.length - 8);
+  if (aResumer.length < 8) return;
+
+  const historique = aResumer.map((m) => {
+    const role = m.role === 'user' ? 'Utilisateur' : 'Assistant';
+    return `${role} : ${String(m.contenu || '').slice(0, 2000)}`;
+  }).join('\n\n');
+
+  const texte = (conv.resume ? `Résumé déjà existant :\n${conv.resume}\n\nNouveaux échanges :\n` : '')
+    + historique;
+
+  try {
+    const r = await API.agent.resumer({ texte });
+    if (!r?.ok) return;
+    conv.resume = r.resume;
+    conv.compacteJusqua = deja + aResumer.length;
+    persisterConversations();
+    notifier(`Contexte compacté : ${aResumer.length} échange(s) résumés.`, 'info', 4000);
+    majStatistiquesConversation();
+  } catch { /* en cas d'échec, l'historique reste simplement tronqué */ }
+}
+
 async function envoyerMessage() {
   const saisie = $('#saisie');
   const texte = saisie.value.trim();
@@ -2740,6 +2803,9 @@ async function envoyerMessage() {
     ouvrirReglages('fournisseurs');
     return;
   }
+
+  // contexte trop gros : on résume les échanges anciens avant d'envoyer
+  await compacterSiBesoin(conv);
 
   // message utilisateur
   const contenuComplet = composerMessage(texte);
@@ -2793,9 +2859,14 @@ async function envoyerMessage() {
       providerId,
       mode: etat.mode,
       modeles: { ...etat.modelesSession },
+      resume: conv.resume || '',
       // borne l'historique : au-delà, la fenêtre de contexte du modèle déborde
-      // et l'API renvoie une erreur. On garde les échanges les plus récents.
-      historique: bornHistorique(conv.messages)
+      // et l'API renvoie une erreur. On garde les échanges les plus récents, et
+      // on n'envoie plus ceux déjà résumés. Le plancher protège le cas où des
+      // messages ont été retirés (régénération) sous la marque de compaction.
+      historique: bornHistorique(conv.messages.slice(
+        Math.max(0, Math.min(conv.compacteJusqua || 0, conv.messages.length - 1))
+      ))
     });
 
     finaliserMessage(conv, etatFlux, res);
@@ -4327,6 +4398,7 @@ function initialiserComportement() {
 
 function initialiserReglagesAvances() {
   brancherReglagesAvances();
+  rendreCompetences();
 }
 
 function initialiserPlugins() {

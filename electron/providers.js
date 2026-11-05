@@ -12,6 +12,41 @@
 
 const ANTHROPIC_VERSION = '2023-06-01';
 
+// statuts qui valent un nouvel essai (surcharge, quota momentané, passerelle)
+const REESSAYABLES = new Set([408, 425, 429, 500, 502, 503, 504, 529]);
+
+function attendre(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      return reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+    }
+    const avorter = () => {
+      clearTimeout(minuteur);
+      reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+    };
+    const minuteur = setTimeout(() => {
+      signal?.removeEventListener('abort', avorter);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', avorter, { once: true });
+  });
+}
+
+/**
+ * fetch avec réessais sur les erreurs transitoires. On ne réessaie qu'avant
+ * le début du flux : une fois la réponse acceptée, couper au milieu perdrait
+ * le texte déjà reçu.
+ */
+async function fetchAvecReessai(url, options, { essais = 3 } = {}) {
+  for (let tentative = 0; ; tentative += 1) {
+    const res = await fetch(url, options);
+    if (!REESSAYABLES.has(res.status) || tentative >= essais - 1) return res;
+
+    try { await res.arrayBuffer(); } catch { /* corps déjà consommé */ }
+    await attendre(Math.min(4000, 500 * 2 ** tentative), options.signal);
+  }
+}
+
 function classify(id) {
   if (id === 'anthropic') return 'anthropic';
   return 'openai';
@@ -79,7 +114,7 @@ async function* streamAnthropic({ apiKey, baseUrl, model, messages, system, tool
   if (tools && tools.length) body.tools = tools;
   if (typeof temperature === 'number') body.temperature = temperature;
 
-  const res = await fetch(url, {
+  const res = await fetchAvecReessai(url, {
     method: 'POST',
     signal,
     headers: {
@@ -178,7 +213,7 @@ async function* streamOpenAI({ apiKey, baseUrl, model, messages, tools, signal, 
   const entetes = { 'content-type': 'application/json' };
   if (apiKey) entetes.authorization = `Bearer ${apiKey}`;
 
-  const res = await fetch(url, {
+  const res = await fetchAvecReessai(url, {
     method: 'POST',
     signal,
     headers: entetes,

@@ -157,6 +157,7 @@
           <span class="pied-infos">
             <span id="statTokens" class="stat-jetons" title="Jetons consommés dans cette conversation">Aucun jeton utilisé</span>
             <span id="statApi" class="stat-api pret" title="État de la dernière requête">API · prête</span>
+            <span id="statContexte" class="stat-jetons stat-contexte" hidden>contexte résumé</span>
             <span id="infoContexte"></span>
           </span>
           <span class="raccourci">Ctrl+N nouvelle discussion · Ctrl+B barre latérale</span>
@@ -490,6 +491,17 @@
             <h3 class="section-reglage-titre">Outils disponibles</h3>
             <p class="section-reglage-desc">Désactivez ce que l'IA ne doit pas utiliser, quel que soit le mode.</p>
             <div id="reglageOutils" class="liste-outils-reglage"></div>
+          </section>
+
+          <section class="section-reglage">
+            <h3 class="section-reglage-titre">Compétences</h3>
+            <p class="section-reglage-desc">
+              Des procédures réutilisables (revue de code, diagnostic, release…).
+              L'agent ne voit que leur nom et leur description : il charge le détail
+              à la demande, avec l'outil « charger_competence ».
+            </p>
+            <div id="listeCompetences" class="liste-competences"></div>
+            <button id="btnOuvrirCompetences" class="btn-secondaire petit">Ouvrir le dossier</button>
           </section>
         </div>
 

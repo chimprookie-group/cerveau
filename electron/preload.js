@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('cerveau', {
     lister: (payload) => ipcRenderer.invoke('models:lister', payload)
   },
 
+  competences: {
+    lister: () => ipcRenderer.invoke('competences:lister'),
+    ouvrirDossier: () => ipcRenderer.invoke('competences:ouvrir-dossier')
+  },
+
   taches: {
     lister: () => ipcRenderer.invoke('taches:lister'),
     sortie: (id, depuis) => ipcRenderer.invoke('taches:sortie', id, depuis),
@@ -171,6 +176,7 @@ contextBridge.exposeInMainWorld('cerveau', {
 
   agent: {
     envoyer: (payload) => ipcRenderer.invoke('agent:envoyer', payload),
+    resumer: (payload) => ipcRenderer.invoke('agent:resumer', payload),
     arreter: () => ipcRenderer.invoke('agent:arreter'),
     surEvenement: (cb) => {
       const handler = (_e, data) => cb(data);

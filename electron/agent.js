@@ -19,6 +19,7 @@ const githubtools = require('./githubtools');
 const webtools = require('./webtools');
 const vision = require('./vision');
 const tachesfond = require('./tachesfond');
+const competences = require('./competences');
 const memoireMod = require('./memoire');
 const sousagents = require('./sousagents');
 const { gestionnaire: mcp } = require('./mcp');
@@ -33,14 +34,20 @@ const MAX_TOURS_DEFAUT = 25;
 function outilsPourMode(mode, desactives = [], outilsMCP = []) {
   let liste;
   if (mode === 'notes') {
-    liste = [...toolbox.TOOLS, ...webtools.OUTILS_WEB, ...vision.OUTILS_VISION];
+    liste = [
+      ...toolbox.TOOLS,
+      ...webtools.OUTILS_WEB,
+      ...vision.OUTILS_VISION,
+      ...competences.OUTILS_COMPETENCES
+    ];
   } else if (mode === 'code' || mode === 'github') {
     liste = [
       ...codetools.OUTILS_CODE,
       ...githubtools.OUTILS_GITHUB,
       ...webtools.OUTILS_WEB,
       ...vision.OUTILS_VISION,
-      ...tachesfond.OUTILS_TACHES_FOND
+      ...tachesfond.OUTILS_TACHES_FOND,
+      ...competences.OUTILS_COMPETENCES
     ];
   } else {
     liste = [
@@ -49,7 +56,8 @@ function outilsPourMode(mode, desactives = [], outilsMCP = []) {
       ...githubtools.OUTILS_GITHUB,
       ...webtools.OUTILS_WEB,
       ...vision.OUTILS_VISION,
-      ...tachesfond.OUTILS_TACHES_FOND
+      ...tachesfond.OUTILS_TACHES_FOND,
+      ...competences.OUTILS_COMPETENCES
     ];
   }
 
@@ -76,8 +84,23 @@ function construireInviteSysteme(ctx, stats) {
     '- Réponds toujours en français, avec un ton direct et utile.',
     '- Si la demande est ambiguë, pose une question courte plutôt que d\'inventer.',
     "- N'invente jamais le contenu d'un fichier : lis-le d'abord avec tes outils.",
-    '- Ne supprime jamais rien sans que l\'utilisateur l\'ait explicitement demandé.'
+    '- Ne supprime jamais rien sans que l\'utilisateur l\'ait explicitement demandé.',
+    '',
+    'Méthode de travail :',
+    "- Avant d'agir, vérifie ce qui existe déjà (fichier, dépôt, outil) au lieu de supposer.",
+    "- Tâche en plusieurs étapes : utilise plan_taches, puis mets-le à jour.",
+    '- Après une modification, vérifie le résultat (test, commande, relecture) et dis ce que tu as vérifié.',
+    "- Ne prétends jamais avoir exécuté quelque chose que tu n'as pas exécuté.",
+    "- Si un outil échoue, lis l'erreur et adapte-toi ; ne répète pas la même commande à l'identique."
   ];
+
+  if (Array.isArray(ctx.competences) && ctx.competences.length) {
+    lignes.push('', 'Compétences disponibles (procédures réutilisables) :');
+    for (const c of ctx.competences.slice(0, 20)) {
+      lignes.push(`- ${c.id} — ${c.nom} : ${c.description}`);
+    }
+    lignes.push('Charge celle qui correspond avec « charger_competence » avant de commencer.');
+  }
 
   if (mode === 'code' || mode === 'complet' || mode === 'github') {
     lignes.push(
@@ -132,6 +155,11 @@ function construireInviteSysteme(ctx, stats) {
         }
       }
     }
+  }
+
+  // contexte compacté : résumé des échanges qui ne sont plus envoyés en entier
+  if (ctx.resume) {
+    lignes.push('', 'Résumé des échanges précédents (contexte compacté, à considérer comme acquis) :', ctx.resume);
   }
 
   // instructions personnalisées de l'utilisateur
@@ -229,6 +257,10 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
     try {
       ctx.blocMemoire = await ctx.memoire.blocPourInvite();
     } catch { ctx.blocMemoire = ''; }
+  }
+
+  if (ctx.competences === undefined) {
+    try { ctx.competences = competences.lister(); } catch { ctx.competences = []; }
   }
 
   const stats = (mode === 'notes' || mode === 'complet') && ctx.vaultPath
@@ -379,31 +411,31 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
     }
 
     // --- exécution des outils ---
-    const resultats = [];
-    for (const appel of outilsDemandes) {
-      const outil = toolbox.BY_NAME.get(appel.nom)
-        || codetools.PAR_NOM.get(appel.nom)
-        || githubtools.PAR_NOM.get(appel.nom)
-        || webtools.PAR_NOM.get(appel.nom)
-        || vision.PAR_NOM.get(appel.nom)
-        || tachesfond.PAR_NOM.get(appel.nom)
-        || memoireMod.PAR_NOM.get(appel.nom)
-        || outilsDelegation.find((t) => t.nom === appel.nom)
-        || outilsMCP.find((t) => t.nom === appel.nom);
+    const resoudreOutil = (appel) => toolbox.BY_NAME.get(appel.nom)
+      || codetools.PAR_NOM.get(appel.nom)
+      || githubtools.PAR_NOM.get(appel.nom)
+      || webtools.PAR_NOM.get(appel.nom)
+      || vision.PAR_NOM.get(appel.nom)
+      || tachesfond.PAR_NOM.get(appel.nom)
+      || competences.PAR_NOM.get(appel.nom)
+      || memoireMod.PAR_NOM.get(appel.nom)
+      || outilsDelegation.find((t) => t.nom === appel.nom)
+      || outilsMCP.find((t) => t.nom === appel.nom);
+
+    const executerUn = async (appel) => {
+      const outil = resoudreOutil(appel);
       emit({ type: 'outil_appel', nom: appel.nom, arguments: appel.arguments, id: appel.id });
 
       if (!outil) {
-        resultats.push({ appel, ok: false, resultat: `Outil inconnu : ${appel.nom}` });
         emit({ type: 'outil_resultat', nom: appel.nom, ok: false, message: 'Outil inconnu' });
-        continue;
+        return { appel, ok: false, resultat: `Outil inconnu : ${appel.nom}` };
       }
 
       // Contrôle des permissions
       const decision = await demanderPermission(outil, appel, ctx, emit);
       if (!decision.autorise) {
-        resultats.push({ appel, ok: false, resultat: `Action refusée par l'utilisateur : ${decision.raison}` });
         emit({ type: 'outil_resultat', nom: appel.nom, ok: false, message: 'Refusé par l\u2019utilisateur' });
-        continue;
+        return { appel, ok: false, resultat: `Action refusée par l'utilisateur : ${decision.raison}` };
       }
 
       try {
@@ -413,12 +445,30 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
         const image = res && res.image && res.image.dataUrl ? res.image : null;
         const texte = JSON.stringify(image ? { ...res, image: '(jointe au modèle)' } : res, null, 2)
           .slice(0, 24000);
-        resultats.push({ appel, ok: true, resultat: texte, image });
         emit({ type: 'outil_resultat', nom: appel.nom, ok: true, message: resumerResultat(appel.nom, res) });
+        return { appel, ok: true, resultat: texte, image };
       } catch (err) {
         const msg = String(err?.message || err);
-        resultats.push({ appel, ok: false, resultat: `Erreur : ${msg}` });
         emit({ type: 'outil_resultat', nom: appel.nom, ok: false, message: msg });
+        return { appel, ok: false, resultat: `Erreur : ${msg}` };
+      }
+    };
+
+    // Les outils en lecture seule peuvent tourner ensemble : c'est le cas
+    // courant (lire trois fichiers, chercher dans deux dossiers). Dès qu'une
+    // action écrit, exécute ou parle à l'extérieur, on repasse en séquentiel
+    // pour garder un ordre prévisible.
+    const outilsDuTour = outilsDemandes.map((appel) => ({ appel, outil: resoudreOutil(appel) }));
+    const lectureSeule = ctx.appelsParalleles !== false
+      && outilsDuTour.length > 1
+      && outilsDuTour.every(({ outil }) => outil && (outil.risque || 'ecriture') === 'lecture');
+
+    const resultats = [];
+    if (lectureSeule) {
+      resultats.push(...await Promise.all(outilsDuTour.map(({ appel }) => executerUn(appel))));
+    } else {
+      for (const { appel } of outilsDuTour) {
+        resultats.push(await executerUn(appel));
       }
     }
 
@@ -546,6 +596,9 @@ function resumerResultat(nom, res) {
     case 'sortie_tache_fond':
       return `${res.statut}${res.code != null ? ` (code ${res.code})` : ''} · ${res.sortie.length} caractère(s)`;
     case 'arreter_tache_fond': return res.ok ? 'arrêt demandé' : res.message;
+    case 'lister_competences': return `${res.competences.length} compétence(s)`;
+    case 'charger_competence': return `${res.nom} — ${res.contenu.length} caractères`;
+    case 'enregistrer_competence': return `compétence enregistrée : ${res.id}`;
     // --- web ---
     case 'deleguer_tache': return `sous-agent : ${String(res.resultat || '').slice(0, 80)}`;
     case 'deleguer_parallelle': return `${res.aboutis}/${res.lances} sous-agent(s)`;

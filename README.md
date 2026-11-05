@@ -42,7 +42,7 @@ conservés au redémarrage.
 actifs. Discrets, désactivables dans *Apparence*, et coupés automatiquement si le
 système demande de réduire les animations.
 
-**Agent et outils** — 44 outils en mode complet (20 en notes, 30 en code),
+**Agent et outils** — 47 outils en mode complet (23 en notes, 33 en code),
 désactivables un par un.
 
 ![Outils](docs/05-outils.png)
@@ -135,7 +135,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.17.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.19.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -268,6 +268,25 @@ compatible Tavily peut être branché dans les réglages.
 
 Ces deux outils sont **intégrés à l'application** : aucun serveur MCP ni paquet à
 installer. Ils se désactivent un par un dans `Réglages → Agent → Outils`.
+
+### Compétences
+
+Des **procédures réutilisables** vivent dans `~/.config/cerveau/competences/`, un
+dossier par compétence avec un `SKILL.md`. Trois sont fournies : revue de code,
+diagnostic de bug et préparation de release.
+
+Le prompt n'annonce que le nom et la description ; l'agent charge le détail à la
+demande (`charger_competence`) et peut enregistrer une nouvelle procédure
+(`enregistrer_competence`). Tu peux les consulter dans `Réglages → Agent → Outils`.
+
+### Performance
+
+- **Outils en lecture exécutés en parallèle** (réglage « Appels d'outils en
+  parallèle ») : lire trois fichiers prend le temps d'un seul.
+- **Compactage du contexte** : au-delà de 24 messages ou 60 000 caractères, les
+  échanges anciens sont résumés par le modèle et réinjectés ; l'historique reste
+  affiché, seul l'envoi est allégé.
+- **Réessais automatiques** sur les erreurs passagères (429, 5xx) avant le flux.
 
 ### Voir les images
 
