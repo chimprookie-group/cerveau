@@ -4,6 +4,13 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.28.1] — 2026-11-05
+
+### Corrigé
+- **Coins du panneau Réglages** : le fond de la navigation et du contenu débordait
+  des coins arrondis en bas, laissant des angles carrés. Le contenu de la modale
+  est désormais découpé par son cadre : les quatre coins restent nets.
+
 ## [2.28.0] — 2026-11-05
 
 ### Ajouté

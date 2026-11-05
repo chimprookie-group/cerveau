@@ -1555,6 +1555,10 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .btn-fermer:hover { background: var(--fond-3); color: var(--texte); }
 
+#modaleReglages .modale-contenu {
+  overflow: hidden;
+}
+
 .modale-contenu.petite { width: min(520px, 92vw); }
 .modale-contenu.moyenne { width: min(640px, 92vw); }
 
