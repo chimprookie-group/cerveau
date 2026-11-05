@@ -995,6 +995,25 @@ async function run(mainWindow, deps) {
   verifier('Plafond de sortie respecté',
     rCap.stdout.length <= 2048 + 200, `${rCap.stdout.length} caractères pour 2 Ko`);
 
+  // privilèges : sudo converti en pkexec (fenêtre de mot de passe système)
+  try {
+    const ct = require('./codetools');
+    const conv = ct.versPkexec('sudo pacman -S x && sudo systemctl restart y');
+    verifier('Privilèges : sudo converti en pkexec',
+      conv.converti && !/\bsudo\b/.test(conv.commande)
+      && (conv.commande.match(/pkexec/g) || []).length === 2, conv.commande);
+
+    const enveloppe = ct.envelopperPkexec('id');
+    verifier('Privilèges : enveloppe pkexec correcte',
+      enveloppe.startsWith('pkexec /bin/bash -lc '), enveloppe);
+
+    const promptPk = agentModule2.construireInviteSysteme({ mode: 'code', workspace: '/tmp' }, null);
+    verifier('Privilèges : pkexec expliqué au modèle',
+      /pkexec/.test(promptPk) && /n'a pas de terminal/.test(promptPk));
+  } catch (err) {
+    verifier('Privilèges : contrôles', false, String(err.message || err));
+  }
+
   // historique borné
   const bornageSrc = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
   verifier('Historique borné avant envoi', /bornHistorique\(conv\.messages/.test(bornageSrc));

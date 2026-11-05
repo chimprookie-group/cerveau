@@ -4,6 +4,18 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.22.0] — 2026-11-05
+
+### Ajouté
+- **Privilèges administrateur via pkexec.** Quand une tâche a besoin de root,
+  l'agent utilise `pkexec` et non `sudo` : l'application n'ayant pas de terminal,
+  `pkexec` ouvre la fenêtre de mot de passe du système (polkit).
+  - `executer_commande` convertit automatiquement `sudo …` en `pkexec …` ;
+  - nouvelle option `privileges: true` pour exécuter toute la commande en root
+    (`pkexec /bin/bash -lc '…'`) ;
+  - l'invite système explique la règle et le message à reconnaître
+    (« No authentication agent found » → proposer hyprpolkitagent ou polkit-gnome).
+
 ## [2.21.1] — 2026-11-05
 
 ### Corrigé

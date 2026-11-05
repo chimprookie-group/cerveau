@@ -139,7 +139,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.21.1-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.22.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -302,6 +302,10 @@ demande (`charger_competence`) et peut enregistrer une nouvelle procédure
   un allègement puis un nouvel essai.
 - **Journal de diagnostic** : `~/.config/cerveau/agent.log` garde les 200 dernières
   fins de requête (modèle, erreur, outils, taille).
+- **Root via pkexec** : les commandes qui exigent les droits administrateur passent
+  par `pkexec` (fenêtre de mot de passe du système), jamais par un `sudo` sans
+  terminal. `sudo` est converti automatiquement, et l'outil accepte
+  `privileges: true`.
 
 ### Voir les images
 

@@ -142,24 +142,58 @@ function executerShell(cmd, cwd, timeout = TIMEOUT_DEFAUT, onDonnee = null, plaf
   });
 }
 
+/* ------------------------------ privilèges ------------------------------ */
+
+/**
+ * Convertit « sudo » en « pkexec ». L'application n'a pas de terminal : sudo ne
+ * pourrait pas demander le mot de passe, tandis que pkexec ouvre la fenêtre
+ * d'authentification du système (polkit).
+ */
+function versPkexec(commande) {
+  const brut = String(commande || '');
+  // sudo -S lit le mot de passe sur l'entrée standard : sans objet ici
+  const sansStdin = brut.replace(/(^|(?:&&|\|\||;|\||\(|\))\s*)sudo\s+(?:-S|--stdin)\s+/g, '$1sudo ');
+  const converti = sansStdin.replace(/(^|(?:&&|\|\||;|\||\(|\))\s*)sudo(?=\s)/g, '$1pkexec');
+  return { commande: converti, converti: converti !== brut };
+}
+
+/** Enveloppe une commande complète dans un shell root lancé par pkexec. */
+function envelopperPkexec(commande) {
+  const propre = String(commande || '').replace(/'/g, "'\\''");
+  return `pkexec /bin/bash -lc '${propre}'`;
+}
+
 /* --------------------------------- outils ------------------------------- */
 
 const OUTILS_CODE = [
   {
     nom: 'executer_commande',
-    description: "Exécute une commande shell dans l'espace de travail et renvoie sa sortie (stdout, stderr, code de sortie). À utiliser pour lister, compiler, tester, installer, lancer git, etc. Le répertoire courant est la racine de l'espace de travail.",
+    description: "Exécute une commande shell dans l'espace de travail et renvoie sa sortie (stdout, stderr, code de sortie). À utiliser pour lister, compiler, tester, installer, lancer git, etc. Le répertoire courant est la racine de l'espace de travail. Pour les actions qui exigent les droits administrateur, utilise pkexec (jamais sudo : l'application n'a pas de terminal, pkexec ouvre la fenêtre de mot de passe du système) ; un sudo est converti automatiquement en pkexec.",
     schema: {
       type: 'object',
       properties: {
         commande: { type: 'string', description: 'Commande bash à exécuter' },
         repertoire: { type: 'string', description: 'Sous-dossier où exécuter la commande (optionnel)' },
-        delai: { type: 'number', description: 'Délai maximum en secondes (défaut 120, max 600)' }
+        delai: { type: 'number', description: 'Délai maximum en secondes (défaut 120, max 600)' },
+        privileges: { type: 'boolean', description: "Exécuter la commande en root via pkexec (fenêtre de mot de passe du système)" }
       },
       required: ['commande']
     },
     risque: 'commande',
     executer: async (args, ctx) => {
-      const cmd = verifierCommande(args.commande);
+      let cmd = verifierCommande(args.commande);
+      let viaPkexec = false;
+
+      const conversion = versPkexec(cmd);
+      if (conversion.converti) {
+        cmd = conversion.commande;
+        viaPkexec = true;
+      }
+      if (args.privileges === true && !/^\s*pkexec\b/.test(cmd)) {
+        cmd = envelopperPkexec(cmd);
+        viaPkexec = true;
+      }
+
       const cwd = args.repertoire ? resoudre(ctx, args.repertoire) : racine(ctx);
       if (!fs.existsSync(cwd)) throw new Error(`Répertoire introuvable : ${args.repertoire}`);
       const delai = Math.min(Math.max(Number(args.delai) || 120, 1), 600) * 1000;
@@ -167,6 +201,7 @@ const OUTILS_CODE = [
       const r = await executerShell(cmd, cwd, delai, ctx.onDonnee, plafond);
       return {
         commande: cmd,
+        ...(viaPkexec ? { via_pkexec: true } : {}),
         code: r.code,
         duree_ms: r.duree,
         stdout: tronquer(r.stdout) || '(vide)',
@@ -440,4 +475,7 @@ function globVersRegex(motif) {
 
 const PAR_NOM = new Map(OUTILS_CODE.map((t) => [t.nom, t]));
 
-module.exports = { OUTILS_CODE, PAR_NOM, globVersRegex, executerShell, verifierCommande };
+module.exports = {
+  OUTILS_CODE, PAR_NOM, globVersRegex, executerShell, verifierCommande,
+  versPkexec, envelopperPkexec
+};

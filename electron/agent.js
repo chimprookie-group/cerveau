@@ -171,7 +171,9 @@ function construireInviteSysteme(ctx, stats) {
       '- Avant de modifier un fichier, lis-le. Pour une modification ciblée, préfère « modifier_fichier » à « ecrire_fichier ».',
       "- Après une modification de code, vérifie que ça fonctionne : lance les tests, le linter ou le programme.",
       "- Pour toute tâche en plusieurs étapes, utilise « plan_taches » puis mets-le à jour au fil de l'avancement.",
-      "- Si une commande échoue, lis l'erreur et corrige plutôt que de répéter la même commande."
+      "- Si une commande échoue, lis l'erreur et corrige plutôt que de répéter la même commande.",
+      "- Pour une action qui exige les droits administrateur (installer un paquet, gérer un service), utilise « pkexec » et jamais « sudo » : l'application n'a pas de terminal, pkexec ouvre la fenêtre de mot de passe du système. Exemple : « pkexec pacman -S --noconfirm paquet ». Un « sudo » est converti automatiquement.",
+      "- Si pkexec échoue avec « No authentication agent found », explique-le et propose d'installer un agent polkit (hyprpolkitagent ou polkit-gnome) ; sinon, donne la commande exacte à lancer à la main."
     );
 
     lignes.push(
