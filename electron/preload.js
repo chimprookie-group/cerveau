@@ -178,7 +178,6 @@ contextBridge.exposeInMainWorld('cerveau', {
     tags: () => ipcRenderer.invoke('obs:tags'),
     notesParTag: (t) => ipcRenderer.invoke('obs:notes-par-tag', t),
     liens: (p) => ipcRenderer.invoke('obs:liens', p),
-    graphe: (opts) => ipcRenderer.invoke('obs:graphe', opts),
     stats: () => ipcRenderer.invoke('obs:stats'),
     journal: (opts) => ipcRenderer.invoke('obs:journal', opts)
   },

@@ -450,7 +450,6 @@ ipcMain.handle('obs:rechercher', async (_e, q, opts) => obsidian.search(requireC
 ipcMain.handle('obs:tags', async () => obsidian.tags(requireCoffre().path));
 ipcMain.handle('obs:notes-par-tag', async (_e, t) => obsidian.notesByTag(requireCoffre().path, t));
 ipcMain.handle('obs:liens', async (_e, p) => obsidian.links(requireCoffre().path, p));
-ipcMain.handle('obs:graphe', async (_e, opts) => obsidian.graphe(requireCoffre().path, opts || {}));
 ipcMain.handle('obs:stats', async () => obsidian.stats(requireCoffre().path));
 ipcMain.handle('obs:journal', async (_e, opts) => obsidian.journal(requireCoffre().path, opts || {}));
 

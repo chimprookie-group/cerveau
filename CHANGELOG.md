@@ -4,6 +4,14 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.27.0] — 2026-11-05
+
+### Retiré
+- **Le cerveau 3D et son onglet** sont supprimés de l'application, à la demande.
+  Le panneau latéral retrouve ses six onglets (Note, Dépôt, Travail, Rech., Tags,
+  Liens) ; la cartographie du coffre, son backend et ses styles sont retirés.
+  Le reste de l'application (tours, plugins, vérification, pkexec…) est inchangé.
+
 ## [2.26.1] — 2026-11-05
 
 ### Modifié

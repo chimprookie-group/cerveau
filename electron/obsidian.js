@@ -340,84 +340,6 @@ async function links(vaultPath, relPath) {
   };
 }
 
-/* ------------------------------- graphe --------------------------------- */
-
-const CACHE_GRAPHE = new Map();
-
-/**
- * Graphe du coffre : notes les plus récentes, liens wiki et tags, pour la
- * visualisation « cerveau » du panneau latéral. Résultat mis en cache 30 s.
- */
-async function graphe(vaultPath, { limite = 320, maxOctets = 150000, forcer = false } = {}) {
-  if (!vaultPath) throw new Error('Aucun coffre actif.');
-
-  const cache = CACHE_GRAPHE.get(vaultPath);
-  if (!forcer && cache && Date.now() - cache.date < 30000) return cache.donnees;
-
-  const toutes = await listNotes(vaultPath);
-  const gardees = [...toutes]
-    .sort((a, b) => (b.mtime || 0) - (a.mtime || 0))
-    .slice(0, Math.max(10, Math.min(Number(limite) || 320, 600)));
-
-  const parCle = new Map();
-  for (const n of gardees) {
-    const titre = n.name.replace(/\.md$/i, '').toLowerCase();
-    if (!parCle.has(titre)) parCle.set(titre, n.path);
-    const complet = n.path.replace(/\.md$/i, '').toLowerCase();
-    if (!parCle.has(complet)) parCle.set(complet, n.path);
-  }
-
-  const notes = [];
-  const liensDiriges = [];
-  for (const n of gardees) {
-    let contenu = '';
-    if (n.size <= maxOctets) {
-      try { contenu = (await readNote(vaultPath, n.path)).content; } catch { /* illisible */ }
-    }
-
-    const liens = new Set();
-    const wiki = /\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g;
-    let m;
-    while ((m = wiki.exec(contenu)) !== null) {
-      const cible = m[1].trim().replace(/\.md$/i, '').toLowerCase();
-      const chemin = parCle.get(cible) || parCle.get(cible.split('/').pop());
-      if (chemin && chemin !== n.path) liens.add(chemin);
-    }
-    const md = /\[[^\]]*\]\(([^)]+\.md)\)/g;
-    while ((m = md.exec(contenu)) !== null) {
-      const cible = m[1].replace(/\.md$/i, '').replace(/^\.\//, '').toLowerCase();
-      const chemin = parCle.get(cible) || parCle.get(cible.split('/').pop());
-      if (chemin && chemin !== n.path) liens.add(chemin);
-    }
-
-    const tags = [...new Set([...contenu.matchAll(/(^|[\s(])#([\p{L}\p{N}_/-]{2,})/gu)]
-      .map((x) => x[2]))].slice(0, 6);
-
-    const dossier = path.dirname(n.path);
-    notes.push({
-      chemin: n.path,
-      titre: n.name.replace(/\.md$/i, ''),
-      dossier: dossier === '.' ? '' : dossier,
-      tags,
-      liens: [...liens],
-      taille: n.size,
-      mtime: n.mtime || 0
-    });
-    for (const l of liens) liensDiriges.push([n.path, l]);
-  }
-
-  const donnees = {
-    notes,
-    liens: liensDiriges,
-    total: toutes.length,
-    affichees: notes.length,
-    tronque: toutes.length > notes.length
-  };
-
-  CACHE_GRAPHE.set(vaultPath, { date: Date.now(), donnees });
-  return donnees;
-}
-
 /* --------------------------------- stats -------------------------------- */
 
 async function stats(vaultPath) {
@@ -482,7 +404,6 @@ module.exports = {
   tags,
   notesByTag,
   links,
-  graphe,
   stats,
   journal,
   normalizeVaultPath,
