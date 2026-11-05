@@ -288,6 +288,8 @@ d'arrêt ; ils sont tués à la fermeture de l'application.
 Cerveau parle le **Model Context Protocol** : chaque serveur est un processus lancé par
 l'application et piloté en JSON-RPC sur son entrée/sortie standard. Tout serveur MCP
 fonctionne — accès fichiers, git avancé, bases de données, navigateur, services web.
+Les commandes (`npx`, `node`…) sont retrouvées même si le PATH du lanceur est pauvre,
+et le tableau des serveurs propose **Tout démarrer** avec le détail des échecs.
 
 Réglages → Plugins et web → ajoute une commande (`npx`, un binaire, ce que tu veux) et
 ses arguments. Les outils du serveur apparaissent préfixés (`mcp_<serveur>_<outil>`) et

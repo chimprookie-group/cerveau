@@ -1837,6 +1837,15 @@ async function rendreServeursMCP() {
     );
 
     zone.append(ligne);
+
+    // le message d'échec était uniquement dans une infobulle : on l'affiche
+    if (enEchec && info?.erreur) {
+      zone.append(el('div', {
+        class: 'mcp-erreur',
+        title: String(info.erreur),
+        text: String(info.erreur).slice(0, 300)
+      }));
+    }
   });
 }
 
@@ -1997,6 +2006,38 @@ function brancherPlugins() {
         ? `${r.total} résultat(s) via ${r.moteur}. Exemple : ${r.exemple || '—'}`
         : `Échec : ${r.message}`;
       cible.style.color = r.ok ? 'var(--succes)' : 'var(--danger)';
+    }
+  });
+
+  $('#btnDemarrerMCP')?.addEventListener('click', async () => {
+    const bouton = $('#btnDemarrerMCP');
+    const cible = $('#resultatMCP');
+    const avant = bouton.textContent;
+    bouton.disabled = true;
+    bouton.textContent = '⟳ démarrage…';
+    if (cible) { cible.textContent = ''; cible.style.color = ''; }
+    try {
+      const r = await API.mcp.tester();
+      await rafraichirEtatsMCP();
+      const etats = r.etats || {};
+      const noms = Object.keys(etats);
+      const prets = noms.filter((n) => etats[n].ok);
+      const echecs = noms.filter((n) => !etats[n].ok);
+      if (cible) {
+        cible.textContent = `${prets.length}/${noms.length} serveur(s) prêt(s)`
+          + (echecs.length ? ` · échec : ${echecs.join(', ')}` : '');
+        cible.style.color = echecs.length ? 'var(--danger)' : 'var(--succes)';
+      }
+      if (echecs.length) {
+        notifier(`Échec : ${echecs.join(', ')} — le détail est affiché sous la ligne.`, 'erreur', 8000);
+      } else if (noms.length) {
+        notifier(`${prets.length} serveur(s) MCP prêt(s).`, 'succes', 3000);
+      }
+    } catch (err) {
+      if (cible) { cible.textContent = String(err.message || err); cible.style.color = 'var(--danger)'; }
+    } finally {
+      bouton.disabled = false;
+      bouton.textContent = avant;
     }
   });
 
@@ -2932,6 +2973,8 @@ function traiterEvenementAgent(evt) {
       break;
     }
     case 'termine': {
+      // les serveurs MCP ont pu démarrer pendant la requête
+      if ($('#modaleReglages') && !$('#modaleReglages').hidden) rafraichirEtatsMCP();
       break;
     }
     default:

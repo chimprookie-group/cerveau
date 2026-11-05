@@ -882,10 +882,16 @@
             <p class="section-reglage-desc">
               Branchez des outils externes : accès fichiers, git avancé, bases de données,
               navigateur, services web. Chaque serveur est un processus lancé par Cerveau,
-              piloté en JSON-RPC sur son entrée/sortie standard.
+              piloté en JSON-RPC sur son entrée/sortie standard. Ils démarrent au premier
+              message — « Tout démarrer » les lance tout de suite.
             </p>
 
             <div id="listeServeursMCP" class="tableau-mcp"></div>
+
+            <div class="mcp-barre">
+              <button id="btnDemarrerMCP" class="btn-mini">▶ Tout démarrer</button>
+              <span id="resultatMCP" class="champ-reglage-aide"></span>
+            </div>
 
             <div class="ajout-mcp">
               <input type="text" id="mcpNom" class="champ-ajout-modele" placeholder="nom du serveur" />

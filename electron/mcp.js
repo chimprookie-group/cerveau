@@ -16,10 +16,74 @@
 
 const { spawn } = require('node:child_process');
 const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
 
 const PROTOCOLE = '2025-06-18';
-const DELAI_INIT = 8000;
+const DELAI_INIT = 20000;      // premier « npx » : le paquet peut être à télécharger
 const DELAI_APPEL = 120000;
+
+let VERSION_APP = '0';
+try { VERSION_APP = require('../package.json').version; } catch { /* version inconnue */ }
+
+/**
+ * Dossiers où chercher une commande. Le PATH d'une application lancée depuis
+ * le menu n'est pas celui d'un terminal : mise, nvm ou asdf n'y sont pas
+ * toujours. On complète donc avec les emplacements usuels.
+ */
+function dossiersExecutables() {
+  const perso = os.homedir();
+  const liste = [];
+
+  for (const dossier of String(process.env.PATH || '').split(':')) {
+    if (dossier) liste.push(dossier);
+  }
+
+  const mise = path.join(perso, '.local', 'share', 'mise');
+  liste.push(
+    path.join(mise, 'shims'),
+    path.join(mise, 'command-wrappers', 'bin'),
+    path.join(mise, 'installs', 'node', 'latest', 'bin'),
+    path.join(perso, '.local', 'bin'),
+    '/usr/local/bin', '/usr/bin', '/bin', '/snap/bin'
+  );
+
+  // toutes les versions de Node installées par mise (latest n'est qu'un lien)
+  try {
+    const base = path.join(mise, 'installs', 'node');
+    for (const version of fs.readdirSync(base)) {
+      liste.push(path.join(base, version, 'bin'));
+    }
+  } catch { /* mise absent */ }
+
+  return [...new Set(liste.filter(Boolean))];
+}
+
+/** Résout « npx », « node »… en chemin absolu, même hors du PATH du lanceur. */
+function resoudreCommande(commande) {
+  const brute = String(commande || '').trim();
+  if (!brute) return null;
+  if (path.isAbsolute(brute)) {
+    try { return fs.statSync(brute).isFile() ? brute : null; } catch { return null; }
+  }
+  if (brute.includes('/')) return null;   // chemin relatif : laissé tel quel
+
+  for (const dossier of dossiersExecutables()) {
+    const cible = path.join(dossier, brute);
+    try {
+      if (fs.statSync(cible).isFile()) return cible;
+    } catch { /* dossier suivant */ }
+  }
+  return null;
+}
+
+/** Environnement du serveur, avec un PATH enrichi pour « npx » et son shebang. */
+function environnementServeur(extra = {}) {
+  const env = { ...process.env, ...extra };
+  const chemins = [...dossiersExecutables(), ...String(env.PATH || '').split(':')];
+  env.PATH = [...new Set(chemins.filter(Boolean))].join(':');
+  return env;
+}
 
 /* ----------------------------- un serveur ------------------------------- */
 
@@ -42,15 +106,25 @@ class ServeurMCP {
   }
 
   /** Démarre le processus et négocie le protocole. */
-  async demarrer() {
+  async demarrer({ delai = DELAI_INIT } = {}) {
     if (this.proc) return this;
 
-    const commande = this.config.commande;
-    if (!commande) throw new Error(`Serveur « ${this.nom} » : commande manquante.`);
+    const demandee = this.config.commande;
+    if (!demandee) throw new Error(`Serveur « ${this.nom} » : commande manquante.`);
+
+    // Résout la commande hors du PATH du lanceur (mise, nvm, /usr/local/bin…).
+    const commande = resoudreCommande(demandee);
+    if (!commande) {
+      throw new Error(
+        `Serveur « ${this.nom} » : commande « ${demandee} » introuvable. `
+        + 'Installe Node.js (npx) ou indique le chemin complet de la commande. '
+        + `Cherché dans : ${dossiersExecutables().slice(0, 8).join(', ')}…`
+      );
+    }
 
     this.proc = spawn(commande, this.config.arguments || [], {
       cwd: this.config.repertoire || undefined,
-      env: { ...process.env, ...(this.config.variablesEnv || {}) },
+      env: environnementServeur(this.config.variablesEnv || {}),
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
@@ -81,15 +155,24 @@ class ServeurMCP {
       this.initialise = false;
     });
 
+    // « initialize » est une vraie requête (avec id) : sans identifiant, les
+    // serveurs conformes la traitent comme une notification et refusent
+    // ensuite « tools/list » (« Server not initialized »).
     const reponse = await this._envoyer('initialize', {
       protocolVersion: PROTOCOLE,
       capabilities: { roots: { listChanged: false } },
-      clientInfo: { name: 'cerveau', version: '2.2.0' }
-    }, DELAI_INIT, false);
+      clientInfo: { name: 'cerveau', version: VERSION_APP }
+    }, delai);
 
     if (reponse?.error) {
       throw new Error(`« ${this.nom} » refuse l'initialisation : ${reponse.error.message}`);
     }
+    if (!reponse?.result) {
+      throw new Error(`« ${this.nom} » n'a pas répondu à l'initialisation.`);
+    }
+
+    // on accepte la version négociée par le serveur
+    this.protocole = reponse.result.protocolVersion || PROTOCOLE;
 
     // notification obligatoire après l'initialisation
     this._notifier('notifications/initialized', {});
@@ -224,16 +307,25 @@ class GestionnaireMCP {
     this.etats = new Map();
   }
 
-  /** Démarre tous les serveurs actifs et renvoie leurs outils agrégés. */
-  async charger(configurations = []) {
+  /**
+   * Démarre des serveurs et renvoie leurs outils agrégés.
+   *
+   * @param {Array} configurations
+   * @param {{ partiel?: boolean, delai?: number }} opts
+   *   partiel : ne pas arrêter les serveurs absents de la liste (test ou
+   *   consultation d'un seul serveur, sans couper les autres).
+   */
+  async charger(configurations = [], { partiel = false, delai = DELAI_INIT } = {}) {
     const actives = configurations.filter((c) => c.actif !== false && c.commande);
 
-    // arrête les serveurs qui ne sont plus déclarés
-    for (const [nom, serveur] of this.serveurs) {
-      if (!actives.some((c) => c.nom === nom)) {
-        serveur.arreter();
-        this.serveurs.delete(nom);
-        this.etats.delete(nom);
+    // arrête les serveurs qui ne sont plus déclarés (chargement complet seulement)
+    if (!partiel) {
+      for (const [nom, serveur] of this.serveurs) {
+        if (!actives.some((c) => c.nom === nom)) {
+          serveur.arreter();
+          this.serveurs.delete(nom);
+          this.etats.delete(nom);
+        }
       }
     }
 
@@ -250,9 +342,11 @@ class GestionnaireMCP {
         // garde-fou : un serveur qui ne répond pas ne doit jamais bloquer
         // l'envoi d'un message par l'utilisateur
         await Promise.race([
-          serveur.demarrer(),
+          serveur.demarrer({ delai }),
           new Promise((_, rej) => setTimeout(
-            () => rej(new Error(`« ${config.nom} » n'a pas démarré en 10 s.`)), 10000))
+            () => rej(new Error(`« ${config.nom} » n'a pas démarré en ${Math.round(delai / 1000)} s.`
+              + ' Au premier lancement, « npx » télécharge le paquet : vérifie la connexion.')),
+            delai + 3000))
         ]);
 
         this.etats.set(config.nom, { ok: true, outils: serveur.outils.length, erreur: null });
@@ -327,4 +421,4 @@ function sanitize(nom) {
 
 const gestionnaire = new GestionnaireMCP();
 
-module.exports = { gestionnaire, ServeurMCP, GestionnaireMCP };
+module.exports = { gestionnaire, ServeurMCP, GestionnaireMCP, resoudreCommande, dossiersExecutables };

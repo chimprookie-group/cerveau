@@ -3483,6 +3483,26 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .mcp-etat-txt.ok { color: var(--succes); }
 .mcp-etat-txt.echec { color: var(--danger); }
 
+/* détail de l'échec, en clair sous la ligne concernée */
+.mcp-erreur {
+  padding: 6px 12px 8px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
+  border-bottom: 1px solid var(--bordure);
+  overflow-wrap: anywhere;
+}
+
+.mcp-barre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -2px 0 10px;
+}
+
+.mcp-barre .champ-reglage-aide { margin: 0; }
+
 /* actions : de vrais boutons, avec du texte lisible */
 .mcp-cellule-actions {
   display: flex;

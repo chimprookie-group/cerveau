@@ -661,11 +661,12 @@ async function run(mainWindow, deps) {
   const scriptMCP = path.join(os.tmpdir(), 'cerveau-mcp-test.js');
   await fsp.copyFile(path.join(__dirname, 'fixtures', 'mcp-echo.js'), scriptMCP);
 
-  const { gestionnaire: mcpTest } = require('./mcp');
+  const mcpMod = require('./mcp');
+  const { gestionnaire: mcpTest } = mcpMod;
   try {
     // Dans Electron, process.execPath pointe vers le binaire Electron, pas Node.
-    // On retrouve node via l'environnement.
-    const nodeBin = process.env.CERVEAU_NODE || 'node';
+    // La résolution maison retrouve node même si le PATH du lanceur est pauvre.
+    const nodeBin = mcpMod.resoudreCommande('node') || process.env.CERVEAU_NODE || 'node';
     const outilsMCP = await mcpTest.charger([
       { nom: 'test', commande: nodeBin, arguments: [scriptMCP], actif: true }
     ]);
@@ -692,6 +693,44 @@ async function run(mainWindow, deps) {
     await fsp.rm(scriptMCP, { force: true });
   }
 
+  // MCP : résolution des commandes et initialisation conforme au protocole
+  try {
+    verifier('MCP : commande résolue hors PATH',
+      Boolean(mcpMod.resoudreCommande('node')) && Boolean(mcpMod.resoudreCommande('npx')),
+      `node=${mcpMod.resoudreCommande('node') || 'introuvable'}`);
+
+    const gStrict = new mcpMod.GestionnaireMCP();
+    try {
+      const outilsStrict = await gStrict.charger([{
+        nom: 'strict',
+        commande: mcpMod.resoudreCommande('node') || 'node',
+        arguments: [path.join(__dirname, 'fixtures', 'mcp-strict.js')],
+        actif: true
+      }], { delai: 15000 });
+      verifier('MCP : initialisation conforme (requête avec id)', outilsStrict.length === 1,
+        `${outilsStrict.length} outil(s) — ${JSON.stringify(gStrict.etatsServeurs().strict)}`);
+    } finally {
+      gStrict.arreterTout();
+    }
+
+    const gPartiel = new mcpMod.GestionnaireMCP();
+    try {
+      const cfgEcho = (nom) => ({
+        nom, commande: mcpMod.resoudreCommande('node') || 'node',
+        arguments: [path.join(__dirname, 'fixtures', 'mcp-echo.js')], actif: true
+      });
+      await gPartiel.charger([cfgEcho('a'), cfgEcho('b')], { delai: 15000 });
+      await gPartiel.charger([cfgEcho('a')], { partiel: true, delai: 15000 });
+      verifier('MCP : tester un serveur ne coupe pas les autres',
+        Object.keys(gPartiel.etatsServeurs()).length === 2,
+        Object.keys(gPartiel.etatsServeurs()).join(', '));
+    } finally {
+      gPartiel.arreterTout();
+    }
+  } catch (err) {
+    verifier('MCP : contrôles avancés', false, String(err.message || err));
+  }
+
   // interface des plugins
   const uiPlugins = await mainWindow.webContents.executeJavaScript(`(async () => {
     document.querySelector('#btnReglages').click();
@@ -702,7 +741,9 @@ async function run(mainWindow, deps) {
       section: document.querySelector('.volet-reglage.actif')?.id,
       moteur: document.querySelector('#reglageMoteurWeb')?.value,
       exemples: document.querySelectorAll('#exemplesMCP .preset').length,
-      champCommande: !!document.querySelector('#mcpCommande')
+      champCommande: !!document.querySelector('#mcpCommande'),
+      demarrerTout: !!document.querySelector('#btnDemarrerMCP'),
+      resultatMCP: !!document.querySelector('#resultatMCP')
     };
     document.querySelector('#btnFermerReglages2').click();
     return r;
@@ -711,6 +752,8 @@ async function run(mainWindow, deps) {
   verifier('Moteur de recherche par défaut : DuckDuckGo', uiPlugins.moteur === 'duckduckgo', uiPlugins.moteur);
   verifier('Exemples MCP proposés', uiPlugins.exemples >= 4, `${uiPlugins.exemples} exemples`);
   verifier('Champ de commande MCP présent', uiPlugins.champCommande === true);
+  verifier('Bouton « Tout démarrer » présent', uiPlugins.demarrerTout === true);
+  verifier('Zone de résultat MCP présente', uiPlugins.resultatMCP === true);
 
   // nombre total d'outils selon le mode
   const agentTools = require('./agent');
@@ -776,7 +819,6 @@ async function run(mainWindow, deps) {
     resRepli.texte.includes('Reponse sans outils'), resRepli.texte || '(vide)');
 
   // 6undecies. Non-régression des bugs corrigés lors de l'audit
-  const mcpMod = require('./mcp');
   const tMcp = Date.now();
   const outilsFantome = await mcpMod.gestionnaire.charger([
     { nom: 'fantome', commande: 'commande-inexistante-audit', arguments: [], actif: true }

@@ -4,6 +4,29 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.18.0] — 2026-11-05
+
+### Corrigé
+- **Les serveurs MCP s'initialisaient mal.** `initialize` partait sans identifiant,
+  comme une notification : les serveurs stricts répondaient « Server not initialized »
+  à `tools/list` et n'exposaient aucun outil. La requête est désormais conforme
+  (identifiant + version du client lue depuis `package.json`).
+- **Une commande absente du PATH bloquait tout.** `npx` n'existe pas dans le PATH
+  d'une application lancée depuis le menu quand Node vient de mise, nvm ou asdf. Les
+  commandes sont résolues dans les dossiers usuels, et le PATH du serveur est enrichi
+  — y compris pour le shebang `#!/usr/bin/env node`.
+- **Démarrer ou consulter un serveur arrêtait les autres.** Un chargement partiel ne
+  coupe plus les serveurs déjà lancés.
+- **Le premier démarrage pouvait expirer.** Délai porté à 20 s pendant une
+  conversation et 60 s pour un démarrage manuel : au premier lancement, `npx`
+  télécharge le paquet.
+
+### Ajouté
+- Bouton **Tout démarrer** avec bilan : « 5/6 serveur(s) prêt(s) · échec : … ».
+- Le message d'échec s'affiche **en clair sous la ligne** du serveur, plus seulement
+  dans une infobulle.
+- Le tableau se rafraîchit après une conversation, quand les serveurs ont démarré.
+
 ## [2.17.0] — 2026-11-05
 
 ### Ajouté

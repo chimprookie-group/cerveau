@@ -1035,7 +1035,7 @@ ipcMain.handle('mcp:outils', async (_e, nom) => {
     if (!cible) return { ok: false, outils: [], message: `Serveur « ${nom} » introuvable.` };
 
     const dejaLa = mcpGestionnaire.etatsServeurs()[nom];
-    if (!dejaLa?.ok) await mcpGestionnaire.charger([cible]);
+    if (!dejaLa?.ok) await mcpGestionnaire.charger([cible], { partiel: true });
 
     const outils = mcpGestionnaire.outilsDuServeur(nom);
     return { ok: true, outils, total: outils.length };
@@ -1063,7 +1063,8 @@ ipcMain.handle('mcp:tester', async (_e, nom) => {
       }
       mcpGestionnaire.etats.delete(nom);
 
-      const outils = await mcpGestionnaire.charger([cible]);
+      // « Démarrer » peut attendre : au premier lancement npx télécharge le paquet.
+      const outils = await mcpGestionnaire.charger([cible], { partiel: true, delai: 60000 });
       const etat = mcpGestionnaire.etatsServeurs()[nom];
       return {
         ok: Boolean(etat?.ok) && outils.length > 0,
@@ -1072,7 +1073,7 @@ ipcMain.handle('mcp:tester', async (_e, nom) => {
       };
     }
 
-    const outils = await mcpGestionnaire.charger(serveurs);
+    const outils = await mcpGestionnaire.charger(serveurs, { delai: 60000 });
     return { ok: true, outils: outils.length, etats: mcpGestionnaire.etatsServeurs() };
   } catch (err) {
     return { ok: false, message: String(err.message || err) };
