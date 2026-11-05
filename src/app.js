@@ -2466,6 +2466,56 @@ function nouvelleConversation({ silencieux = false } = {}) {
   if (!silencieux) $('#saisie').focus();
 }
 
+function formaterJetons(n) {
+  return Number(n || 0).toLocaleString('fr-FR');
+}
+
+/**
+ * Barre de statistiques sous la conversation : jetons consommés (entrée /
+ * sortie) et état du dernier appel API (latence, erreur).
+ */
+function majStatistiquesConversation() {
+  const conv = etat.conversationCourante;
+  const usage = conv?.usage || null;
+  const jetons = $('#statTokens');
+  const api = $('#statApi');
+  if (!jetons || !api) return;
+
+  const entree = Number(usage?.entree || 0);
+  const sortie = Number(usage?.sortie || 0);
+  const total = entree + sortie;
+
+  jetons.textContent = total
+    ? `${formaterJetons(total)} jeton${total > 1 ? 's' : ''} · ${formaterJetons(entree)} ↑ / ${formaterJetons(sortie)} ↓`
+    : 'Aucun jeton utilisé';
+  jetons.title = usage?.appels
+    ? `${usage.appels} appel(s) API depuis le début de la conversation`
+    : 'Les jetons consommés apparaîtront après le premier échange';
+
+  const statut = usage?.statut || 'pret';
+  api.className = `stat-api ${statut === 'ok' ? 'ok' : statut}`;
+
+  if (statut === 'erreur') {
+    api.textContent = 'API · erreur';
+    api.title = usage?.dernierMessage || 'La dernière requête a échoué';
+    return;
+  }
+  if (statut === 'en_cours') {
+    api.textContent = 'API · en cours';
+    api.title = 'Une requête est en cours';
+    return;
+  }
+  if (usage?.derniereMs != null) {
+    const ms = Number(usage.derniereMs);
+    api.textContent = `API · ${ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`}`;
+    const modele = usage.modele ? ` · ${usage.modele}` : '';
+    api.title = `Dernier appel réussi · ${usage.appels || 1} appel(s) au total${modele}`;
+    return;
+  }
+  api.textContent = 'API · prête';
+  api.title = 'Aucune requête envoyée dans cette conversation';
+}
+
 function afficherConversation() {
   const conv = etat.conversationCourante;
   const messages = $('#messages');
@@ -2475,6 +2525,7 @@ function afficherConversation() {
   $('#sousTitreConversation').textContent = conv?.messages?.length
     ? `${conv.messages.filter((m) => m.role === 'user').length} message(s)`
     : 'Prêt à travailler';
+  majStatistiquesConversation();
 
   if (!conv || conv.messages.length === 0) {
     accueil.style.display = '';
@@ -2663,6 +2714,11 @@ async function envoyerMessage() {
     conv.titre = texte.slice(0, 60) + (texte.length > 60 ? '…' : '');
   }
   conv.fournisseur = providerId;
+  if (!conv.usage) conv.usage = { entree: 0, sortie: 0, appels: 0 };
+  conv.usage.statut = 'en_cours';
+  conv.usage.fournisseur = NOMS_FOURNISSEURS[providerId] || providerId;
+  conv.usage.modele = modele;
+  majStatistiquesConversation();
   saisie.value = '';
   piecesJointes = [];
   rendrePieces();
@@ -2704,6 +2760,10 @@ async function envoyerMessage() {
     finaliserMessage(conv, etatFlux, res);
   } catch (err) {
     corps.textContent = `Erreur : ${err.message || err}`;
+    if (!conv.usage) conv.usage = { entree: 0, sortie: 0, appels: 0 };
+    conv.usage.statut = 'erreur';
+    conv.usage.dernierMessage = String(err.message || err);
+    majStatistiquesConversation();
   } finally {
     fluxActif = null;
     etat.enCours = false;
@@ -2765,6 +2825,26 @@ function defilerEnBas() {
 /* --------------------- traitement des événements agent ----------------- */
 
 function traiterEvenementAgent(evt) {
+  // Les statistiques ne dépendent pas du flux : l'événement « usage » peut
+  // arriver une fois la requête terminée, quand fluxActif est déjà remis à zéro.
+  if (evt.type === 'usage') {
+    const u = evt.usage || {};
+    const conv = etat.conversationCourante;
+    if (conv) {
+      if (!conv.usage) conv.usage = { entree: 0, sortie: 0, appels: 0 };
+      const entree = Number(u.input_tokens ?? u.prompt_tokens ?? 0) || 0;
+      const sortie = Number(u.output_tokens ?? u.completion_tokens ?? 0) || 0;
+      conv.usage.entree += entree;
+      conv.usage.sortie += sortie;
+      conv.usage.appels += 1;
+      if (Number.isFinite(evt.ms)) conv.usage.derniereMs = evt.ms;
+      conv.usage.statut = 'ok';
+      conv.usage.dernierMessage = '';
+    }
+    majStatistiquesConversation();
+    return;
+  }
+
   const flux = fluxActif;
   if (!flux) return;
 
@@ -2835,19 +2915,16 @@ function traiterEvenementAgent(evt) {
       rendrePlan(evt.taches);
       break;
     }
-    case 'usage': {
-      const u = evt.usage;
-      const details = [];
-      if (u.input_tokens) details.push(`${u.input_tokens} entrée`);
-      if (u.output_tokens) details.push(`${u.output_tokens} sortie`);
-      if (u.prompt_tokens) details.push(`${u.prompt_tokens} entrée`);
-      if (u.completion_tokens) details.push(`${u.completion_tokens} sortie`);
-      if (details.length) $('#sousTitreConversation').textContent = `jetons : ${details.join(' · ')}`;
-      break;
-    }
     case 'erreur': {
       const ind = corps.querySelector('.indicateur');
       if (ind) ind.remove();
+      const convErr = etat.conversationCourante;
+      if (convErr) {
+        if (!convErr.usage) convErr.usage = { entree: 0, sortie: 0, appels: 0 };
+        convErr.usage.statut = 'erreur';
+        convErr.usage.dernierMessage = evt.message;
+        majStatistiquesConversation();
+      }
       notifier(evt.message, 'erreur', 6000);
       if (!fluxCourant?.texte) {
         corps.innerHTML = `<p style="color:var(--danger)">⚠️ ${echapper(evt.message)}</p>`;

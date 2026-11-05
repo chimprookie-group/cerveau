@@ -821,10 +821,51 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   margin: 6px auto 0;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   font-size: 10.5px;
   color: var(--texte-3);
   padding: 0 4px;
 }
+
+.pied-infos {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.stat-jetons,
+.stat-api {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.stat-jetons { color: var(--texte-2); }
+
+.stat-api {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.stat-api::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--texte-3);
+  flex-shrink: 0;
+}
+
+.stat-api.ok::before { background: var(--succes); box-shadow: 0 0 6px var(--succes); }
+.stat-api.en_cours::before { background: var(--accent); animation: effetsPouls 1.6s ease-in-out infinite; }
+.stat-api.erreur::before { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+.stat-api.erreur { color: var(--danger); }
+.stat-api.en_cours { color: var(--accent); }
 
 /* ══════════════════ PANNEAU OBSIDIAN ══════════════════ */
 

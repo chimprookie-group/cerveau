@@ -4,6 +4,19 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.17.0] — 2026-11-05
+
+### Ajouté
+- **Statistiques sous la conversation.** Une barre discrète affiche les jetons
+  consommés — total, entrée ↑, sortie ↓ — et l'état du dernier appel API : latence,
+  requête en cours, erreur. Les compteurs sont cumulés par conversation, conservés
+  au redémarrage, et détaillés au survol (nombre d'appels, modèle).
+- La durée de chaque appel est mesurée par l'agent et transmise avec les jetons.
+
+### Modifié
+- Le sous-titre de l'en-tête garde le nombre de messages : il n'est plus écrasé par
+  l'affichage des jetons.
+
 ## [2.16.0] — 2026-11-05
 
 ### Ajouté

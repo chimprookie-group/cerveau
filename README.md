@@ -30,6 +30,10 @@ Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 
 ![Sélecteur de modèle](docs/03-modeles.png)
 
+**Statistiques sous le chat** — jetons consommés (entrée ↑ / sortie ↓) et état du
+dernier appel API (latence, en cours, erreur), cumulés par conversation et
+conservés au redémarrage.
+
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
 ![Réglages](docs/04-reglages.png)
@@ -131,7 +135,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.16.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.17.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

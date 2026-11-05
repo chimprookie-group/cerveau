@@ -49,6 +49,8 @@ async function run(mainWindow, deps) {
       modaleReglages: !!q('#modaleReglages'),
       fournisseurs: document.querySelectorAll('.carte-fournisseur').length,
       tachesFond: !!q('#tachesFond'),
+      statTokens: !!q('#statTokens'),
+      statApi: !!q('#statApi'),
       effets: document.body.classList.contains('effets'),
       reglageEffets: !!q('#reglageEffets'),
       apiTaches: typeof window.cerveau?.taches,
@@ -77,6 +79,8 @@ async function run(mainWindow, deps) {
   verifier('Modale réglages présente', ui.modaleReglages);
   verifier('Cartes fournisseurs rendues', ui.fournisseurs >= 3, `${ui.fournisseurs} cartes`);
   verifier('Zone des processus de fond présente', ui.tachesFond);
+  verifier('Statistiques de jetons présentes', ui.statTokens);
+  verifier('Indicateur API présent', ui.statApi);
   verifier('Effets visuels actifs par défaut', ui.effets);
   verifier('Réglage des effets visuels présent', ui.reglageEffets);
   verifier('API tâches de fond exposée', ui.apiTaches === 'object', ui.apiTaches);

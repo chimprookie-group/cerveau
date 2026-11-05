@@ -300,6 +300,7 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
     let texteTour = '';
     const outilsDemandes = [];
     let raison = 'end_turn';
+    const debutFlux = Date.now();
 
     const flux = providers.stream({
       providerId,
@@ -338,7 +339,7 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
           return { texte: texteFinal + texteTour, outils: outilsExecutes, erreur: evt.message };
         } else if (evt.type === 'fin') {
           raison = evt.raison;
-          if (evt.usage) emit({ type: 'usage', usage: evt.usage });
+          if (evt.usage) emit({ type: 'usage', usage: evt.usage, ms: Date.now() - debutFlux });
         }
       }
       // Le modèle a refusé les outils : on réessaie immédiatement sans eux.
