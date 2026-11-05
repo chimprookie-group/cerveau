@@ -3254,6 +3254,206 @@ function masquerApercuTour() {
   if (apercu) apercu.hidden = true;
 }
 
+/* --------------------- cerveau : cartographie du coffre ------------------ */
+
+function hashTexte(texte) {
+  let h = 2166136261;
+  for (let i = 0; i < texte.length; i += 1) {
+    h ^= texte.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) / 4294967295;
+}
+
+function svgEl(nom, attrs = {}, ...enfants) {
+  const n = document.createElementNS('http://www.w3.org/2000/svg', nom);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  for (const e of enfants) if (e) n.append(e);
+  return n;
+}
+
+function construireSvgCerveau(g) {
+  const W = 360;
+  const H = 540;
+  const cx = 180;
+  const cy = 248;
+  const notes = g.notes || [];
+  const n = notes.length;
+
+  const positions = new Map();
+  notes.forEach((note, i) => {
+    // deux hémisphères : chaque note rejoint un lobe, en spirale dorée
+    const lobe = hashTexte(`${note.chemin}:lobe`) < 0.5 ? -1 : 1;
+    const angle = i * 2.399963;
+    const r = Math.sqrt((i + 0.8) / n);
+    const hx = hashTexte(`${note.chemin}:x`) - 0.5;
+    const hy = hashTexte(`${note.chemin}:y`) - 0.5;
+    const x = cx + lobe * 28 + Math.cos(angle) * 74 * r + hx * 16;
+    const y = 238 + Math.sin(angle) * 152 * r + hy * 16;
+    positions.set(note.chemin, { x, y });
+  });
+
+  const degres = new Map();
+  for (const [a, b] of g.liens || []) {
+    degres.set(a, (degres.get(a) || 0) + 1);
+    degres.set(b, (degres.get(b) || 0) + 1);
+  }
+
+  const svg = svgEl('svg', {
+    viewBox: `0 0 ${W} ${H}`,
+    class: 'cerveau-svg',
+    role: 'img',
+    'aria-label': `Carte du coffre : ${n} notes, ${(g.liens || []).length} liens`
+  });
+
+  const defs = svgEl('defs',
+    svgEl('radialGradient', { id: 'fondCerveau', cx: '50%', cy: '42%', r: '75%' },
+      svgEl('stop', { offset: '0%', 'stop-color': '#111a2e' }),
+      svgEl('stop', { offset: '55%', 'stop-color': '#080d17' }),
+      svgEl('stop', { offset: '100%', 'stop-color': '#04060b' })
+    ),
+    svgEl('radialGradient', { id: 'auraCerveau', cx: '50%', cy: '50%', r: '50%' },
+      svgEl('stop', { offset: '0%', 'stop-color': '#ffd479', 'stop-opacity': '0.5' }),
+      svgEl('stop', { offset: '45%', 'stop-color': '#ffb347', 'stop-opacity': '0.18' }),
+      svgEl('stop', { offset: '100%', 'stop-color': '#ffb347', 'stop-opacity': '0' })
+    ),
+    svgEl('radialGradient', { id: 'lueurNoeud', cx: '50%', cy: '50%', r: '50%' },
+      svgEl('stop', { offset: '0%', 'stop-color': '#fff3d6', 'stop-opacity': '0.95' }),
+      svgEl('stop', { offset: '55%', 'stop-color': '#ffd479', 'stop-opacity': '0.85' }),
+      svgEl('stop', { offset: '100%', 'stop-color': '#ffb347', 'stop-opacity': '0' })
+    ),
+    svgEl('filter', { id: 'flouCerveau', x: '-40%', y: '-40%', width: '180%', height: '180%' },
+      svgEl('feGaussianBlur', { stdDeviation: '4' })
+    )
+  );
+  svg.append(defs);
+
+  svg.append(svgEl('rect', {
+    x: 0, y: 0, width: W, height: H, rx: 14, fill: 'url(#fondCerveau)'
+  }));
+
+  // étoiles
+  for (let i = 0; i < 90; i += 1) {
+    const x = hashTexte(`etoile-x-${i}`) * W;
+    const y = hashTexte(`etoile-y-${i}`) * H;
+    const r = 0.35 + hashTexte(`etoile-r-${i}`) * 0.9;
+    const o = 0.15 + hashTexte(`etoile-o-${i}`) * 0.5;
+    svg.append(svgEl('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2), fill: '#ffffff', opacity: o.toFixed(2) }));
+  }
+
+  // contour du cerveau
+  const contour = 'M180 70 C138 62 96 92 86 142 C78 186 90 236 112 284 '
+    + 'C130 322 156 356 180 384 C204 356 230 322 248 284 '
+    + 'C270 236 282 186 274 142 C264 92 222 62 180 70 Z';
+  svg.append(svgEl('path', {
+    d: contour, fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.12',
+    'stroke-width': '4', filter: 'url(#flouCerveau)'
+  }));
+  svg.append(svgEl('path', {
+    d: contour, fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.3', 'stroke-width': '1.3'
+  }));
+  svg.append(svgEl('path', {
+    d: 'M180 96 C172 150 174 220 180 372',
+    fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.12', 'stroke-width': '1'
+  }));
+  svg.append(svgEl('path', {
+    d: 'M180 96 C142 86 104 118 98 166 C92 214 108 266 134 310',
+    fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.09', 'stroke-width': '1'
+  }));
+  svg.append(svgEl('path', {
+    d: 'M180 96 C218 86 256 118 262 166 C268 214 252 266 226 310',
+    fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.09', 'stroke-width': '1'
+  }));
+
+  // liens (avant les nœuds)
+  for (const [a, b] of g.liens || []) {
+    const pa = positions.get(a);
+    const pb = positions.get(b);
+    if (!pa || !pb) continue;
+    const mx = (pa.x + pb.x) / 2;
+    const my = (pa.y + pb.y) / 2;
+    const qx = mx + (cx - mx) * 0.32;
+    const qy = my + (cy - my) * 0.32;
+    svg.append(svgEl('path', {
+      d: `M ${pa.x.toFixed(1)} ${pa.y.toFixed(1)} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${pb.x.toFixed(1)} ${pb.y.toFixed(1)}`,
+      fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.13', 'stroke-width': '0.8'
+    }));
+  }
+
+  // tronc cérébral
+  svg.append(svgEl('path', {
+    d: 'M170 380 C162 400 166 418 180 426 C194 418 198 400 190 380',
+    fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.16', 'stroke-width': '1.1'
+  }));
+
+  // cœur lumineux
+  svg.append(svgEl('circle', { cx, cy, r: 58, fill: 'url(#auraCerveau)', filter: 'url(#flouCerveau)' }));
+  svg.append(svgEl('circle', { cx, cy, r: 7, fill: '#ffe6b0', class: 'cerveau-coeur' }));
+  svg.append(svgEl('circle', { cx, cy, r: 14, fill: 'none', stroke: '#ffd479', 'stroke-opacity': '0.35', 'stroke-width': '1' }));
+
+  // nœuds
+  for (const note of notes) {
+    const p = positions.get(note.chemin);
+    if (!p) continue;
+    const degre = degres.get(note.chemin) || 0;
+    const r = 3 + Math.min(degre, 6) * 0.85;
+
+    const groupe = svgEl('g', {
+      class: 'cerveau-noeud',
+      'data-chemin': note.chemin,
+      tabindex: '0',
+      role: 'button'
+    },
+      svgEl('circle', { cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: (r + 4).toFixed(1), fill: 'url(#lueurNoeud)', opacity: '0.5' }),
+      svgEl('circle', { cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: r.toFixed(1), fill: '#ffd479', opacity: (0.6 + Math.min(degre, 6) * 0.06).toFixed(2) })
+    );
+    const infos = [note.titre];
+    if (note.dossier) infos.push(note.dossier);
+    if (note.tags?.length) infos.push(note.tags.map((t) => `#${t}`).join(' '));
+    groupe.append(svgEl('title', {}, document.createTextNode(infos.join(' · '))));
+
+    const ouvrir = () => ouvrirNote(note.chemin);
+    groupe.addEventListener('click', ouvrir);
+    groupe.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrir(); }
+    });
+    svg.append(groupe);
+  }
+
+  return svg;
+}
+
+async function rendreCerveau(forcer = false) {
+  const zone = $('#cerveauGraphe');
+  const infos = $('#cerveauInfos');
+  if (!zone) return;
+
+  zone.innerHTML = '';
+  zone.append(el('p', { class: 'vide', text: 'Cartographie du coffre…' }));
+
+  let g;
+  try {
+    g = await API.obs.graphe({ limite: 320, forcer });
+  } catch (err) {
+    zone.innerHTML = '';
+    zone.append(el('p', { class: 'vide', text: err.message || 'Coffre indisponible.' }));
+    if (infos) infos.textContent = '—';
+    return;
+  }
+
+  if (infos) {
+    const total = g.tronque ? ` · ${g.total} au total` : '';
+    infos.textContent = `${g.affichees} notes · ${g.liens.length} liens${total}`;
+  }
+
+  zone.innerHTML = '';
+  if (!g.notes.length) {
+    zone.append(el('p', { class: 'vide', text: 'Aucune note dans le coffre.' }));
+    return;
+  }
+  zone.append(construireSvgCerveau(g));
+}
+
 /* --------------------- traitement des événements agent ----------------- */
 
 function traiterEvenementAgent(evt) {
@@ -4264,6 +4464,7 @@ function brancherEvenements() {
   $$('.onglet-panneau').forEach((o) => {
     o.addEventListener('click', () => actifOngletPanneau(o.dataset.panneau));
   });
+  $('#btnRafraichirCerveau')?.addEventListener('click', () => rendreCerveau(true));
 
   $('#btnNoteEditer').addEventListener('click', () => basculerEditionNote(true));
   $('#btnNoteEnregistrer').addEventListener('click', enregistrerNote);
@@ -4462,6 +4663,7 @@ function actifOngletPanneau(nom) {
   $$('.onglet-panneau').forEach((x) => x.classList.toggle('actif', x.dataset.panneau === nom));
   $$('.volet-panneau').forEach((v) => v.classList.toggle('actif', v.id === `panneau-${nom}`));
   if (nom === 'travail') rafraichirTachesFond();
+  if (nom === 'cerveau') rendreCerveau();
   if ($('#panneauObsidian').classList.contains('replie')) basculerPanneauObsidian();
 }
 

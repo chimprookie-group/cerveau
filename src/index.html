@@ -179,6 +179,7 @@
           <button class="onglet-panneau" data-panneau="recherche">Rech.</button>
           <button class="onglet-panneau" data-panneau="tags">Tags</button>
           <button class="onglet-panneau" data-panneau="graphe">Liens</button>
+          <button class="onglet-panneau" data-panneau="cerveau" title="Cerveau connecté au coffre">Cerveau</button>
         </div>
         <button id="btnFermerPanneau" class="btn-icone" title="Fermer">✕</button>
       </div>
@@ -293,6 +294,22 @@
         <div class="volet-panneau" id="panneau-graphe">
           <div id="liensNote" class="liens-note">
             <p class="vide">Ouvrez une note pour voir ses liens.</p>
+          </div>
+        </div>
+
+        <!-- Volet Cerveau : cartographie du coffre -->
+        <div class="volet-panneau" id="panneau-cerveau">
+          <div class="cerveau-barre">
+            <span id="cerveauInfos" class="cerveau-infos">—</span>
+            <button id="btnRafraichirCerveau" class="btn-mini" title="Rafraîchir le cerveau">⟳</button>
+          </div>
+          <div id="cerveauGraphe" class="cerveau-graphe">
+            <p class="vide">Ouvrez un coffre pour voir le cerveau.</p>
+          </div>
+          <div class="cerveau-legende">
+            <span class="cerveau-pastille"></span> note
+            <span class="cerveau-pastille lien"></span> lien
+            <span class="cerveau-aide">Survolez un nœud, cliquez pour ouvrir.</span>
           </div>
         </div>
       </div>

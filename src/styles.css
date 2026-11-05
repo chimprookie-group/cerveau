@@ -543,6 +543,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .conversation {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   scroll-behavior: smooth;
@@ -676,7 +677,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .suggestions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 10px;
   text-align: left;
 }
@@ -1108,7 +1109,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .panneau-entete button { -webkit-app-region: no-drag; }
 
-.onglets-panneau { display: flex; gap: 2px; flex: 1; }
+.onglets-panneau { display: flex; flex-wrap: wrap; gap: 2px; flex: 1; }
 
 .onglet-panneau {
   background: transparent;
@@ -1136,6 +1137,98 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 }
 
 .volet-panneau.actif { display: flex; }
+
+/* ---- cerveau : cartographie du coffre ---- */
+.cerveau-barre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 6px;
+}
+
+.cerveau-infos {
+  font-size: 11px;
+  color: var(--texte-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cerveau-graphe {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 0 8px;
+}
+
+.cerveau-svg {
+  display: block;
+}
+
+.cerveau-graphe svg {
+  width: 100%;
+  height: auto;
+  align-self: center;
+  border-radius: 12px;
+}
+
+.cerveau-noeud { cursor: pointer; }
+
+.cerveau-noeud circle {
+  transition: filter 0.15s ease;
+}
+
+.cerveau-noeud:hover circle {
+  filter: drop-shadow(0 0 6px #ffd479);
+}
+
+.cerveau-coeur {
+  opacity: 0.9;
+  transform-origin: center;
+}
+
+body.effets .cerveau-coeur {
+  animation: battementCoeur 2.8s ease-in-out infinite;
+}
+
+@keyframes battementCoeur {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+
+.cerveau-legende {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  font-size: 10.5px;
+  color: var(--texte-3);
+}
+
+.cerveau-pastille {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffd479;
+  flex-shrink: 0;
+}
+
+.cerveau-pastille.lien {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 212, 121, 0.45);
+}
+
+.cerveau-aide {
+  margin-left: auto;
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cerveau-coeur { animation: none; }
+}
 
 .note-entete { display: flex; gap: 6px; align-items: center; }
 

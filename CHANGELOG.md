@@ -4,6 +4,22 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.25.0] — 2026-11-05
+
+### Ajouté
+- **Cerveau : cartographie du coffre** dans le panneau latéral (onglet « Cerveau »).
+  Chaque note est un nœud lumineux, les liens wiki sont des fibres qui convergent
+  vers un cœur central, sur un fond étoilé. Les nœuds sont répartis en deux
+  hémisphères, avec un tronc cérébral et une lueur qui bat doucement.
+  - survol : titre, dossier et tags de la note ; clic : ouverture de la note ;
+  - compteur « N notes · N liens » et bouton de rafraîchissement ;
+  - limité aux 320 notes les plus récentes (cache de 30 s) pour rester fluide.
+
+### Corrigé
+- Le contenu de la conversation ne déborde plus horizontalement quand le panneau
+  latéral est ouvert (barre de défilement parasite).
+- Les suggestions de l'accueil s'adaptent à la largeur disponible.
+
 ## [2.24.0] — 2026-11-05
 
 ### Ajouté

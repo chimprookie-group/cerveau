@@ -1114,9 +1114,25 @@ async function run(mainWindow, deps) {
     }
     return { ids, resultats };
   })()`);
-  verifier('Les 6 volets du panneau s\'affichent',
+  verifier('Les volets du panneau s\'affichent',
     Object.values(ongletsPanneau.resultats).every(Boolean),
     Object.entries(ongletsPanneau.resultats).filter(([, v]) => !v).map(([k]) => k).join(',') || 'tous');
+  verifier('Onglet Cerveau présent', ongletsPanneau.ids.includes('cerveau'));
+
+  // graphe « cerveau » : notes, liens wiki et tags
+  try {
+    const vg = await fsp.mkdtemp(path.join(os.tmpdir(), 'cv-graphe-'));
+    await fsp.mkdir(path.join(vg, 'Projets'));
+    await fsp.writeFile(path.join(vg, 'A.md'), '# A\nVoir [[B]] et [[Projets/C]] #test\n');
+    await fsp.writeFile(path.join(vg, 'B.md'), '[[A]]\n');
+    await fsp.writeFile(path.join(vg, 'Projets', 'C.md'), '[[B|alias]]\n');
+    const g = await require('./obsidian').graphe(vg);
+    verifier('Graphe du coffre : notes et liens',
+      g.notes.length === 3 && g.liens.length >= 3,
+      `${g.notes.length} note(s), ${g.liens.length} lien(s)`);
+  } catch (err) {
+    verifier('Graphe du coffre : notes et liens', false, String(err.message || err));
+  }
 
   // 6quaterdecies. Coffre : arbre, note et tags
   const coffre = await mainWindow.webContents.executeJavaScript(`(async () => {
