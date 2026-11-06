@@ -4,6 +4,35 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.46.0] — 2026-11-07
+
+### Corrigé
+- **Sécurité : filtre des commandes destructrices**. Le filtre ne reconnaissait
+  que la forme exacte `rm -rf /`. Un guillemet, un glob ou un chemin explicite
+  (`rm -rf "/"`, `rm -rf /*`, `rm -rf $HOME`, `rm -rf ~/`, `rm -rf /home/<user>`)
+  passait sans être bloqué. Les commandes sont désormais normalisées
+  (guillemets, échappements, `$HOME`, `~`, barres redondantes) avant analyse,
+  et toute suppression récursive visant une racine critique est refusée.
+  Les commandes légitimes (`rm -rf node_modules`, `rm -rf dist`) restent
+  autorisées.
+- **Sécurité : actions destructives**. La logique de permission était inversée :
+  quand la suppression était désactivée dans les réglages, l'application la
+  proposait quand même ; quand elle était autorisée, elle répondait « non
+  autorisée ». Le refus est maintenant prononcé avant toute demande, et le mode
+  lecture seule s'applique aussi aux suppressions.
+- **Rendu Markdown : repli sûr**. Sans DOMPurify chargé, le HTML non nettoyé
+  partait directement dans `innerHTML`. Le rendu retombe désormais sur du texte
+  échappé.
+- **Réglages MCP** : les en-têtes du tableau restent affichés quand aucun
+  serveur n'est configuré, au lieu de disparaître avec la section.
+
+### Ajouté
+- `npm test` lance l'autotest de bout en bout ; il utilise un dossier de
+  configuration et un coffre temporaires, puis les supprime. L'autotest ne
+  dépend plus de la machine et n'écrit jamais dans la configuration réelle.
+- `npm run test:commandes` vérifie le filtre de commandes destructrices
+  (41 cas : refus attendus et commandes légitimes).
+
 ## [2.45.4] — 2026-11-06
 
 ### Modifié

@@ -1035,10 +1035,16 @@ async function demanderPermission(outil, appel, ctx, emit) {
   }
 
   if (risque === 'destructif') {
-    if (mode === 'demander' || !ctx.permissions?.allowDelete) {
-      return demander(ctx, emit, outil, appel, 'destructif');
+    // la suppression doit être autorisée dans les réglages ; sinon on refuse
+    // franchement, sans proposer une action que l'utilisateur a désactivée
+    if (!ctx.permissions?.allowDelete) {
+      return { autorise: false, raison: 'suppression non autorisée dans les réglages' };
     }
-    return { autorise: false, raison: 'suppression non autorisée dans les réglages' };
+    if (mode === 'lecture') {
+      return { autorise: false, raison: 'mode lecture seule actif (suppression désactivée)' };
+    }
+    if (mode === 'auto') return { autorise: true };
+    return demander(ctx, emit, outil, appel, 'destructif');
   }
 
   if (mode === 'auto') return { autorise: true };

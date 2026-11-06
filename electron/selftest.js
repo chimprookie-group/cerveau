@@ -2700,6 +2700,22 @@ async function run(mainWindow, deps) {
   console.log(`\n${resultats.length - echecs.length}/${resultats.length} tests réussis`);
   if (echecs.length) console.log('ÉCHECS :', echecs.map((e) => e.test).join(', '));
 
+  // les données jetables de l'autotest ne doivent pas survivre : coffre
+  // temporaire et dossier de configuration dédié
+  try {
+    const profilTest = require('./profil-test');
+    const cfg = config.getConfig();
+    for (const v of cfg.vaults || []) {
+      if (profilTest.estDossierDeTest(v.path)) {
+        fs2.rmSync(v.path, { recursive: true, force: true });
+      }
+    }
+    const dossierConf = process.env.XDG_CONFIG_HOME_TEST;
+    if (dossierConf && profilTest.estDossierDeTest(dossierConf)) {
+      fs2.rmSync(dossierConf, { recursive: true, force: true });
+    }
+  } catch { /* un nettoyage raté ne change pas le résultat des tests */ }
+
   const code = echecs.length ? 1 : 0;
   app.exit(code);
 }
