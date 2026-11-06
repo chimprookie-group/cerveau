@@ -179,8 +179,15 @@ personne ne peut répondre en arrière-plan.
 
 ## Ce que le paquet installe, et ce qu'il faut en plus
 
-Le paquet `cerveau` contient l'application et son interface. **`git`** est la seule
-dépendance système obligatoire.
+Le paquet `cerveau` installe l'application et son interface, ainsi que :
+
+- `/usr/bin/cerveau` (lanceur) et `/usr/bin/cerveau-daemon` / `cerveau-daemon-install` ;
+- le service utilisateur `cerveau-daemon.service` (activation avec `cerveau-daemon-install`) ;
+- le lanceur `.desktop`, les icônes 16→512 et l'icône scalable ;
+- les données dans `~/.config/cerveau/` (configuration, plugins, compétences) ;
+- les métadonnées AppStream dans `/usr/share/metainfo/` et la licence dans `/usr/share/licenses/cerveau/`.
+
+**`git`** est la seule dépendance système obligatoire.
 
 **Requis pour les fonctions GitHub et MCP** — à installer, ou à fournir via un
 gestionnaire de versions comme `mise`, `nvm` ou `asdf` (c'est pourquoi ils restent
@@ -497,10 +504,17 @@ cerveau/
 │   ├── github.js      Intégration GitHub
 │   ├── githubtools.js Outils GitHub
 │   ├── agent.js       Boucle agentique et permissions
+│   ├── webtools.js    Recherche DeepSeek Search + lecture HTTP
+│   ├── plugins.js     Chargement des plugins locaux
+│   ├── plugins-catalogue.js  Plugins prêts à l'emploi
+│   ├── planificateur.js      Tâches planifiées
+│   ├── superviseur.js        Superviseur GitHub
+│   ├── memoire.js     Mémoire durable
 │   └── obsidian.js    Moteur de coffre
+├── daemon/            Démon systemd + installateur
 ├── src/               Interface (HTML/CSS/JS)
-├── pkg/               PKGBUILD, .desktop, AppStream, icône SVG
-├── scripts/           dist.sh (archive), release.sh (publication)
+├── pkg/               PKGBUILD, .desktop, AppStream, icônes
+├── scripts/           dist.sh (archive), release.sh (publication), captures
 ├── install.sh         Installateur en une ligne
 └── CHANGELOG.md
 ```
@@ -512,7 +526,7 @@ cerveau/
 ```bash
 npm install
 npm start                      # lance l'application
-CERVEAU_SELFTEST=1 npm start   # autotest (88 vérifications)
+CERVEAU_SELFTEST=1 npm start   # autotest (432 vérifications)
 npm run dist                   # archive source distribuable
 npm run pkg                    # archive + paquet Arch
 ```
@@ -544,3 +558,5 @@ Merci d'indiquer ta version (`Réglages → À propos`) et les étapes de reprod
 ## Licence
 
 [MIT](LICENSE) — utilise librement, modifie, redistribue.
+
+[Journal des modifications](CHANGELOG.md) · [Toutes les versions](https://github.com/chimprookie-group/cerveau/releases)
