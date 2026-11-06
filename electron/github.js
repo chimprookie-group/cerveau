@@ -535,12 +535,27 @@ async function creerDepot({ nom, dossierLocal = null, prive = true, description 
 
 /* ------------------------------ pull requests --------------------------- */
 
+/**
+ * `gh` n'accepte que open/closed/merged/all. L'interface et le modèle sont
+ * francophones : on tolère les équivalents français au lieu de renvoyer une
+ * erreur de ligne de commande.
+ */
+function normaliserEtat(valeur, { pullRequest = false } = {}) {
+  const v = String(valeur || '').trim().toLowerCase();
+  if (!v || ['ouvert', 'ouverte', 'open', 'actif', 'active'].includes(v)) return 'open';
+  if (['ferme', 'fermee', 'fermé', 'closed', 'clos'].includes(v)) return 'closed';
+  if (pullRequest && ['fusionne', 'fusionnee', 'fusionné', 'merged'].includes(v)) return 'merged';
+  if (['tous', 'toutes', 'all'].includes(v)) return 'all';
+  return 'open';
+}
+
 async function listerPR(nomComplet, { etat = 'open', limite = 30 } = {}) {
+  const etatGithub = normaliserEtat(etat, { pullRequest: true });
   const champs = 'number,title,state,isDraft,author,createdAt,updatedAt,headRefName,baseRefName,url,mergeable,reviewDecision';
   const liste = await ghJson([
     'pr', 'list',
     '--repo', nomComplet,
-    '--state', etat,
+    '--state', etatGithub,
     '--limit', String(limite),
     '--json', champs
   ], { timeout: 45000 });
@@ -664,10 +679,11 @@ async function fusionnerPR(nomComplet, numero, { methode = 'squash' } = {}) {
 
 async function listerIssues(nomComplet, { etat = 'open', limite = 30 } = {}) {
   const champs = 'number,title,state,author,labels,createdAt,updatedAt,url,comments';
+  const etatGithub = normaliserEtat(etat);
   const liste = await ghJson([
     'issue', 'list',
     '--repo', nomComplet,
-    '--state', etat,
+    '--state', etatGithub,
     '--limit', String(limite),
     '--json', champs
   ], { timeout: 45000 });
@@ -737,6 +753,7 @@ module.exports = {
   historique,
   difference,
   listerPR,
+  normaliserEtat,
   creerPR,
   commenter,
   infosPR,

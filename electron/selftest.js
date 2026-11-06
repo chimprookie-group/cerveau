@@ -212,6 +212,12 @@ async function run(mainWindow, deps) {
   verifier('URL SSH GitHub reconnue', github.extraireNomComplet('git@github.com:a/b.git') === 'a/b');
   verifier('URL HTTPS GitHub reconnue', github.extraireNomComplet('https://github.com/a/b.git') === 'a/b');
   verifier('URL non-GitHub ignorée', github.extraireNomComplet('https://gitlab.com/a/b') === null);
+  verifier('GitHub : états PR/Issues normalisés',
+    github.normaliserEtat('ouvert', { pullRequest: true }) === 'open'
+    && github.normaliserEtat('ferme') === 'closed'
+    && github.normaliserEtat('fusionne', { pullRequest: true }) === 'merged'
+    && github.normaliserEtat('tous') === 'all'
+    && github.normaliserEtat('open', { pullRequest: true }) === 'open');
 
   const authGh = await github.etatAuth();
   verifier('État auth GitHub lisible', typeof authGh.connecte === 'boolean',

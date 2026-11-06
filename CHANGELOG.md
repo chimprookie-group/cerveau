@@ -4,6 +4,13 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.38.4] — 2026-11-06
+
+### Corrigé
+- **GitHub PR / Issues** : les états français (`ouvert`, `fermé`, `fusionné`,
+  `tous`) sont acceptés et traduits pour `gh` au lieu de provoquer une erreur de
+  ligne de commande.
+
 ## [2.38.3] — 2026-11-06
 
 ### Corrigé
