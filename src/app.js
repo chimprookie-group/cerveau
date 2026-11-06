@@ -603,7 +603,11 @@ function rendrePieces() {
     const p = piecesJointes[i];
     const puce = el('div', { class: 'piece' },
       p.type === 'image'
-        ? el('img', { class: 'piece-vignette', src: p.dataUrl, alt: p.nom })
+        ? el('img', {
+            class: 'piece-vignette', src: p.dataUrl, alt: p.nom,
+            title: 'Cliquer pour agrandir',
+            onclick: () => ouvrirImage(p.dataUrl, p.nom)
+          })
         : el('span', { class: 'piece-icone', text: '🗎' }),
       el('span', { class: 'piece-nom', text: p.nom, title: p.nom }),
       el('span', { class: 'piece-taille', text: `${Math.max(1, Math.round((p.taille || 0) / 1024))} Ko` }),
@@ -2759,6 +2763,23 @@ function chercherSuivant(precedent = false) {
   API.app.rechercher({ texte: champ.value, suivant: !precedent, precedent }).catch(() => {});
 }
 
+function ouvrirImage(src, nom = '') {
+  const modale = $('#modaleImage');
+  const image = $('#imageAgrandie');
+  if (!modale || !image || !src) return;
+  image.src = src;
+  image.alt = nom || 'image';
+  modale.hidden = false;
+}
+
+function fermerImage() {
+  const modale = $('#modaleImage');
+  if (!modale || modale.hidden) return;
+  modale.hidden = true;
+  const image = $('#imageAgrandie');
+  if (image) image.src = '';
+}
+
 function ouvrirStatistiques() {
   const conv = etat.conversationCourante;
   const corps = $('#corpsStatistiques');
@@ -2937,12 +2958,20 @@ function ajouterMessageDOM(m) {
     const galerie = el('div', { class: 'images-message' });
     for (const img of m.images) {
       if (!img?.dataUrl) continue;
-      galerie.append(el('img', {
+      const vignette = el('img', {
         class: 'image-message',
         src: img.dataUrl,
         alt: img.nom || 'image jointe',
-        title: img.nom || 'image jointe'
-      }));
+        title: img.nom ? `${img.nom} — cliquer pour agrandir` : 'Cliquer pour agrandir'
+      });
+      vignette.addEventListener('click', () => ouvrirImage(img.dataUrl, img.nom));
+      vignette.addEventListener('error', () => {
+        vignette.replaceWith(el('span', {
+          class: 'image-indisponible',
+          text: `Image indisponible${img.nom ? ` · ${img.nom}` : ''}`
+        }));
+      });
+      galerie.append(vignette);
     }
     if (galerie.children.length) bloc.append(galerie);
   }
@@ -4639,6 +4668,12 @@ function brancherEvenements() {
   $('#modaleStatistiques .modale-fond')?.addEventListener('click', () => {
     $('#modaleStatistiques').hidden = true;
   });
+  $('#btnFermerImage')?.addEventListener('click', fermerImage);
+  $('#modaleImage .modale-fond')?.addEventListener('click', fermerImage);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('#modaleImage')?.hidden) fermerImage();
+  });
+
   $('#btnCopierStatistiques')?.addEventListener('click', async () => {
     await navigator.clipboard.writeText(statistiquesTexte);
     notifier('Statistiques copiées.', 'succes', 1800);

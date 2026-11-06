@@ -4,6 +4,17 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.37.1] — 2026-11-06
+
+### Corrigé
+- **Images jointes plus visibles** : vignette de la saisie agrandie (40 px) et
+  miniatures de conversation avec une taille minimale, pour qu'une petite image
+  ne passe pas inaperçue.
+- **Aperçu plein écran** : un clic sur une miniature (saisie ou conversation)
+  ouvre l'image en grand ; fermeture par ✕, clic sur le fond ou Échap.
+- **Formats** : AVIF accepté en plus de PNG, JPEG, GIF, WebP, BMP et SVG ; une
+  image illisible affiche un remplacement « Image indisponible ».
+
 ## [2.37.0] — 2026-11-06
 
 ### Ajouté

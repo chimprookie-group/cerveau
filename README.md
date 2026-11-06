@@ -72,7 +72,8 @@ détaillées de la discussion.
 
 **Édition et secours** — « Modifier » replace le dernier message dans la saisie
 (images comprises) ; un fournisseur de secours de la même famille d'API prend le
-relais si le principal échoue.
+relais si le principal échoue. Les images jointes s'affichent en miniatures et
+s'ouvrent en grand au clic.
 
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
@@ -176,7 +177,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.37.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.37.1-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

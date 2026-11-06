@@ -1325,7 +1325,7 @@ ipcMain.handle('fichiers:lire', async (_e, chemin) => {
     const nom = path.basename(abs);
     const ext = path.extname(abs).toLowerCase().replace('.', '');
 
-    const IMAGES = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
+    const IMAGES = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif'];
     if (IMAGES.includes(ext)) {
       if (st.size > 8 * 1024 * 1024) {
         throw new Error(`Image trop volumineuse (${Math.round(st.size / 1024 / 1024)} Mo, maximum 8 Mo).`);

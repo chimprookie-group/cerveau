@@ -834,23 +834,29 @@ async function run(mainWindow, deps) {
     };
     etat.conversations = [{ id: 'images', titre: 'Images', date: Date.now(), mode: 'complet', messages: [
       { role: 'user', contenu: 'Image jointe', images: [
-        { nom: 'a.png', mime: 'image/png', dataUrl: 'data:image/png;base64,iVBORw0KGgo=' }
+        { nom: 'a.png', mime: 'image/png', dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' }
       ] }
     ] }];
     etat.conversationCourante = etat.conversations[0];
     afficherConversation();
     await new Promise((r) => setTimeout(r, 120));
+    document.querySelector('.message.utilisateur .image-message')?.click();
+    await new Promise((r) => setTimeout(r, 120));
+    const apercu = !document.querySelector('#modaleImage').hidden;
+    document.querySelector('#btnFermerImage')?.click();
     return {
       bouton: Boolean(bouton),
       messages: apres.messages,
       saisie: apres.saisie,
-      images: document.querySelectorAll('.message.utilisateur .image-message').length
+      images: document.querySelectorAll('.message.utilisateur .image-message').length,
+      apercu
     };
   })()`);
   verifier('Modifier le dernier message',
     editionUi.bouton && editionUi.messages === 0 && editionUi.saisie === 'Texte initial',
     `${editionUi.messages} message(s) restant(s)`);
   verifier('Images jointes affichées', editionUi.images === 1, `${editionUi.images} image(s)`);
+  verifier('Aperçu d’image au clic', editionUi.apercu === true);
 
   // thème par défaut puis palettes appliquées distinctement
   const themeDefaut = await mainWindow.webContents.executeJavaScript('document.body.dataset.theme');

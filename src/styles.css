@@ -718,6 +718,45 @@ body.fenetre-inactive * {
 
 .pied-infos { cursor: pointer; }
 
+.visionneuse {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 92vw;
+  max-height: 88vh;
+}
+
+.visionneuse-image {
+  max-width: 92vw;
+  max-height: 88vh;
+  border-radius: 10px;
+  box-shadow: var(--ombre);
+  background: var(--fond-3);
+}
+
+.visionneuse-fermer {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  background: var(--fond-2);
+  border: 1px solid var(--bordure-claire);
+}
+
+.image-message:hover { border-color: var(--accent); }
+
+.image-indisponible {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--bordure);
+  background: var(--fond-2);
+  font-size: 11px;
+  color: var(--texte-3);
+}
+
 .recherche-conversation {
   position: absolute;
   top: 10px;
@@ -1072,9 +1111,13 @@ body.fenetre-inactive * {
 .image-message {
   max-width: 220px;
   max-height: 180px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 8px;
   border: 1px solid var(--bordure);
   object-fit: cover;
+  cursor: zoom-in;
+  background: var(--fond-3);
 }
 
 .details-travail {
@@ -3146,10 +3189,12 @@ body.fenetre-inactive * {
 }
 
 .piece-vignette {
-  width: 26px; height: 26px;
+  width: 40px; height: 40px;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--bordure);
   flex-shrink: 0;
+  cursor: zoom-in;
 }
 
 .piece-icone { font-size: 14px; flex-shrink: 0; }
