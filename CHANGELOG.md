@@ -4,6 +4,14 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.45.4] — 2026-11-06
+
+### Modifié
+- **Police de l'application** : Envy Code R (Nerd Font, licence SIL OFL 1.1)
+  remplace Inter et JetBrains Mono dans toute l'interface, y compris les
+  extraits de code et les noms de modèles. La licence accompagne la police
+  dans `src/fonts/`.
+
 ## [2.45.3] — 2026-11-06
 
 ### Modifié
