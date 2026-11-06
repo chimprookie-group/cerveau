@@ -75,6 +75,9 @@ message (images comprises) ; un fournisseur de secours de la même famille d'API
 prend le relais si le principal échoue. Les images jointes s'affichent en
 miniatures et s'ouvrent en grand au clic.
 
+**Réglages de démarrage** — mode au démarrage, restauration de la dernière
+conversation, panneau latéral et limite d'historique sont appliqués au lancement.
+
 **Mémoire durable** — l'agent retient les préférences, conventions de projet et
 décisions dans `Réglages → Mémoire` (fichier `memoire.json`), et les réinjecte
 dans chaque conversation.
@@ -188,7 +191,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.38.1-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.38.2-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

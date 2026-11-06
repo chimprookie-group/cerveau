@@ -2055,10 +2055,12 @@ async function run(mainWindow, deps) {
 
   // 6octovicies. Démarrage : aucune conversation vide ajoutée
   const appSrcConv = fs2.readFileSync(path.join(racine, 'src', 'app.js'), 'utf8');
-  verifier('Démarrage : ne crée pas de conversation à l\'aveugle',
-    /On ne crée une conversation neuve que s'il n'y en a aucune à reprendre/.test(appSrcConv));
-  verifier('Démarrage : reprend une conversation existante',
-    /const aReprendre = etat\.conversations\.find/.test(appSrcConv));
+  verifier('Démarrage : respecte « restaurer la dernière conversation »',
+    /const aReprendre = general\.restaurerDerniere/.test(appSrcConv)
+    && /nouvelleConversation\(\{ silencieux: true \}\)/.test(appSrcConv));
+  verifier('Démarrage : reprend la conversation la plus récente',
+    /const aReprendre = general\.restaurerDerniere/.test(appSrcConv)
+    && /Number\(b\.date\)/.test(appSrcConv));
   verifier('Démarrage : nettoie les conversations vides héritées',
     /les conversations vides héritées des anciennes versions/.test(appSrcConv));
   verifier('Persistance : ignore les conversations vides',

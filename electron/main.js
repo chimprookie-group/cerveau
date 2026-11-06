@@ -492,7 +492,8 @@ ipcMain.handle('coffre:activer', (_e, id) => {
 ipcMain.handle('coffre:retirer', (_e, id) => {
   const cfg = config.getConfig();
   const vaults = cfg.vaults.filter((v) => v.id !== id);
-  const activeVaultId = cfg.activeVaultId === id ? (vaults[0]?.id ?? null) : cfg.activeVaultId;
+  // '' et non null : deepMerge ignore les valeurs null et garderait l'ancien id
+  const activeVaultId = cfg.activeVaultId === id ? (vaults[0]?.id || '') : cfg.activeVaultId;
   config.updateConfig({ vaults, activeVaultId });
   return { coffres: config.getConfig().vaults };
 });
@@ -587,7 +588,8 @@ ipcMain.handle('workspace:definir', (_e, chemin) => {
 });
 
 ipcMain.handle('workspace:oublier', () => {
-  config.updateConfig({ workspace: null });
+  // '' et non null : deepMerge ignore null et l'espace de travail resterait actif
+  config.updateConfig({ workspace: '' });
   return { ok: true };
 });
 

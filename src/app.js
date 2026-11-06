@@ -252,7 +252,12 @@ async function demarrer() {
   appliquerEffets(etat.config.ui?.effets !== false);
 
   if (etat.config.ui?.sidebarOpen === false) $('#sidebar').classList.add('repliee');
-  if (etat.config.ui?.obsidianPanelOpen === false) $('#panneauObsidian').classList.add('replie');
+  // le réglage « panneau latéral ouvert » pilote l'état au démarrage
+  if ((etat.config.general || {}).panneauOuvert === false) {
+    $('#panneauObsidian').classList.add('replie');
+  } else {
+    $('#panneauObsidian').classList.remove('replie');
+  }
 
   brancherEvenements();
   synchroniserHauteurEntete();
@@ -262,24 +267,26 @@ async function demarrer() {
   await rafraichirFournisseurs();
   await rafraichirCoffre();
   await rafraichirWorkspace();
-  definirMode(etat.config.mode || 'complet');
+  definirMode((etat.config.general || {}).modeDemarrage || etat.config.mode || 'complet');
   // Nettoyage : les conversations vides héritées des anciennes versions
   // (une par lancement) sont retirées de la liste. On garde celle qui est
   // ouverte s'il n'y a rien d'autre, pour ne pas laisser l'écran vide.
-  const nonVides = etat.conversations.filter((c) => Array.isArray(c.messages) && c.messages.length);
-  if (nonVides.length) {
-    etat.conversations = nonVides;
-  } else if (etat.conversations.length > 1) {
-    etat.conversations = [etat.conversations[0]];
-  }
+  const general = etat.config.general || {};
+  let nonVides = etat.conversations.filter((c) => Array.isArray(c.messages) && c.messages.length);
+  // limite d'historique configurée
+  const limite = Math.max(10, Number(general.historiqueMax) || 200);
+  if (nonVides.length > limite) nonVides = nonVides.slice(0, limite);
+  etat.conversations = nonVides;
 
-  // On ne crée une conversation neuve que s'il n'y en a aucune à reprendre.
-  // Sinon chaque lancement ajoutait une conversation vide à la liste.
-  const aReprendre = etat.conversations.find((c) => Array.isArray(c.messages) && c.messages.length);
+  // « Restaurer la dernière conversation » décide si on rouvre l'ancienne ou
+  // si on démarre sur une discussion neuve (les anciennes restent listées).
+  const aReprendre = general.restaurerDerniere
+    ? [...etat.conversations]
+      .sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0))
+      .find((c) => Array.isArray(c.messages) && c.messages.length)
+    : null;
   if (aReprendre) {
     chargerConversation(aReprendre.id);
-  } else if (etat.conversations.length) {
-    chargerConversation(etat.conversations[0].id);
   } else {
     nouvelleConversation({ silencieux: true });
   }
@@ -2185,6 +2192,9 @@ function brancherReglagesAvances() {
 
   lier('#reglageModeDemarrage', g.modeDemarrage, 'general.modeDemarrage', (v) => v, 'complet');
   lier('#reglagePanneauDemarrage', g.panneauOuvert, 'general.panneauOuvert', (v) => v, true);
+  $('#reglagePanneauDemarrage')?.addEventListener('change', (e) => {
+    $('#panneauObsidian')?.classList.toggle('replie', !e.target.checked);
+  });
   lier('#reglageRestaurer', g.restaurerDerniere, 'general.restaurerDerniere', (v) => v, false);
   lier('#reglageAutostart', g.demarrerAuDemarrage, 'general.demarrerAuDemarrage', (v) => v, false);
   lier('#reglageNotifications', g.notifications, 'general.notifications', (v) => v, true);
@@ -3309,9 +3319,10 @@ function persisterConversations() {
       || c.id === etat.conversationCourante?.id
     );
 
+    const limite = Math.max(10, Number(etat.config.general?.historiqueMax) || 200);
     const borne = utiles
       .sort((a, b) => b.date - a.date)
-      .slice(0, 200)
+      .slice(0, limite)
       .map((c) => ({ ...c, messages: (c.messages || []).slice(-80) }));
     etat.config = await API.config.mettreAJour({ conversations: borne });
   }, 600);
@@ -4557,6 +4568,8 @@ async function rafraichirWorkspace() {
       );
     }
   }
+  const oublierWs = $('#btnOublierWorkspace');
+  if (oublierWs) oublierWs.hidden = !infos.actif;
 
   // réglages : dossiers récents
   const recents = etat.config?.workspacesRecents || [];
@@ -5005,6 +5018,12 @@ function brancherEvenements() {
   $('#btnChoisirWorkspace2')?.addEventListener('click', choisirWorkspace);
   $('#btnWorkspaceRapide')?.addEventListener('click', () => ouvrirReglages('workspace'));
   $('#btnDefinirWorkspace')?.addEventListener('click', definirWorkspaceManuel);
+  $('#btnOublierWorkspace')?.addEventListener('click', async () => {
+    await API.workspace.oublier();
+    etat.config = await API.config.obtenir();
+    await rafraichirWorkspace();
+    notifier('Espace de travail retiré.', 'info', 2500);
+  });
   $('#cheminWorkspaceManuel')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') definirWorkspaceManuel();
   });
@@ -5237,7 +5256,10 @@ function basculerSidebar() {
 function basculerPanneauObsidian() {
   const p = $('#panneauObsidian');
   p.classList.toggle('replie');
-  enregistrerConfig({ ui: { obsidianPanelOpen: !p.classList.contains('replie') } });
+  {
+    const ouvert = !p.classList.contains('replie');
+    enregistrerConfig({ ui: { obsidianPanelOpen: ouvert }, general: { panneauOuvert: ouvert } });
+  }
 }
 
 function actifOngletPanneau(nom) {

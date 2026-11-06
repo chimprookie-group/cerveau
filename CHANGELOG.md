@@ -4,6 +4,19 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.38.2] — 2026-11-06
+
+### Corrigé
+- **Réglages Général réellement appliqués** : « Mode au démarrage », « Restaurer
+  la dernière conversation », « Panneau latéral ouvert » et « Conversations
+  conservées » étaient enregistrés mais ignorés au lancement. Ils pilotent
+  maintenant le mode, la conversation reprise (la plus récente), le panneau et
+  la limite d'historique.
+- **Retirer l'espace de travail** : bouton ajouté (l'API existait sans interface) ;
+  l'espace se vide aussi correctement (valeur `null` ignorée par la fusion).
+- **Retrait du coffre actif** : l'identifiant actif est bien effacé, plus de
+  coffre fantôme dans la configuration.
+
 ## [2.38.1] — 2026-11-06
 
 ### Corrigé
