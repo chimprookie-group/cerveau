@@ -4,6 +4,13 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.45.2] — 2026-11-06
+
+### Corrigé
+- **Panneau latéral** : sa disposition et sa largeur s'appliquent dès le
+  démarrage. Sous 1280 px, le panneau s'ouvre sous l'en-tête : son bouton
+  reste visible et cliquable, au lieu de passer sous les onglets.
+
 ## [2.45.1] — 2026-11-06
 
 ### Corrigé
