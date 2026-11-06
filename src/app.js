@@ -4848,8 +4848,8 @@ const COMMANDES = [
   { id: 'coffres', titre: 'Gérer les coffres Obsidian', action: () => ouvrirReglages('coffres') },
   { id: 'permissions', titre: 'Régler les permissions', action: () => ouvrirReglages('permissions') },
   { id: 'theme', titre: 'Changer de thème', action: async () => {
-      const ordre = ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste', 'systeme'];
-      const noms = { deepseek: 'DeepSeek', sombre: 'Sombre', clair: 'Clair', matrix: 'Matrix', capucine: 'Capucine', nord: 'Nord', amethyste: 'Améthyste', systeme: 'Système' };
+      const ordre = ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste', 'cyber', 'systeme'];
+      const noms = { deepseek: 'DeepSeek', sombre: 'Sombre', clair: 'Clair', matrix: 'Matrix', capucine: 'Capucine', nord: 'Nord', amethyste: 'Améthyste', cyber: 'Cyber', systeme: 'Système' };
       const actuel = etat.config.ui?.theme || 'sombre';
       const suivant = ordre[(ordre.indexOf(actuel) + 1) % ordre.length];
       await enregistrerConfig({ ui: { theme: suivant } });

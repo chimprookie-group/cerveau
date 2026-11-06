@@ -969,13 +969,13 @@ async function run(mainWindow, deps) {
     appliquerTheme('deepseek');
     return { valeurs, fonds, accents };
   })()`);
-  verifier('Huit thèmes disponibles',
-    themesUi.valeurs.length === 8
-    && ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste', 'systeme'].every((t) => themesUi.valeurs.includes(t)),
+  verifier('Neuf thèmes disponibles',
+    themesUi.valeurs.length === 9
+    && ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste', 'cyber', 'systeme'].every((t) => themesUi.valeurs.includes(t)),
     themesUi.valeurs.join(', '));
   verifier('Thèmes distincts (fonds et accents)',
-    new Set(Object.values(themesUi.fonds)).size >= 7
-    && new Set(Object.values(themesUi.accents)).size === 7,
+    new Set(Object.values(themesUi.fonds)).size >= 8
+    && new Set(Object.values(themesUi.accents)).size === 8,
     `${new Set(Object.values(themesUi.fonds)).size} fonds, ${new Set(Object.values(themesUi.accents)).size} accents`);
 
   // intégration système : autostart et défauts

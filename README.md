@@ -5,6 +5,9 @@ et **intégration GitHub**. Conçu pour [Omarchy](https://omarchy.org) et Arch L
 
 ![Icône Cerveau](build/icon-256.png)
 
+[![Dernière version](https://img.shields.io/github/v/release/chimprookie-group/cerveau?label=version&color=22d3ee)](https://github.com/chimprookie-group/cerveau/releases/latest)
+[![Licence](https://img.shields.io/github/license/chimprookie-group/cerveau?color=22d3ee)](LICENSE)
+
 Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 
 | | |
@@ -53,15 +56,16 @@ inactive, et contexte borné pendant les longues tâches.
 tâche ; un garde-fou technique très haut et le bouton d'arrêt restent seuls
 limites.
 
-**Huit thèmes** — **DeepSeek** (sombre neutre, bleu, par défaut), Sombre (cuivré),
+**Neuf thèmes** — **DeepSeek** (sombre neutre, bleu, par défaut), Sombre (cuivré),
 Clair, **Matrix** (vert terminal), **Capucine** (crème et orange), **Nord** (bleu
-arctique), **Améthyste** (violet profond) et **Système** (suit le mode
-clair/sombre du bureau), à choisir dans `Réglages → Apparence` ou en les faisant
-défiler depuis la palette de commandes.
+arctique), **Améthyste** (violet profond), **Cyber** (bleu nuit et cyan néon,
+d'après le logo) et **Système** (suit le mode clair/sombre du bureau), à choisir
+dans `Réglages → Apparence` ou en les faisant défiler depuis la palette de
+commandes.
 
 **Intégration système** — lancement au démarrage, notifications de fin de
-réponse en arrière-plan, vérification des mises à jour depuis À propos, journal
-de crash dans `agent.log`.
+réponse en arrière-plan, **vérification automatique des mises à jour une fois par
+jour**, démon de tâches en arrière-plan, journal de crash dans `agent.log`.
 
 **Titres automatiques** — après le premier échange, le modèle donne un titre
 court à la conversation (désactivable dans Général).
@@ -81,7 +85,8 @@ est transmis aux modèles compatibles.
 
 **Mises à jour automatiques (vérification)** — au lancement, une fois par jour,
 Cerveau vérifie la dernière release et propose un lien si une version est
-disponible (désactivable dans Général).
+disponible (désactivable dans Général). Le **démon** permet aux tâches
+planifiées de tourner même Cerveau fermé.
 
 **Contexte adaptatif et recherche globale** — la compaction s'adapte à la
 fenêtre du modèle (plus de détail sur les grands modèles) ; `Ctrl+Maj+F` cherche
@@ -100,6 +105,9 @@ la puce de l'en-tête, et définis-en un par défaut pour les nouvelles discussi
 
 **File d'attente** — écris pendant qu'une réponse se génère : le message est mis
 en attente et envoyé dès la fin. « Dupliquer » (⧉) clone une conversation.
+
+**Thème Cyber** — bleu nuit profond, cyan néon et éclats magenta, directement
+inspiré du logo ; les effets d'ambiance suivent la même palette.
 
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
@@ -203,7 +211,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.41.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.42.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

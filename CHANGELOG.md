@@ -4,6 +4,17 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.42.0] — 2026-11-06
+
+### Ajouté
+- **Nouveau logo** : singe cybernétique au plumage de données, décliné pour
+  l'application, l'icône de bureau, le paquet et le README.
+- **Thème Cyber** : bleu nuit profond, cyan néon et éclats magenta, directement
+  inspiré du logo ; il rejoint les thèmes dans `Apparence`.
+
+### Modifié
+- Page GitHub, README et captures d'écran rafraîchis pour la version 2.42.0.
+
 ## [2.41.0] — 2026-11-06
 
 ### Ajouté

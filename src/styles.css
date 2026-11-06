@@ -130,6 +130,26 @@ body[data-theme="nord"] {
 }
 
 /* Améthyste : violet profond */
+/* Cyber : bleu nuit profond, cyan néon et éclats magenta — d'après le logo */
+body[data-theme="cyber"] {
+  --fond: #050b16;
+  --fond-2: #081422;
+  --fond-3: #0d1d2f;
+  --fond-4: #12283d;
+  --bordure: #14354b;
+  --bordure-claire: #1f4d6a;
+  --texte: #e8fbff;
+  --texte-2: #9fd3e4;
+  --texte-3: #5f91a8;
+  --accent: #22d3ee;
+  --accent-clair: #67e8f9;
+  --accent-sombre: #0891b2;
+  --succes: #34d399;
+  --danger: #fb7185;
+  --alerte: #fbbf24;
+  --ombre: 0 8px 32px rgba(0, 12, 24, 0.7);
+}
+
 body[data-theme="amethyste"] {
   --fond: #14101d;
   --fond-2: #1a1526;
@@ -4543,6 +4563,9 @@ body.effets .statut.ok::before {
 body[data-theme="clair"].effets .accueil::before { opacity: 0.3; }
 body[data-theme="clair"].effets .accueil::after { opacity: 0.35; }
 body[data-theme="clair"].effets .entete::after { opacity: 0.35; }
+body[data-theme="cyber"].effets .accueil::before { opacity: 0.4; }
+body[data-theme="cyber"].effets .accueil::after { opacity: 0.45; }
+body[data-theme="cyber"].effets .entete::after { opacity: 0.45; }
 body[data-theme="capucine"].effets .accueil::before { opacity: 0.25; }
 body[data-theme="capucine"].effets .accueil::after { opacity: 0.3; }
 body[data-theme="capucine"].effets .entete::after { opacity: 0.3; }

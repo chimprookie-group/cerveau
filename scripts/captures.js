@@ -125,7 +125,8 @@ function preparerConfigDemo(coffreDemo) {
     activeProvider: 'custom',
     mode: 'complet',
     workspace: path.join(os.homedir(), 'Projects'),
-    ui: { theme: 'sombre', fontScale: 1 },
+    ui: { theme: 'cyber', fontScale: 1 },
+    general: { verifierMajAuto: false, notifications: false, titresAuto: false },
     panneau: { style: 'cote', largeur: 400 },
     permissions: {
       mode: 'auto', allowDelete: false,
@@ -142,28 +143,23 @@ function preparerConfigDemo(coffreDemo) {
     conversations: [
       {
         id: 'conv_demo',
-        titre: 'Audit de l’application',
+        titre: 'Synthèse du coffre et plan de refonte',
         date: Date.now() - 3600_000,
         fournisseur: 'custom',
         messages: [
-          { role: 'user', contenu: 'Vérifie que tout est bien connecté dans l’application.' },
+          { role: 'user', contenu: 'Fais-moi une synthèse de mes notes et propose un plan pour la refonte du site.' },
           {
             role: 'assistant',
-            contenu: `J'ai vérifié quatre couches.
+            contenu: `**Synthèse.** Trois notes, deux projets actifs. La refonte du site
+reste le sujet principal ; le budget de performance est la contrainte à garder
+en tête.
 
-**Les chemins d'abord.** L'application et le démon écrivaient dans deux dossiers
-différents : les tâches planifiées créées dans l'interface étaient invisibles au
-démon. Corrigé, et les données existantes sont reprises automatiquement.
+**Plan proposé.**
+1. Inventorier les pages existantes et leurs dépendances.
+2. Choisir le générateur statique et figer la structure des URL.
+3. Migrer les contenus, puis mesurer avant/après.
 
-**Les contextes ensuite.** Le Superviseur n'avait ni mémoire, ni serveurs MCP :
-il ne pouvait pas utiliser les mêmes outils que le chat.
-
-**Les écouteurs.** Chaque ouverture des réglages en empilait de nouveaux. Après
-onze ouvertures, un seul clic déclenchait plusieurs actions.
-
-**Les styles.** Six classes utilisées n'avaient aucune règle CSS.
-
-365 vérifications passent, et les 14 sections s'ouvrent sans une seule erreur.`
+Je peux commencer par l'inventaire et créer une note de suivi.`
           }
         ]
       },
@@ -283,7 +279,7 @@ async function principal() {
     const conv = ui.etat.conversations.find((c) => c.id === 'conv_demo');
     if (conv) { ui.etat.conversationCourante = conv; ui.afficherConversation(); }
     await ui.rafraichirCoffre();
-    const note = document.querySelector('#arbreCoffre li, .coffre-arbre li');
+    await ui.ouvrirNote('Bienvenue.md');
     document.querySelector('#listeConversations')?.scrollTo(0, 0);
     return true;
   })()`);
