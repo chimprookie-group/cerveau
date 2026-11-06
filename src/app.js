@@ -2104,6 +2104,32 @@ function synchroniserHauteurEntete() {
   if (!entete) return;
   const h = Math.round(entete.getBoundingClientRect().height);
   if (h > 0) document.documentElement.style.setProperty('--hauteur-entete', `${h}px`);
+  adapterDispositionEntete();
+}
+
+/**
+ * Le panneau reste côte à côte tant que l'en-tête y tient. Dès qu'il manque
+ * de place, il passe sous l'en-tête pour laisser toute la largeur aux
+ * commandes. On mesure l'encombrement réel au lieu de fixer une largeur :
+ * le seuil suit la largeur du panneau et l'échelle du texte.
+ */
+function adapterDispositionEntete() {
+  const html = document.documentElement;
+  const entete = $('.entete');
+  const panneau = $('#panneauObsidian');
+  if (!entete || !panneau) return;
+  html.classList.remove('entete-etroite');
+  if (html.dataset.panneau === 'superpose') return;
+  if (panneau.classList.contains('replie')) return;
+  // Mesure sur la disposition côte à côte finale : la transition d'ouverture
+  // du panneau fausserait la largeur disponible pendant quelques millisecondes.
+  const transition = panneau.style.transition;
+  panneau.style.transition = 'none';
+  panneau.style.marginRight = '0';
+  const manque = entete.scrollWidth > entete.clientWidth + 1;
+  panneau.style.transition = transition;
+  panneau.style.marginRight = '';
+  if (manque) html.classList.add('entete-etroite');
 }
 
 /* ═══════════════════════════ RÉGLAGES AVANCÉS ═══════════════════════════ */
@@ -5428,6 +5454,7 @@ function basculerSidebar() {
   const sb = $('#sidebar');
   sb.classList.toggle('repliee');
   enregistrerConfig({ ui: { sidebarOpen: !sb.classList.contains('repliee') } });
+  synchroniserHauteurEntete();
 }
 
 function basculerPanneauObsidian() {
@@ -5437,6 +5464,7 @@ function basculerPanneauObsidian() {
     const ouvert = !p.classList.contains('replie');
     enregistrerConfig({ ui: { obsidianPanelOpen: ouvert }, general: { panneauOuvert: ouvert } });
   }
+  synchroniserHauteurEntete();
 }
 
 function actifOngletPanneau(nom) {

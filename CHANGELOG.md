@@ -4,6 +4,18 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.45.3] — 2026-11-06
+
+### Modifié
+- **En-tête plus compact** : boutons, pastille d'employé, sélecteurs de mode et
+  de modèle, titre et espacements réduits. Le titre et le nom du modèle ont
+  davantage de place sans rien masquer.
+
+### Corrigé
+- **Panneau latéral** : il reste côte à côte tant que l'en-tête y tient ; le
+  passage en superposition est mesuré sur l'encombrement réel de l'en-tête, et
+  suit donc la largeur du panneau et l'échelle du texte.
+
 ## [2.45.2] — 2026-11-06
 
 ### Corrigé
