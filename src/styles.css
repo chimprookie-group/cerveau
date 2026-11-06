@@ -299,7 +299,46 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .volet { display: none; flex-direction: column; overflow: hidden; height: 100%; }
 .volet.actif { display: flex; }
 
-.recherche-mini { padding: 10px; }
+.recherche-mini {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+}
+
+.recherche-mini input { flex: 1; width: auto; }
+.recherche-mini .btn-icone { flex-shrink: 0; }
+
+.resultats-recherche-globale {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.resultat-global {
+  display: block;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--bordure);
+  border-radius: 8px;
+  background: var(--fond-2);
+  color: var(--texte);
+  text-align: left;
+  cursor: pointer;
+}
+
+.resultat-global:hover { border-color: var(--accent); }
+.resultat-global-titre { font-size: 11px; color: var(--texte-3); margin-bottom: 3px; }
+.resultat-global-extrait { font-size: 12px; line-height: 1.45; }
+
+.message.surligne {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
 
 .recherche-mini input, .champ-plein {
   width: 100%;

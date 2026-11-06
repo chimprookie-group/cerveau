@@ -4,6 +4,17 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.40.0] — 2026-11-06
+
+### Amélioré
+- **Contexte adaptatif** : la compaction attend plus longtemps sur les grands
+  modèles (Claude, GPT-5/6, GPT-4.1, DeepSeek…) et reste prudente sur les
+  modèles inconnus ; le budget d'allègement des outils suit le même calcul.
+  Les longues conversations gardent donc plus de détail sans risquer la fenêtre.
+- **Recherche globale dans les messages** : `Ctrl+Maj+F` ou le bouton `⌕` de la
+  barre latérale cherche dans toutes les conversations, affiche des extraits,
+  ouvre la bonne discussion et surligne le message trouvé.
+
 ## [2.39.0] — 2026-11-06
 
 ### Amélioré

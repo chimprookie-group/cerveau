@@ -82,6 +82,7 @@ function allegerMessages(messages, isAnthropic, { budget = BUDGET_CONTEXTE, gard
   return modifie;
 }
 const memoireMod = require('./memoire');
+const contextwindow = require('./contextwindow');
 const sousagents = require('./sousagents');
 const { gestionnaire: mcp } = require('./mcp');
 
@@ -454,6 +455,8 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
   let actif = { providerId, credentials };
   let fallbackUtilise = false;
   let basculerFallback = false;
+  // budget de contexte adapté au modèle (plus large sur les grands modèles)
+  const budgetContexte = contextwindow.budgetCaracteres(credentials.model, 0.55);
 
   const verifierDemande = async (texte) => {
     const demande = [...historique].reverse().find((m) => m.role === 'user')?.contenu || '';
@@ -513,7 +516,7 @@ Réponds uniquement par OUI ou NON.`;
     const debutFlux = Date.now();
 
     // garde-fou : ne jamais envoyer un contexte démesuré au fournisseur
-    if (allegerMessages(messages, isAnthropic)) {
+    if (allegerMessages(messages, isAnthropic, { budget: budgetContexte })) {
       emit({ type: 'avertissement', message: 'Contexte volumineux : anciens résultats d\'outils allégés.' });
     }
 
@@ -601,7 +604,7 @@ Réponds uniquement par OUI ou NON.`;
       // Contexte refusé pour sa taille : on allège fortement et on réessaie.
       if (messageContexte) {
         allegerMessages(messages, isAnthropic, {
-          budget: Math.round(BUDGET_CONTEXTE * 0.4),
+          budget: Math.round(budgetContexte * 0.4),
           garder: 2
         });
         messageContexte = null;

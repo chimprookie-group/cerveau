@@ -2947,6 +2947,85 @@ function formaterJetons(n) {
 let minuteurRecherche = null;
 let statistiquesTexte = '';
 
+let minuteurRechercheGlobale = null;
+
+function ouvrirRechercheGlobale() {
+  const modale = $('#modaleRechercheGlobale');
+  const champ = $('#champRechercheGlobale');
+  if (!modale || !champ) return;
+  modale.hidden = false;
+  $('#resultatsRechercheGlobale').innerHTML = '';
+  setTimeout(() => champ.focus(), 40);
+  if (champ.value.trim()) lancerRechercheGlobale();
+}
+
+function fermerRechercheGlobale() {
+  const modale = $('#modaleRechercheGlobale');
+  if (modale) modale.hidden = true;
+}
+
+function ouvrirResultatGlobal(convId, index) {
+  fermerRechercheGlobale();
+  convDeplies.add(convId);
+  chargerConversation(convId);
+  setTimeout(() => {
+    const elMsg = document.querySelectorAll('#messages .message')[index];
+    if (!elMsg) return;
+    elMsg.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    elMsg.classList.add('surligne');
+    setTimeout(() => elMsg.classList.remove('surligne'), 1800);
+  }, 220);
+}
+
+function lancerRechercheGlobale() {
+  const champ = $('#champRechercheGlobale');
+  const zone = $('#resultatsRechercheGlobale');
+  if (!champ || !zone) return;
+  const requete = normaliserRecherche(champ.value.trim());
+  zone.innerHTML = '';
+
+  if (!requete) {
+    zone.append(el('p', { class: 'vide petit', text: 'Tape un mot pour chercher dans tous les messages.' }));
+    return;
+  }
+
+  const resultats = [];
+  for (const conv of etat.conversations) {
+    const messages = conv.messages || [];
+    for (let i = 0; i < messages.length; i++) {
+      const texte = String(messages[i].contenu || '');
+      const pos = normaliserRecherche(texte).indexOf(requete);
+      if (pos < 0) continue;
+      const debut = Math.max(0, pos - 60);
+      const extrait = texte.slice(debut, Math.min(texte.length, pos + requete.length + 90))
+        .replace(/\s+/g, ' ').trim();
+      resultats.push({
+        conv,
+        index: i,
+        role: messages[i].role,
+        extrait: `${debut > 0 ? '…' : ''}${extrait}${pos + requete.length + 90 < texte.length ? '…' : ''}`
+      });
+    }
+  }
+
+  resultats.sort((a, b) => (Number(b.conv.date) || 0) - (Number(a.conv.date) || 0));
+  if (!resultats.length) {
+    zone.append(el('p', { class: 'vide petit', text: 'Aucun message ne correspond.' }));
+    return;
+  }
+
+  for (const r of resultats.slice(0, 40)) {
+    zone.append(el('button', {
+      class: 'resultat-global',
+      type: 'button',
+      onclick: () => ouvrirResultatGlobal(r.conv.id, r.index)
+    },
+      el('div', { class: 'resultat-global-titre', text: `${r.conv.titre || 'Conversation'} · ${r.role === 'user' ? 'Vous' : 'Assistant'}` }),
+      el('div', { class: 'resultat-global-extrait', text: r.extrait })
+    ));
+  }
+}
+
 function ouvrirRechercheConversation() {
   const barre = $('#rechercheConversation');
   const champ = $('#champRechercheConversation');
@@ -3410,13 +3489,29 @@ function nettoyerReflexion() {
   $('#navTours')?.querySelectorAll('.tour-mark.occupe').forEach((n) => n.classList.remove('occupe'));
 }
 
+/** Budget de compaction en caractères, adapté au modèle actif. */
+function budgetCompaction() {
+  const pid = etat.config.activeProvider;
+  const modele = String(
+    etat.modelesSession?.[pid] || etat.config.providers?.[pid]?.model || ''
+  ).toLowerCase();
+  let jetons = 64000;
+  if (/claude/.test(modele)) jetons = 200000;
+  else if (/gpt-5|gpt-6/.test(modele)) jetons = 400000;
+  else if (/gpt-4\.1/.test(modele)) jetons = 1000000;
+  else if (/gpt-4/.test(modele)) jetons = 128000;
+  else if (/\bo[1-9]\b|o[1-9]-/.test(modele)) jetons = 200000;
+  else if (/deepseek/.test(modele)) jetons = 128000;
+  return Math.max(60000, Math.min(400000, Math.round(jetons * 4 * 0.35)));
+}
+
 /** Compacte les échanges anciens en un résumé quand le contexte devient gros. */
 async function compacterSiBesoin(conv) {
   if (!conv || !Array.isArray(conv.messages)) return;
   const deja = conv.compacteJusqua || 0;
   const restants = conv.messages.slice(deja);
   const taille = restants.reduce((n, m) => n + String(m.contenu || '').length, 0);
-  if (restants.length < 24 || taille < 60000) return;
+  if (restants.length < 24 || taille < budgetCompaction()) return;
 
   const aResumer = restants.slice(0, restants.length - 8);
   if (aResumer.length < 8) return;
@@ -4940,7 +5035,12 @@ function brancherEvenements() {
   // recherche dans la conversation
   $('#statsConversation')?.addEventListener('click', ouvrirStatistiques);
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'f') {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && String(e.key).toLowerCase() === 'f') {
+      e.preventDefault();
+      ouvrirRechercheGlobale();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && String(e.key).toLowerCase() === 'f') {
       e.preventDefault();
       ouvrirRechercheConversation();
     }
@@ -4958,6 +5058,24 @@ function brancherEvenements() {
   $('#btnRecherchePrec')?.addEventListener('click', () => chercherSuivant(true));
   $('#btnRechercheSuiv')?.addEventListener('click', () => chercherSuivant(false));
   $('#btnFermerRecherche')?.addEventListener('click', fermerRechercheConversation);
+
+  // recherche globale dans les messages
+  $('#btnRechercheGlobale')?.addEventListener('click', ouvrirRechercheGlobale);
+  $('#btnFermerRechercheGlobale')?.addEventListener('click', fermerRechercheGlobale);
+  $('#modaleRechercheGlobale .modale-fond')?.addEventListener('click', fermerRechercheGlobale);
+  $('#champRechercheGlobale')?.addEventListener('input', () => {
+    clearTimeout(minuteurRechercheGlobale);
+    minuteurRechercheGlobale = setTimeout(lancerRechercheGlobale, 160);
+  });
+  $('#champRechercheGlobale')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      $('#resultatsRechercheGlobale .resultat-global')?.click();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      fermerRechercheGlobale();
+    }
+  });
   API.app.surResultatRecherche?.((r) => {
     const compte = $('#compteRecherche');
     if (!compte) return;

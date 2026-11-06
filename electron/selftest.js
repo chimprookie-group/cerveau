@@ -212,6 +212,15 @@ async function run(mainWindow, deps) {
   verifier('URL SSH GitHub reconnue', github.extraireNomComplet('git@github.com:a/b.git') === 'a/b');
   verifier('URL HTTPS GitHub reconnue', github.extraireNomComplet('https://github.com/a/b.git') === 'a/b');
   verifier('URL non-GitHub ignorée', github.extraireNomComplet('https://gitlab.com/a/b') === null);
+  const ctxWin = require('./contextwindow');
+  verifier('Contexte : fenêtres modèles connues',
+    ctxWin.fenetreJetons('claude-sonnet-4') === 200000
+    && ctxWin.fenetreJetons('gpt-5-mini') === 400000
+    && ctxWin.fenetreJetons('deepseek-chat') === 128000
+    && ctxWin.fenetreJetons('modele-inconnu') === 64000);
+  verifier('Contexte : budget adaptatif',
+    ctxWin.budgetCaracteres('claude-sonnet-4') > ctxWin.budgetCaracteres('modele-inconnu'));
+
   verifier('GitHub : états PR/Issues normalisés',
     github.normaliserEtat('ouvert', { pullRequest: true }) === 'open'
     && github.normaliserEtat('ferme') === 'closed'
@@ -909,6 +918,38 @@ async function run(mainWindow, deps) {
     `${fonctionsUi.restants} message(s)`);
   verifier('File d’attente pendant une génération',
     fonctionsUi.file === 1 && fonctionsUi.bandeau === true);
+
+  // recherche globale dans les messages
+  const rechercheGlobale = await mainWindow.webContents.executeJavaScript(`(async () => {
+    etat.conversations = [
+      { id: 'g1', titre: 'Alpha', date: 2000, mode: 'complet', messages: [
+        { role: 'user', contenu: 'Bonjour le monde alpha' },
+        { role: 'assistant', contenu: 'Rien ici.' }
+      ] },
+      { id: 'g2', titre: 'Beta', date: 1000, mode: 'complet', messages: [
+        { role: 'user', contenu: 'Un alpha ailleurs' }
+      ] }
+    ];
+    afficherConversations();
+    ouvrirRechercheGlobale();
+    const champ = document.querySelector('#champRechercheGlobale');
+    champ.value = 'alpha';
+    champ.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 350));
+    const n = document.querySelectorAll('#resultatsRechercheGlobale .resultat-global').length;
+    document.querySelector('#resultatsRechercheGlobale .resultat-global')?.click();
+    await new Promise((r) => setTimeout(r, 600));
+    return {
+      n,
+      conv: etat.conversationCourante?.id,
+      ouvert: !document.querySelector('#modaleRechercheGlobale').hidden,
+      surligne: document.querySelectorAll('.message.surligne').length
+    };
+  })()`);
+  verifier('Recherche globale dans les messages',
+    rechercheGlobale.n === 2 && rechercheGlobale.conv === 'g1'
+    && rechercheGlobale.ouvert === false && rechercheGlobale.surligne === 1,
+    `${rechercheGlobale.n} résultat(s)`);
 
   // thème par défaut puis palettes appliquées distinctement
   const themeDefaut = await mainWindow.webContents.executeJavaScript('document.body.dataset.theme');

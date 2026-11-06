@@ -79,6 +79,10 @@ miniatures et s'ouvrent en grand au clic.
 mémorisés par fournisseur et réappliqués au lancement ; l'effort de raisonnement
 est transmis aux modèles compatibles.
 
+**Contexte adaptatif et recherche globale** — la compaction s'adapte à la
+fenêtre du modèle (plus de détail sur les grands modèles) ; `Ctrl+Maj+F` cherche
+dans le texte de toutes les conversations et ouvre le message trouvé.
+
 **Réglages de démarrage** — mode au démarrage, restauration de la dernière
 conversation, panneau latéral et limite d'historique sont appliqués au lancement.
 
@@ -195,7 +199,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.39.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.40.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
