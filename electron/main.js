@@ -1190,6 +1190,8 @@ ipcMain.handle('superviseur:passer', async () => {
     const sup = obtenirSuperviseur();
     const r = await sup.passer(contexteSuperviseur(cfg));
     const snap = await sup.instantane();
+    // une collecte GitHub en échec doit remonter, pas passer pour « 0 ticket »
+    if (r.erreur) return { ok: false, message: r.erreur, ...snap };
     return { ok: true, ...r, ...snap };
   } catch (err) {
     return { ok: false, message: String(err.message || err) };

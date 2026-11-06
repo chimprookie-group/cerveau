@@ -4,6 +4,12 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.38.3] — 2026-11-06
+
+### Corrigé
+- **Superviseur** : un échec de collecte GitHub (non connecté, réseau, jeton)
+  n'est plus présenté comme « 0 ticket, 0 exécuté » ; l'erreur est affichée.
+
 ## [2.38.2] — 2026-11-06
 
 ### Corrigé
