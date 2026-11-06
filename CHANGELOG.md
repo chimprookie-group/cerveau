@@ -4,6 +4,14 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.38.1] — 2026-11-06
+
+### Corrigé
+- **Mémoire de long terme réellement utilisée** : le bloc de mémoire était chargé
+  mais **jamais ajouté au prompt système** ; il est maintenant injecté en tête,
+  avec des règles invitant l'agent à retenir les préférences durables, les
+  conventions de projet et les décisions sans qu'on le lui demande.
+
 ## [2.38.0] — 2026-11-06
 
 ### Ajouté

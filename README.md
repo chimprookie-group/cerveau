@@ -75,6 +75,10 @@ message (images comprises) ; un fournisseur de secours de la même famille d'API
 prend le relais si le principal échoue. Les images jointes s'affichent en
 miniatures et s'ouvrent en grand au clic.
 
+**Mémoire durable** — l'agent retient les préférences, conventions de projet et
+décisions dans `Réglages → Mémoire` (fichier `memoire.json`), et les réinjecte
+dans chaque conversation.
+
 **Employés (bots)** — dans `Réglages → Comportement`, crée des profils
 d'assistant (emoji, nom, rôle, instructions), choisis-en un par conversation via
 la puce de l'en-tête, et définis-en un par défaut pour les nouvelles discussions.
@@ -184,7 +188,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.38.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.38.1-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
