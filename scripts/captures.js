@@ -125,7 +125,7 @@ function preparerConfigDemo(coffreDemo) {
     activeProvider: 'custom',
     mode: 'complet',
     workspace: path.join(os.homedir(), 'Projects'),
-    ui: { theme: 'cyber', fontScale: 1 },
+    ui: { theme: 'sombre', fontScale: 1 },
     general: { verifierMajAuto: false, notifications: false, titresAuto: false },
     panneau: { style: 'cote', largeur: 400 },
     permissions: {
@@ -285,6 +285,13 @@ async function principal() {
   })()`);
   await pause(900);
   await capture(win, '01-accueil.png');
+
+  // 1b. le même écran en thème clair
+  await ui(`(async () => { appliquerTheme('clair'); return true; })()`);
+  await pause(700);
+  await capture(win, '11-clair.png');
+  await ui(`(async () => { appliquerTheme('sombre'); return true; })()`);
+  await pause(400);
 
   // 2. une note ouverte dans le panneau de droite
   await ui(`(async () => {

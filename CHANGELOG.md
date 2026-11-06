@@ -4,6 +4,16 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.45.0] — 2026-11-06
+
+### Modifié
+- **Deux thèmes seulement, redessinés** : **Sombre** (graphite profond, accent
+  indigo, surfaces en dégradé) et **Clair** (blanc froid, accent indigo, en-tête
+  translucide). Les thèmes DeepSeek, Matrix, Capucine, Nord, Améthyste, Cyber et
+  le mode Système sont retirés ; les anciennes configurations retombent sur
+  Sombre.
+- Captures d'écran régénérées (Sombre + Clair) et README mis à jour.
+
 ## [2.44.0] — 2026-11-06
 
 ### Ajouté

@@ -980,7 +980,7 @@ async function run(mainWindow, deps) {
 
   // thème par défaut puis palettes appliquées distinctement
   const themeDefaut = await mainWindow.webContents.executeJavaScript('document.body.dataset.theme');
-  verifier('Thème par défaut : DeepSeek', themeDefaut === 'deepseek', themeDefaut);
+  verifier('Thème par défaut : Sombre', themeDefaut === 'sombre', themeDefaut);
 
   const themesUi = await mainWindow.webContents.executeJavaScript(`(async () => {
     const valeurs = [...document.querySelectorAll('#choixTheme option')].map((o) => o.value);
@@ -993,16 +993,16 @@ async function run(mainWindow, deps) {
       fonds[v] = s.backgroundColor;
       accents[v] = s.getPropertyValue('--accent').trim();
     }
-    appliquerTheme('deepseek');
+    appliquerTheme('sombre');
     return { valeurs, fonds, accents };
   })()`);
-  verifier('Neuf thèmes disponibles',
-    themesUi.valeurs.length === 9
-    && ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste', 'cyber', 'systeme'].every((t) => themesUi.valeurs.includes(t)),
+  verifier('Deux thèmes disponibles',
+    themesUi.valeurs.length === 2
+    && ['sombre', 'clair'].every((t) => themesUi.valeurs.includes(t)),
     themesUi.valeurs.join(', '));
   verifier('Thèmes distincts (fonds et accents)',
-    new Set(Object.values(themesUi.fonds)).size >= 8
-    && new Set(Object.values(themesUi.accents)).size === 8,
+    new Set(Object.values(themesUi.fonds)).size === 2
+    && new Set(Object.values(themesUi.accents)).size === 2,
     `${new Set(Object.values(themesUi.fonds)).size} fonds, ${new Set(Object.values(themesUi.accents)).size} accents`);
 
   // intégration système : autostart et défauts

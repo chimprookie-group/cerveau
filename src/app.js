@@ -347,20 +347,9 @@ function cleConfiguree() {
   return Boolean(p && p.hasKey);
 }
 
-const mediaSombre = window.matchMedia('(prefers-color-scheme: dark)');
-
-function themeEffectif(theme) {
-  if (theme === 'systeme') return mediaSombre.matches ? 'deepseek' : 'clair';
-  return theme;
-}
-
 function appliquerTheme(theme) {
-  document.body.dataset.theme = themeEffectif(theme);
+  document.body.dataset.theme = theme === 'clair' ? 'clair' : 'sombre';
 }
-
-mediaSombre.addEventListener('change', () => {
-  if (etat.config?.ui?.theme === 'systeme') appliquerTheme('systeme');
-});
 
 /** Active ou coupe les effets visuels (halo, grille, lueurs). */
 function appliquerEffets(actif) {
@@ -4882,8 +4871,8 @@ const COMMANDES = [
   { id: 'coffres', titre: 'Gérer les coffres Obsidian', action: () => ouvrirReglages('coffres') },
   { id: 'permissions', titre: 'Régler les permissions', action: () => ouvrirReglages('permissions') },
   { id: 'theme', titre: 'Changer de thème', action: async () => {
-      const ordre = ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste', 'cyber', 'systeme'];
-      const noms = { deepseek: 'DeepSeek', sombre: 'Sombre', clair: 'Clair', matrix: 'Matrix', capucine: 'Capucine', nord: 'Nord', amethyste: 'Améthyste', cyber: 'Cyber', systeme: 'Système' };
+      const ordre = ['sombre', 'clair'];
+      const noms = { sombre: 'Sombre', clair: 'Clair' };
       const actuel = etat.config.ui?.theme || 'sombre';
       const suivant = ordre[(ordre.indexOf(actuel) + 1) % ordre.length];
       await enregistrerConfig({ ui: { theme: suivant } });

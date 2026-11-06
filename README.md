@@ -25,6 +25,10 @@ Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 
 ![Accueil](docs/01-accueil.png)
 
+**Le thème Clair** — même interface, surfaces blanches et accent indigo.
+
+![Thème Clair](docs/11-clair.png)
+
 **Une note** — rendu Markdown, propriétés et liens, lus directement dans le dossier du coffre.
 
 ![Note](docs/02-note.png)
@@ -56,12 +60,9 @@ inactive, et contexte borné pendant les longues tâches.
 tâche ; un garde-fou technique très haut et le bouton d'arrêt restent seuls
 limites.
 
-**Neuf thèmes** — **DeepSeek** (sombre neutre, bleu, par défaut), Sombre (cuivré),
-Clair, **Matrix** (vert terminal), **Capucine** (crème et orange), **Nord** (bleu
-arctique), **Améthyste** (violet profond), **Cyber** (bleu nuit et cyan néon,
-d'après le logo) et **Système** (suit le mode clair/sombre du bureau), à choisir
-dans `Réglages → Apparence` ou en les faisant défiler depuis la palette de
-commandes.
+**Deux thèmes modernes** — **Sombre** (graphite profond, accent indigo, surfaces
+en dégradé) et **Clair** (blanc froid, accent indigo, en-tête translucide), à
+choisir dans `Réglages → Apparence` ou depuis la palette de commandes.
 
 **Intégration système** — lancement au démarrage, notifications de fin de
 réponse en arrière-plan, **vérification automatique des mises à jour une fois par
@@ -108,9 +109,6 @@ la puce de l'en-tête, et définis-en un par défaut pour les nouvelles discussi
 
 **File d'attente** — écris pendant qu'une réponse se génère : le message est mis
 en attente et envoyé dès la fin. « Dupliquer » (⧉) clone une conversation.
-
-**Thème Cyber** — bleu nuit profond, cyan néon et éclats magenta, directement
-inspiré du logo ; les effets d'ambiance suivent la même palette.
 
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
@@ -220,7 +218,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.44.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.45.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
