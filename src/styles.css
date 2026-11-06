@@ -28,7 +28,7 @@
   --police-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
   --largeur-sidebar: 268px;
   --largeur-panneau: 400px;
-  --hauteur-entete: 55px;
+  --hauteur-entete: 44px;
 }
 
 body[data-theme="sombre"] {
@@ -515,14 +515,14 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .puce-employe {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  max-width: 122px;
-  padding: 4px 9px;
+  gap: 4px;
+  max-width: 100px;
+  padding: 2px 6px;
   border: 1px solid var(--bordure-claire);
   border-radius: 999px;
   background: var(--fond-3);
   color: var(--texte-2);
-  font-size: 11px;
+  font-size: 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -634,14 +634,14 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .entete {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
+  gap: 6px;
+  padding: 5px 12px;
   border-bottom: 1px solid var(--bordure);
   background: var(--fond-2);
   -webkit-app-region: drag;
   flex-shrink: 0;
   flex-wrap: nowrap;
-  min-height: 54px;
+  min-height: 44px;
 }
 
 .entete button, .entete select, .entete .selecteur-mode { -webkit-app-region: no-drag; }
@@ -650,7 +650,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .entete-titre h1 {
   margin: 0;
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -658,7 +658,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 }
 
 .sous-titre {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--texte-3);
   white-space: nowrap;
   overflow: hidden;
@@ -670,7 +670,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   /* doit pouvoir rétrécir : sinon l'en-tête déborde de la zone principale
      et ses derniers boutons passent sous le panneau latéral */
   flex: 0 1 auto;
@@ -681,24 +681,27 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 /* les boutons carrés gardent leur taille, c'est le sélecteur qui cède */
 .entete-actions .btn-icone { flex-shrink: 0; }
 
+/* en-tête compact : les commandes restent lisibles et tiennent à l'écran */
+.entete .btn-icone { width: 24px; height: 24px; font-size: 12px; border-radius: 5px; }
+
 @media (max-width: 1400px) {
   .entete-actions select#selectFournisseur { max-width: 110px; }
   .entete-actions select#selectModele { max-width: 240px; min-width: 140px; }
-  .selecteur-mode .mode-btn { padding: 4px 8px; }
+  .selecteur-mode .mode-btn { padding: 3px 6px; }
 }
 
 /* Fenêtre étroite : le titre passe au-dessus, les contrôles gardent toute la place.
    Ainsi le nom du modèle n'est jamais tronqué. */
 @media (max-width: 1240px) {
   .entete {
-    gap: 8px;
-    padding-left: 12px;
-    padding-right: 12px;
+    gap: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
   .entete-titre { flex: 0 1 auto; min-width: 0; }
-  .entete-titre h1 { font-size: 13.5px; }
-  .entete-actions { gap: 5px; }
-  .selecteur-mode .mode-btn { padding-left: 8px; padding-right: 8px; }
+  .entete-titre h1 { font-size: 12px; }
+  .entete-actions { gap: 3px; }
+  .selecteur-mode .mode-btn { padding-left: 5px; padding-right: 5px; }
   .entete-actions select#selectFournisseur { max-width: 150px; }
   .entete-actions select#selectModele { flex: 1 1 auto; max-width: none; min-width: 160px; }
 }
@@ -2170,19 +2173,19 @@ body.fenetre-inactive * {
   display: flex;
   background: var(--fond-3);
   border: 1px solid var(--bordure);
-  border-radius: 7px;
-  padding: 2px;
+  border-radius: 6px;
+  padding: 1px;
   gap: 1px;
 }
 
 .mode-btn {
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 4px;
   color: var(--texte-3);
-  font-size: 11.5px;
+  font-size: 10px;
   font-weight: 550;
-  padding: 4px 10px;
+  padding: 3px 6px;
   transition: all 0.15s;
   white-space: nowrap;
 }
@@ -2887,16 +2890,16 @@ body.fenetre-inactive * {
 .declencheur-modele {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
   background: var(--fond-3);
   border: 1px solid var(--bordure);
-  border-radius: 8px;
-  padding: 6px 9px;
-  font-size: 12px;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 10.5px;
   color: var(--texte);
   cursor: pointer;
-  max-width: 300px;
-  min-width: 88px;
+  max-width: 240px;
+  min-width: 140px;
   flex: 0 1 auto;
   transition: border-color 0.15s, background 0.15s;
 }
@@ -2905,7 +2908,7 @@ body.fenetre-inactive * {
 .declencheur-modele:focus-visible { outline: 2px solid var(--accent-sombre); outline-offset: 1px; }
 
 .modele-pastille {
-  width: 7px; height: 7px;
+  width: 6px; height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--succes);
@@ -2916,7 +2919,7 @@ body.fenetre-inactive * {
 
 .modele-libelle {
   font-family: var(--police-mono);
-  font-size: 11.5px;
+  font-size: 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2926,7 +2929,7 @@ body.fenetre-inactive * {
 .modele-libelle.vide { color: var(--texte-3); font-style: italic; }
 
 .modele-effort {
-  font-size: 9.5px;
+  font-size: 8px;
   background: var(--accent-sombre);
   color: #fff;
   border-radius: 20px;
@@ -2935,7 +2938,7 @@ body.fenetre-inactive * {
   flex-shrink: 0;
 }
 
-.modele-chevron { color: var(--texte-3); font-size: 11px; flex-shrink: 0; }
+.modele-chevron { color: var(--texte-3); font-size: 10px; flex-shrink: 0; }
 
 /* ---- menu déroulant ---- */
 
@@ -4278,25 +4281,27 @@ html[data-panneau="superpose"] .entete {
 
 html[data-panneau="superpose"] #principal { position: relative; }
 
-/* Sous 1280 px, la barre latérale + l'en-tête + le panneau ne tiennent plus
-   côte à côte : les derniers boutons de l'en-tête seraient masqués par le
-   panneau. On force alors la superposition, quel que soit le réglage. */
-@media (max-width: 1280px) {
-  html[data-panneau="cote"] .panneau-obsidian {
-    position: absolute;
-    top: var(--hauteur-entete, 55px);
-    right: 0;
-    bottom: 0;
-    z-index: 90;
-    box-shadow: -8px 0 28px rgba(0, 0, 0, 0.28);
-  }
-  html[data-panneau="cote"] .panneau-obsidian.replie {
-    margin-right: 0;
-    right: calc(-1 * var(--largeur-panneau));
-  }
-  html[data-panneau="cote"] .entete { position: relative; z-index: 95; }
-  html[data-panneau="cote"] #principal { position: relative; }
+/* Quand l'en-tête ne tient pas à côté du panneau, celui-ci glisse sous
+   l'en-tête : le bouton qui le referme reste accessible. La décision est
+   mesurée en JavaScript (adapterDispositionEntete), pas devinée à une
+   largeur fixe : elle suit la largeur du panneau et l'échelle du texte. */
+html.entete-etroite .panneau-obsidian {
+  position: absolute;
+  top: var(--hauteur-entete, 44px);
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  box-shadow: -8px 0 28px rgba(0, 0, 0, 0.28);
+  background: var(--fond-2);
 }
+
+html.entete-etroite .panneau-obsidian.replie {
+  margin-right: 0;
+  right: calc(-1 * var(--largeur-panneau));
+}
+
+html.entete-etroite .entete { position: relative; z-index: 95; }
+html.entete-etroite #principal { position: relative; }
 
 @media (max-width: 900px) {
   .suggestions { grid-template-columns: 1fr; }
