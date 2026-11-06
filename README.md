@@ -70,10 +70,17 @@ court à la conversation (désactivable dans Général).
 précédent/suivant) ; un clic sur la barre d'état affiche les statistiques
 détaillées de la discussion.
 
-**Édition et secours** — « Modifier » replace le dernier message dans la saisie
-(images comprises) ; un fournisseur de secours de la même famille d'API prend le
-relais si le principal échoue. Les images jointes s'affichent en miniatures et
-s'ouvrent en grand au clic.
+**Édition et secours** — « Modifier » rembobine le fil jusqu'à n'importe quel
+message (images comprises) ; un fournisseur de secours de la même famille d'API
+prend le relais si le principal échoue. Les images jointes s'affichent en
+miniatures et s'ouvrent en grand au clic.
+
+**Employés (bots)** — dans `Réglages → Comportement`, crée des profils
+d'assistant (emoji, nom, rôle, instructions), choisis-en un par conversation via
+la puce de l'en-tête, et définis-en un par défaut pour les nouvelles discussions.
+
+**File d'attente** — écris pendant qu'une réponse se génère : le message est mis
+en attente et envoyé dès la fin. « Dupliquer » (⧉) clone une conversation.
 
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
@@ -177,7 +184,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.37.1-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.38.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

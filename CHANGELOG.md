@@ -4,6 +4,21 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.38.0] — 2026-11-06
+
+### Ajouté
+- **Employés (bots)** dans `Comportement` : crée des profils d'assistant (emoji,
+  nom, rôle, instructions), modifie-les ou supprime-les. L'employé choisi
+  s'applique à la conversation en cours (puce dans l'en-tête), son nom et son
+  emoji signent les réponses, et ses consignes sont ajoutées au prompt. Un
+  employé peut être défini par défaut pour les nouvelles conversations.
+- **File d'attente** : pendant qu'une réponse se génère, un nouveau message est
+  mis en attente (bandeau avec annulation) et part automatiquement ensuite.
+- **Modifier n'importe quel message** (et plus seulement le dernier) : le fil
+  est rembobiné jusqu'à ce message, texte et images replacés dans la saisie.
+- **Dupliquer une conversation** depuis l'en-tête, pour tester une autre piste
+  sans perdre l'originale.
+
 ## [2.37.1] — 2026-11-06
 
 ### Corrigé

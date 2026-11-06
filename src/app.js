@@ -2426,6 +2426,200 @@ function rendrePresetsComportement() {
   }
 }
 
+/* ------------------------------- employés ------------------------------- */
+
+function listeEmployes() {
+  return Array.isArray(etat.config.employes) ? etat.config.employes : [];
+}
+
+function employeParId(id) {
+  return listeEmployes().find((e) => e.id === id) || null;
+}
+
+function employeCourant() {
+  const id = etat.conversationCourante?.employeId;
+  return id ? employeParId(id) : null;
+}
+
+function identiteAssistant() {
+  const e = employeCourant();
+  return e
+    ? { nom: e.nom || 'Employé', emoji: e.emoji || '🤖' }
+    : { nom: 'Cerveau', emoji: 'C' };
+}
+
+/** Employé transmis au modèle : uniquement le nécessaire, jamais d'identifiant. */
+function employePourAgent() {
+  const e = employeCourant();
+  if (!e) return null;
+  return { nom: e.nom, role: e.role || '', instructions: e.instructions || '' };
+}
+
+function majPuceEmploye() {
+  const puce = $('#employeActif');
+  if (!puce) return;
+  const e = employeCourant();
+  puce.textContent = e ? `${e.emoji || '🤖'} ${e.nom}` : '🧠 Cerveau';
+  puce.title = e
+    ? `Employé : ${e.nom}${e.role ? ` — ${e.role}` : ''}`
+    : 'Aucun employé : conversation avec Cerveau';
+}
+
+async function utiliserEmploye(id) {
+  const conv = etat.conversationCourante;
+  if (!conv) return;
+  conv.employeId = id || '';
+  conv.date = Date.now();
+  persisterConversations();
+  majPuceEmploye();
+  afficherConversation();
+  const e = id ? employeParId(id) : null;
+  notifier(e ? `Employé « ${e.nom} » activé pour cette conversation.` : 'Conversation avec Cerveau.', 'succes', 2600);
+}
+
+function rendreMenuEmployes() {
+  const menu = $('#menuEmployes');
+  if (!menu) return;
+  if (!menu.hidden) { menu.hidden = true; return; }
+
+  menu.innerHTML = '';
+  const courant = etat.conversationCourante?.employeId || '';
+
+  const option = (id, emoji, nom, role, actif) => {
+    const bouton = el('button', {
+      class: 'menu-employe-option' + (actif ? ' menu-employe-actif' : ''),
+      onclick: async () => {
+        menu.hidden = true;
+        await utiliserEmploye(id);
+      }
+    },
+      el('span', { text: emoji || '🤖' }),
+      el('span', { class: 'menu-employe-libelle' }, el('div', { text: nom }), role ? el('div', { class: 'menu-employe-role', text: role }) : null)
+    );
+    menu.append(bouton);
+  };
+
+  option('', '🧠', 'Cerveau', 'Assistant par défaut', !courant);
+  for (const e of listeEmployes()) option(e.id, e.emoji || '🤖', e.nom, e.role || '', e.id === courant);
+
+  menu.append(el('div', { class: 'menu-employes-sep' }));
+  menu.append(el('button', {
+    class: 'menu-employe-option',
+    onclick: () => {
+      menu.hidden = true;
+      ouvrirReglages('comportement');
+    }
+  }, el('span', { text: '⚙' }), el('span', { text: 'Gérer les employés…' })));
+
+  menu.hidden = false;
+}
+
+function rendreEmployes() {
+  const zone = $('#listeEmployes');
+  if (!zone) return;
+  zone.innerHTML = '';
+  const employes = listeEmployes();
+  const courant = etat.conversationCourante?.employeId || '';
+
+  if (!employes.length) {
+    zone.append(el('p', { class: 'aide petit', text: 'Aucun employé pour le moment. Crée un profil pour lui donner un rôle et des consignes.' }));
+  }
+
+  for (const e of employes) {
+    const badge = etat.config.employeDefaut === e.id
+      ? el('span', { class: 'employe-badge', text: 'Par défaut' })
+      : null;
+    const carte = el('div', { class: 'carte-employe' + (e.id === courant ? ' actif' : '') },
+      el('div', { class: 'employe-emoji', text: e.emoji || '🤖' }),
+      el('div', { class: 'employe-infos' },
+        el('div', { class: 'employe-nom', text: e.nom }),
+        el('div', { class: 'employe-role', text: e.role || 'Sans rôle précis' }),
+        e.instructions ? el('div', { class: 'employe-instructions', text: e.instructions }) : null,
+        badge
+      ),
+      el('div', { class: 'employe-actions' },
+        (() => {
+          const choisir = el('button', {
+            class: 'btn-mini', text: e.id === courant ? 'Actif' : 'Choisir',
+            title: 'Utiliser cet employé pour la conversation en cours',
+            onclick: () => utiliserEmploye(e.id)
+          });
+          choisir.disabled = e.id === courant;
+          return choisir;
+        })(),
+        el('button', { class: 'btn-icone', text: '✎', title: 'Modifier', onclick: () => ouvrirFormEmploye(e.id) }),
+        el('button', { class: 'btn-icone', text: '🗑', title: 'Supprimer', onclick: () => supprimerEmploye(e.id) })
+      )
+    );
+    zone.append(carte);
+  }
+}
+
+function ouvrirFormEmploye(id = '') {
+  const form = $('#formEmploye');
+  if (!form) return;
+  const e = id ? employeParId(id) : null;
+  $('#employeId').value = e?.id || '';
+  $('#employeEmoji').value = e?.emoji || '';
+  $('#employeNom').value = e?.nom || '';
+  $('#employeRole').value = e?.role || '';
+  $('#employeInstructions').value = e?.instructions || '';
+  const defaut = $('#employeDefautCheck');
+  if (defaut) defaut.checked = Boolean(e && etat.config.employeDefaut === e.id);
+  form.hidden = false;
+  form.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  setTimeout(() => $('#employeNom')?.focus(), 50);
+}
+
+function fermerFormEmploye() {
+  const form = $('#formEmploye');
+  if (form) form.hidden = true;
+}
+
+async function enregistrerFormulaireEmploye(evt) {
+  evt.preventDefault();
+  const nom = $('#employeNom').value.trim();
+  if (!nom) { notifier('Donne un nom à l’employé.', 'erreur', 3000); $('#employeNom').focus(); return; }
+
+  const id = $('#employeId').value || identifiant('emp');
+  const employe = {
+    id,
+    nom: nom.slice(0, 40),
+    emoji: ($('#employeEmoji').value.trim() || '🤖').slice(0, 4),
+    role: $('#employeRole').value.trim().slice(0, 80),
+    instructions: $('#employeInstructions').value.trim().slice(0, 8000)
+  };
+
+  const liste = listeEmployes().filter((e) => e.id !== id);
+  liste.push(employe);
+
+  let defaut = etat.config.employeDefaut || '';
+  if ($('#employeDefautCheck')?.checked) defaut = id;
+  else if (defaut === id) defaut = '';
+
+  await enregistrerConfig({ employes: liste, employeDefaut: defaut });
+  fermerFormEmploye();
+  rendreEmployes();
+  majPuceEmploye();
+  notifier(`Employé « ${employe.nom} » enregistré.`, 'succes', 2500);
+}
+
+async function supprimerEmploye(id) {
+  const e = employeParId(id);
+  if (!e) return;
+  const liste = listeEmployes().filter((x) => x.id !== id);
+  const defaut = etat.config.employeDefaut === id ? '' : etat.config.employeDefaut;
+  await enregistrerConfig({ employes: liste, employeDefaut: defaut });
+  for (const conv of etat.conversations) {
+    if (conv.employeId === id) conv.employeId = '';
+  }
+  persisterConversations();
+  rendreEmployes();
+  majPuceEmploye();
+  afficherConversation();
+  notifier(`Employé « ${e.nom} » supprimé.`, 'info', 2600);
+}
+
 let initialiserComportementBranche = false;
 function brancherComportement() {
   // Les réglages sont réaffichés à chaque ouverture : on ne branche les
@@ -2467,6 +2661,11 @@ function brancherComportement() {
   }
 
   rendrePresetsComportement();
+  rendreEmployes();
+  $('#btnNouvelEmploye')?.addEventListener('click', () => ouvrirFormEmploye());
+  $('#btnAnnulerEmploye')?.addEventListener('click', fermerFormEmploye);
+  $('#formEmploye')?.addEventListener('submit', enregistrerFormulaireEmploye);
+  majPuceEmploye();
 }
 
 function majCompteurPrompt() {
@@ -2698,13 +2897,15 @@ async function enregistrerConfig(patch) {
 /* ═══════════════════════════ CONVERSATIONS ═══════════════════════════ */
 
 function nouvelleConversation({ silencieux = false } = {}) {
+  viderFileAttente();
   sauverBrouillonImmediat();
   const conv = {
     id: identifiant('conv'),
     titre: 'Nouvelle conversation',
     date: Date.now(),
     messages: [],
-    fournisseur: etat.config?.activeProvider || 'anthropic'
+    fournisseur: etat.config?.activeProvider || 'anthropic',
+    employeId: etat.config?.employeDefaut || ''
   };
   etat.conversations.unshift(conv);
   etat.conversationCourante = conv;
@@ -2876,6 +3077,7 @@ function afficherConversation() {
   const messages = $('#messages');
   const accueil = $('#accueil');
 
+  majPuceEmploye();
   $('#titreConversation').textContent = conv?.titre || 'Nouvelle conversation';
   const nbTours = conv ? conv.messages.filter((m) => m.role === 'user').length : 0;
   const sousTitre = conv?.messages?.length
@@ -2918,11 +3120,12 @@ function ajouterMessageDOM(m) {
   const messages = $('#messages');
   const estUtilisateur = m.role === 'user';
 
+  const identite = estUtilisateur ? { nom: 'Vous', emoji: 'V' } : identiteAssistant();
   const bloc = el('div', { class: `message ${estUtilisateur ? 'utilisateur' : 'assistant'}` });
   bloc.append(
     el('div', { class: 'message-entete' },
-      el('div', { class: 'avatar', text: estUtilisateur ? 'V' : 'C' }),
-      el('span', { text: estUtilisateur ? 'Vous' : 'Cerveau' })
+      el('div', { class: 'avatar', text: identite.emoji }),
+      el('span', { text: identite.nom })
     )
   );
 
@@ -2986,16 +3189,11 @@ function ajouterMessageDOM(m) {
         }
       })
     );
-    const dernierUtilisateur = etat.conversationCourante
-      ? [...etat.conversationCourante.messages].reverse().find((x) => x.role === 'user')
-      : null;
-    if (dernierUtilisateur === m) {
-      actions.append(el('button', {
-        class: 'btn-message', text: 'Modifier',
-        title: 'Replacer ce message dans la saisie pour le modifier',
-        onclick: () => modifierDernierMessage(m)
-      }));
-    }
+    actions.append(el('button', {
+      class: 'btn-message', text: 'Modifier',
+      title: 'Replacer ce message dans la saisie (la suite du fil sera retirée)',
+      onclick: () => modifierDernierMessage(m)
+    }));
     bloc.append(actions);
   }
 
@@ -3080,6 +3278,7 @@ function afficherConversations() {
 function chargerConversation(id) {
   const conv = etat.conversations.find((c) => c.id === id);
   if (!conv) return;
+  viderFileAttente();
   sauverBrouillonImmediat();
   etat.conversationCourante = conv;
   afficherConversation();
@@ -3225,6 +3424,7 @@ async function compacterSiBesoin(conv) {
 
 let minuteurBrouillon = null;
 let restaurationRegeneration = null;
+let fileAttente = [];
 
 function cleBrouillon(id) {
   return `cerveau.brouillon.${id}`;
@@ -3267,16 +3467,59 @@ function effacerBrouillon(id) {
   try { localStorage.removeItem(cleBrouillon(id)); } catch { /* ignore */ }
 }
 
+function majFileAttente() {
+  const zone = $('#fileAttente');
+  if (!zone) return;
+  const n = fileAttente.length;
+  zone.hidden = n === 0;
+  if (!n) return;
+  const premier = (fileAttente[0].texte || '').replace(/\s+/g, ' ').slice(0, 70);
+  $('#texteFileAttente').textContent = `${n} message${n > 1 ? 's' : ''} en attente`
+    + (premier ? ` · ${premier}${fileAttente[0].texte.length > 70 ? '…' : ''}` : '');
+}
+
+function viderFileAttente() {
+  if (!fileAttente.length) return;
+  fileAttente = [];
+  majFileAttente();
+}
+
+/** Envoie le prochain message mis en attente pendant que l'agent travaillait. */
+function traiterFileAttente() {
+  if (etat.enCours || !fileAttente.length) return;
+  const suivant = fileAttente.shift();
+  majFileAttente();
+  if (!etat.conversations.some((c) => c.id === suivant.convId)) return;
+  if (etat.conversationCourante?.id !== suivant.convId) chargerConversation(suivant.convId);
+  setTimeout(() => envoyerMessage({ texteFile: suivant.texte, piecesFile: suivant.pieces }), 250);
+}
+
 async function envoyerMessage(options = {}) {
   const regenerer = options?.regenerer === true;
-  if (etat.enCours) return;
-
+  const depuisFile = typeof options?.texteFile === 'string';
   const saisie = $('#saisie');
   const conv = etat.conversationCourante;
-  if (!conv) return;
+  if (!conv || !saisie) return;
 
-  let texte = saisie.value.trim();
-  if (!regenerer && !texte) return;
+  // pendant une génération, le message part dans la file au lieu d'être perdu
+  if (etat.enCours) {
+    if (regenerer || depuisFile) return;
+    const enAttente = saisie.value.trim();
+    if (!enAttente && !piecesJointes.length) return;
+    fileAttente.push({ convId: conv.id, texte: enAttente, pieces: piecesJointes.slice() });
+    saisie.value = '';
+    ajusterHauteurSaisie();
+    piecesJointes = [];
+    rendrePieces();
+    effacerBrouillon(conv.id);
+    majFileAttente();
+    notifier(`Message en attente (${fileAttente.length}). Il partira dès que l'agent aura terminé.`, 'info', 3200);
+    return;
+  }
+
+  let texte = depuisFile ? options.texteFile : saisie.value.trim();
+  if (depuisFile) piecesJointes = Array.isArray(options.piecesFile) ? options.piecesFile : [];
+  if (!regenerer && !texte && !piecesJointes.length) return;
 
   const providerId = etat.config.activeProvider;
   const modele = etat.modelesSession[providerId] || etat.config.providers?.[providerId]?.model || '';
@@ -3329,11 +3572,13 @@ async function envoyerMessage(options = {}) {
   majStatistiquesConversation();
 
   if (!regenerer) {
-    saisie.value = '';
+    if (!depuisFile) {
+      saisie.value = '';
+      ajusterHauteurSaisie();
+      effacerBrouillon(conv.id);
+    }
     piecesJointes = [];
     rendrePieces();
-    ajusterHauteurSaisie();
-    effacerBrouillon(conv.id);
   }
   afficherConversation();
   afficherConversations();
@@ -3345,8 +3590,8 @@ async function envoyerMessage(options = {}) {
   const bloc = el('div', { class: 'message assistant' });
   bloc.append(
     el('div', { class: 'message-entete' },
-      el('div', { class: 'avatar', text: 'C' }),
-      el('span', { text: 'Cerveau' })
+      el('div', { class: 'avatar', text: identiteAssistant().emoji }),
+      el('span', { text: identiteAssistant().nom })
     )
   );
   const zoneOutils = el('div', { class: 'outils-message' });
@@ -3369,6 +3614,7 @@ async function envoyerMessage(options = {}) {
       mode: etat.mode,
       modeles: { ...etat.modelesSession },
       resume: conv.resume || '',
+      employe: employePourAgent(),
       // borne l'historique : au-delà, la fenêtre de contexte du modèle déborde
       // et l'API renvoie une erreur. On garde les échanges les plus récents, et
       // on n'envoie plus ceux déjà résumés. Le plancher protège le cas où des
@@ -3396,6 +3642,7 @@ async function envoyerMessage(options = {}) {
     etat.enCours = false;
     basculerEtatEnvoi(false);
     majStatutFournisseur();
+    traiterFileAttente();
     if (modele) { /* le modèle actif reste celui des réglages */ }
   }
 }
@@ -3412,6 +3659,7 @@ function modifierDernierMessage(message) {
   const index = conv?.messages?.indexOf(message);
   if (!conv || index < 0) return;
 
+  viderFileAttente();
   conv.messages.splice(index);
   conv.date = Date.now();
   persisterConversations();
@@ -3429,6 +3677,22 @@ function modifierDernierMessage(message) {
     : [];
   rendrePieces();
   notifier('Message replacé dans la saisie : modifie-le puis renvoie.', 'info', 4000);
+}
+
+function dupliquerConversation() {
+  const conv = etat.conversationCourante;
+  if (!conv) return;
+  const copie = JSON.parse(JSON.stringify(conv));
+  copie.id = identifiant('conv');
+  copie.titre = `${conv.titre || 'Conversation'} (copie)`;
+  copie.date = Date.now();
+  delete copie.titreGenere;
+  delete copie.titreTente;
+  etat.conversations.unshift(copie);
+  chargerConversation(copie.id);
+  afficherConversations();
+  persisterConversations();
+  notifier('Conversation dupliquée.', 'succes', 2400);
 }
 
 function regenererReponse() {
@@ -3549,10 +3813,16 @@ async function demanderTitre(conv) {
 }
 
 function basculerEtatEnvoi(enCours) {
-  $('#btnEnvoyer').disabled = enCours;
+  const envoyer = $('#btnEnvoyer');
+  if (envoyer) {
+    envoyer.hidden = false;
+    envoyer.disabled = false;
+    envoyer.title = enCours
+      ? 'Mettre le message en attente (il partira après la réponse en cours)'
+      : 'Envoyer (Entrée)';
+  }
   $('#btnArreter').hidden = !enCours;
-  $('#btnEnvoyer').hidden = enCours;
-  $('#saisie').disabled = enCours;
+  $('#saisie').disabled = false;
   if (!enCours) $('#saisie').focus();
 }
 
@@ -4634,6 +4904,18 @@ function brancherEvenements() {
   API.taches?.surEvenement?.(() => rafraichirTachesFond());
   rafraichirTachesFond();
 
+  // employé de la conversation
+  $('#employeActif')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    rendreMenuEmployes();
+  });
+  document.addEventListener('click', (e) => {
+    const menu = $('#menuEmployes');
+    if (!menu || menu.hidden) return;
+    if (!menu.contains(e.target) && e.target.id !== 'employeActif') menu.hidden = true;
+  });
+  $('#btnDupliquer')?.addEventListener('click', dupliquerConversation);
+
   // recherche dans la conversation
   $('#statsConversation')?.addEventListener('click', ouvrirStatistiques);
   document.addEventListener('keydown', (e) => {
@@ -4693,6 +4975,11 @@ function brancherEvenements() {
   });
 
   $('#btnEnvoyer').addEventListener('click', envoyerMessage);
+  $('#btnViderFile')?.addEventListener('click', () => {
+    const n = fileAttente.length;
+    viderFileAttente();
+    notifier(`${n} message(s) retiré(s) de la file.`, 'info', 2400);
+  });
   $('#btnArreter').addEventListener('click', async () => {
     await API.agent.arreter();
     notifier('Génération interrompue.', 'info', 2000);

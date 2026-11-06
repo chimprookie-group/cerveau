@@ -858,6 +858,52 @@ async function run(mainWindow, deps) {
   verifier('Images jointes affichées', editionUi.images === 1, `${editionUi.images} image(s)`);
   verifier('Aperçu d’image au clic', editionUi.apercu === true);
 
+  // employés, duplication, édition de n'importe quel message, file d'attente
+  const fonctionsUi = await mainWindow.webContents.executeJavaScript(`(async () => {
+    etat.conversations = [{ id: 'emp', titre: 'Employés', date: Date.now(), mode: 'complet', messages: [
+      { role: 'user', contenu: 'Premier' }, { role: 'assistant', contenu: 'Un' },
+      { role: 'user', contenu: 'Deuxième' }, { role: 'assistant', contenu: 'Deux' }
+    ] }];
+    etat.conversationCourante = etat.conversations[0];
+    afficherConversation();
+    await new Promise((r) => setTimeout(r, 100));
+    await utiliserEmploye('redacteur');
+    await new Promise((r) => setTimeout(r, 120));
+    const identite = identiteAssistant().nom;
+    const entete = document.querySelector('.message.assistant .message-entete span')?.textContent;
+    const puce = document.querySelector('#employeActif')?.textContent;
+    const avant = etat.conversations.length;
+    dupliquerConversation();
+    await new Promise((r) => setTimeout(r, 160));
+    const apres = etat.conversations.length;
+    const titreCopie = etat.conversationCourante.titre;
+    document.querySelector('.message.utilisateur .btn-message:last-child')?.click();
+    await new Promise((r) => setTimeout(r, 120));
+    const restants = etat.conversationCourante.messages.length;
+    const saisie = document.querySelector('#saisie').value;
+    etat.enCours = true;
+    document.querySelector('#saisie').value = 'En attente';
+    envoyerMessage();
+    await new Promise((r) => setTimeout(r, 120));
+    const file = fileAttente.length;
+    const bandeau = !document.querySelector('#fileAttente').hidden;
+    viderFileAttente();
+    etat.enCours = false;
+    document.querySelector('#saisie').value = '';
+    return { identite, entete, puce, avant, apres, titreCopie, restants, saisie, file, bandeau };
+  })()`);
+  verifier('Employé appliqué à la conversation',
+    fonctionsUi.identite === 'Rédacteur' && fonctionsUi.entete === 'Rédacteur' && /Rédacteur/.test(fonctionsUi.puce),
+    fonctionsUi.identite);
+  verifier('Conversation dupliquée',
+    fonctionsUi.apres === fonctionsUi.avant + 1 && /\(copie\)/.test(fonctionsUi.titreCopie),
+    fonctionsUi.titreCopie);
+  verifier('Modifier n’importe quel message',
+    fonctionsUi.restants === 0 && fonctionsUi.saisie === 'Premier',
+    `${fonctionsUi.restants} message(s)`);
+  verifier('File d’attente pendant une génération',
+    fonctionsUi.file === 1 && fonctionsUi.bandeau === true);
+
   // thème par défaut puis palettes appliquées distinctement
   const themeDefaut = await mainWindow.webContents.executeJavaScript('document.body.dataset.theme');
   verifier('Thème par défaut : DeepSeek', themeDefaut === 'deepseek', themeDefaut);
@@ -1218,6 +1264,34 @@ async function run(mainWindow, deps) {
   });
   srvPrincipal.close();
   srvSecours.close();
+  // consignes d'employé dans le prompt système
+  let promptEmploye = '';
+  const srvEmploye = httpFB.createServer((req, res) => {
+    if (req.method !== 'POST') { res.writeHead(200); return res.end('ok'); }
+    req.on('data', (c) => { promptEmploye += c; });
+    req.on('end', () => {
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: 'OK' } }] })}\n\n`);
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }], usage: { prompt_tokens: 10, completion_tokens: 1 } })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+  });
+  await new Promise((r) => srvEmploye.listen(0, r));
+  await agentModule2.run({
+    providerId: 'custom',
+    credentials: { apiKey: 'k', baseUrl: `http://127.0.0.1:${srvEmploye.address().port}/v1`, model: 'test' },
+    historique: [{ role: 'user', contenu: 'qui es-tu ?' }],
+    ctx: { mode: 'complet', vaultPath: null, coffre: null, workspace: os.tmpdir(),
+      permissions: { mode: 'auto' }, confirmer: async () => ({ autorise: true }),
+      employe: { nom: 'Testeur', role: 'Vérification', instructions: 'CONSIGNE-EMPLOYE' } },
+    emit: () => {},
+    limiteTours: 2
+  });
+  srvEmploye.close();
+  verifier('Consignes d’employé dans le prompt',
+    /Employé actif : Testeur/.test(promptEmploye) && /CONSIGNE-EMPLOYE/.test(promptEmploye));
+
   verifier('Fournisseur de secours',
     /Réponse de secours/.test(resSecours.texte || '')
     && !resSecours.erreur

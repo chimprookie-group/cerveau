@@ -1572,7 +1572,7 @@ ipcMain.handle('github:ouvrir-url', async (_e, url) => {
 
 /* --------------------------- IPC : agent ------------------------------- */
 
-ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, modeles, resume }) => {
+ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, modeles, resume, employe }) => {
   const coffre = coffreActif();
   const cfg = config.getConfig({ revealKeys: true });
   const pid = providerId || cfg.activeProvider;
@@ -1614,6 +1614,7 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
     serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
     memoire: obtenirMemoire(),
     presets: presetsActifs(cfg),
+    employe: employe && typeof employe === 'object' ? employe : null,
     temperature: typeof cfg.temperature === 'number' ? cfg.temperature : undefined,
     permissions: ctxPermissions(),
     onPlan: (taches) => emit({ type: 'plan', taches }),

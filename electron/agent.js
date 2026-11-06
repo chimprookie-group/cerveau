@@ -257,6 +257,13 @@ function construireInviteSysteme(ctx, stats) {
     lignes.push('', 'Style attendu :', ...ctx.presets.map((p) => `- ${p}`));
   }
 
+  // employé actif : identité et consignes propres à la conversation
+  if (ctx.employe) {
+    const e = ctx.employe;
+    lignes.push('', `Employé actif : ${e.nom}${e.role ? ` — ${e.role}` : ''}.`);
+    if (e.instructions) lignes.push(String(e.instructions));
+  }
+
   // la mémoire vient en dernier : elle précède immédiatement la demande
   if (ctx.blocMemoire) lignes.push('', ctx.blocMemoire);
 

@@ -52,6 +52,28 @@ const DEFAULTS = {
   systemPrompt: '',
   presetsComportement: [],
   temperature: 0.7,
+  // Employés : profils d'assistant (rôle + instructions) applicables à une conversation
+  employes: [
+    {
+      id: 'redacteur',
+      nom: 'Rédacteur',
+      emoji: '✍️',
+      role: 'Rédaction et synthèse',
+      instructions: "Tu rédiges des textes clairs, structurés et agréables à lire. "
+        + "Tu commences par l'essentiel, tu évites le jargon inutile et tu proposes "
+        + 'une version courte quand le sujet le permet.'
+    },
+    {
+      id: 'developpeur',
+      nom: 'Développeur',
+      emoji: '🛠️',
+      role: 'Code et revue',
+      instructions: 'Tu es un développeur rigoureux. Tu lis le code avant de le '
+        + 'modifier, tu privilégies la solution la plus simple, tu vérifies tes '
+        + 'changements (tests, build) et tu expliques brièvement ce que tu as fait.'
+    }
+  ],
+  employeDefaut: '',
   // disposition du panneau latéral : « cote » (pousse) ou « superpose »
   panneau: { style: 'cote', largeur: 400 },
   // Superviseur : agent qui traite les demandes d'un dépôt GitHub

@@ -74,6 +74,8 @@
           <span id="sousTitreConversation" class="sous-titre">Prêt à travailler</span>
         </div>
         <div class="entete-actions">
+          <button id="employeActif" class="puce-employe" title="Employé de cette conversation">🧠 Cerveau</button>
+          <div id="menuEmployes" class="menu-employes" hidden></div>
           <div class="selecteur-mode" id="selecteurMode">
             <button class="mode-btn" data-mode="notes" title="Notes Obsidian">Notes</button>
             <button class="mode-btn" data-mode="code" title="Développement">Code</button>
@@ -100,6 +102,7 @@
             </div>
           </div>
           <button id="btnPalette" class="btn-icone" title="Palette de commandes (Ctrl+K)">⌘</button>
+          <button id="btnDupliquer" class="btn-icone" title="Dupliquer la conversation">⧉</button>
           <button id="btnExporter" class="btn-icone" title="Exporter la conversation">⭳</button>
           <button id="btnBasculerObsidian" class="btn-icone" title="Panneau latéral (Ctrl+Maj+B)">▤</button>
         </div>
@@ -150,6 +153,10 @@
 
       <div class="zone-saisie">
         <div id="zoneDepot" class="zone-depot-indic" hidden>Déposez vos fichiers ici</div>
+        <div id="fileAttente" class="file-attente" hidden>
+          <span id="texteFileAttente">1 message en attente</span>
+          <button id="btnViderFile" class="btn-mini">Annuler</button>
+        </div>
         <div id="listePieces" class="liste-pieces" hidden></div>
         <div class="saisie-conteneur">
           <textarea id="saisie" rows="1" placeholder="Écrivez un message…  (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)"
@@ -1041,10 +1048,49 @@
 
         <!-- Comportement -->
         <div class="volet-reglage" id="reglage-comportement">
-          <h3 class="section-reglage-titre">Instructions et style</h3>
+          <h3 class="section-reglage-titre">Employés</h3>
+          <p class="section-reglage-desc">
+            Des profils d'assistant avec leur rôle et leurs consignes. L'employé choisi
+            s'applique à la conversation en cours ; « Cerveau » reste le profil par défaut.
+          </p>
+          <div id="listeEmployes" class="liste-employes"></div>
+          <button id="btnNouvelEmploye" class="btn-secondaire btn-nouvel-employe">+ Créer un employé</button>
+
+          <form id="formEmploye" class="form-employe" hidden>
+            <input type="hidden" id="employeId" />
+            <div class="ligne-champs">
+              <label class="champ champ-etroit">
+                <span>Emoji</span>
+                <input type="text" id="employeEmoji" maxlength="4" placeholder="🤖" />
+              </label>
+              <label class="champ champ-large">
+                <span>Nom</span>
+                <input type="text" id="employeNom" placeholder="Rédacteur" autocomplete="off" />
+              </label>
+            </div>
+            <label class="champ">
+              <span>Rôle</span>
+              <input type="text" id="employeRole" placeholder="Rédaction et synthèse" autocomplete="off" />
+            </label>
+            <label class="champ">
+              <span>Instructions</span>
+              <textarea id="employeInstructions" rows="5"
+                placeholder="Tu es… Décris la personnalité, le ton, les méthodes et les limites de cet employé."></textarea>
+            </label>
+            <label class="champ-inline">
+              <input type="checkbox" id="employeDefautCheck" />
+              <span>Employé par défaut des nouvelles conversations</span>
+            </label>
+            <div class="rangee-boutons">
+              <button type="submit" class="btn-principal">Enregistrer</button>
+              <button type="button" id="btnAnnulerEmploye" class="btn-secondaire">Annuler</button>
+            </div>
+          </form>
+
+          <div class="section-titre" style="margin-top:26px">Instructions et style (Cerveau)</div>
           <p class="aide">
             Ces instructions sont ajoutées au système, en plus des règles internes de Cerveau.
-            Elles s'appliquent à toutes les conversations.
+            Elles s'appliquent à toutes les conversations sans employé.
           </p>
 
           <div class="section-titre">Style de réponse</div>
