@@ -4,6 +4,17 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.39.0] — 2026-11-06
+
+### Amélioré
+- **Le modèle choisi est mémorisé** par fournisseur et restauré au lancement
+  (avant, il fallait le resélectionner à chaque ouverture).
+- **Le niveau de raisonnement choisi est mémorisé** et **réellement appliqué** :
+  consigne de profondeur dans le prompt pour tous les fournisseurs, et
+  `reasoning_effort` transmis aux modèles OpenAI compatibles (o*, gpt-5/6) avec
+  les bons paramètres (`max_completion_tokens`, sans `temperature`).
+- Démarrage : le mode n'est plus réécrit sur le disque à chaque lancement.
+
 ## [2.38.4] — 2026-11-06
 
 ### Corrigé

@@ -52,6 +52,7 @@ const DEFAULTS = {
   systemPrompt: '',
   presetsComportement: [],
   temperature: 0.7,
+  efforts: {},             // niveau de raisonnement mémorisé, par fournisseur
   // Employés : profils d'assistant (rôle + instructions) applicables à une conversation
   employes: [
     {

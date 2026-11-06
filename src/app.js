@@ -241,6 +241,13 @@ async function demarrer() {
 
   etat.config = await API.config.obtenir();
   etat.conversations = etat.config.conversations || [];
+  // le modèle et le niveau de raisonnement choisis survivent au redémarrage
+  etat.effortsSession = { ...(etat.config.efforts || {}) };
+  etat.modelesSession = Object.fromEntries(
+    Object.entries(etat.config.providers || {})
+      .map(([id, p]) => [id, p.model])
+      .filter(([, modele]) => modele)
+  );
 
   // dossier personnel, pour développer les chemins des exemples MCP
   try {
@@ -267,7 +274,7 @@ async function demarrer() {
   await rafraichirFournisseurs();
   await rafraichirCoffre();
   await rafraichirWorkspace();
-  definirMode((etat.config.general || {}).modeDemarrage || etat.config.mode || 'complet');
+  definirMode((etat.config.general || {}).modeDemarrage || etat.config.mode || 'complet', { persister: false });
   // Nettoyage : les conversations vides héritées des anciennes versions
   // (une par lancement) sont retirées de la liste. On garde celle qui est
   // ouverte s'il n'y a rien d'autre, pour ne pas laisser l'écran vide.
@@ -3626,6 +3633,7 @@ async function envoyerMessage(options = {}) {
       modeles: { ...etat.modelesSession },
       resume: conv.resume || '',
       employe: employePourAgent(),
+      effort: etat.effortsSession?.[providerId] || null,
       // borne l'historique : au-delà, la fenêtre de contexte du modèle déborde
       // et l'API renvoie une erreur. On garde les échanges les plus récents, et
       // on n'envoie plus ceux déjà résumés. Le plancher protège le cas où des
@@ -4469,11 +4477,11 @@ async function lancerRecherche(query) {
 
 /* ═══════════════════════════ MODE & WORKSPACE ═══════════════════════════ */
 
-function definirMode(mode) {
+function definirMode(mode, { persister = true } = {}) {
   etat.mode = mode || 'complet';
   $$('.mode-btn').forEach((b) => b.classList.toggle('actif', b.dataset.mode === etat.mode));
   majAccueil();
-  enregistrerConfig({ mode: etat.mode });
+  if (persister) enregistrerConfig({ mode: etat.mode });
   majContexte();
 }
 

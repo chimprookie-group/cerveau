@@ -2109,6 +2109,12 @@ async function run(mainWindow, deps) {
     verifier('Mémoire : injectée dans le prompt système',
       /TEST-INJECTION/.test(promptMem) && /Mémoire durable/.test(promptMem));
 
+    const promptNiveau = require('./agent').construireInviteSysteme({
+      mode: 'code', workspace: '/tmp', raisonnement: 'high'
+    }, null);
+    verifier('Raisonnement : consigne dans le prompt',
+      /Niveau de raisonnement : approfondi/.test(promptNiveau));
+
     const cible = (await mem.chercher(''))[0];
     verifier('Mémoire : oubli', (await mem.oublier(cible.id)).supprimee === true);
 

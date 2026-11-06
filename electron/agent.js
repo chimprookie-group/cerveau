@@ -269,6 +269,16 @@ function construireInviteSysteme(ctx, stats) {
     if (e.instructions) lignes.push(String(e.instructions));
   }
 
+  // niveau de raisonnement choisi dans le sélecteur de modèle
+  if (ctx.raisonnement) {
+    const niveaux = {
+      low: 'rapide — réponds directement, sans digression inutile.',
+      medium: 'équilibré — vérifie les points importants avant de conclure.',
+      high: 'approfondi — décompose le problème, vérifie chaque étape et signale les incertitudes.'
+    };
+    if (niveaux[ctx.raisonnement]) lignes.push('', `Niveau de raisonnement : ${niveaux[ctx.raisonnement]}`);
+  }
+
   // la mémoire vient en dernier : elle précède immédiatement la demande
   if (ctx.blocMemoire) lignes.push('', ctx.blocMemoire);
 
@@ -524,6 +534,7 @@ Réponds uniquement par OUI ou NON.`;
       system: isAnthropic ? systeme : undefined,
       tools: sansOutils ? [] : (isAnthropic ? versAnthropic(tools) : versOpenAI(tools)),
       temperature: ctx.temperature,
+      reasoning: ctx.raisonnement,
       signal: signalFlux
     });
 

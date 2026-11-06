@@ -327,6 +327,8 @@
     if (ui.etat.config.activeProvider !== pid) {
       await ui.enregistrerConfig({ activeProvider: pid });
     }
+    // le choix du modèle est mémorisé pour les prochains lancements
+    await ui.enregistrerConfig({ providers: { [pid]: { model: modelId } } });
     ui.majStatutFournisseur();
 
     // propose le niveau de raisonnement si le modèle en gère
@@ -345,11 +347,13 @@
     notifier(`Modèle : ${modelId}`, 'succes', 2000);
   }
 
-  function choisirEffort(pid, effort) {
-    if (!window.cerveauUI.etat.effortsSession) window.cerveauUI.etat.effortsSession = {};
-    window.cerveauUI.etat.effortsSession[pid] = effort;
+  async function choisirEffort(pid, effort) {
+    const ui = window.cerveauUI;
+    if (!ui.etat.effortsSession) ui.etat.effortsSession = {};
+    ui.etat.effortsSession[pid] = effort;
     fermerMenu();
     rendreDeclencheur();
+    await ui.enregistrerConfig({ efforts: { ...(ui.etat.config.efforts || {}), [pid]: effort } });
     notifier(`Raisonnement : ${(EFFORTS[famille(pid)] || []).find((e) => e.id === effort)?.nom || effort}`, 'succes', 2000);
   }
 

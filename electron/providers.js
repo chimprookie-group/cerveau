@@ -102,7 +102,7 @@ function errorMessage(status, body) {
 
 /* ---------------------------- Anthropic (Claude) ------------------------- */
 
-async function* streamAnthropic({ apiKey, baseUrl, model, messages, system, tools, signal, maxTokens, temperature }) {
+async function* streamAnthropic({ apiKey, baseUrl, model, messages, system, tools, signal, maxTokens, temperature, reasoning }) {
   const url = `${(baseUrl || 'https://api.anthropic.com').replace(/\/+$/, '')}/v1/messages`;
   const body = {
     model,
@@ -190,23 +190,33 @@ async function* streamAnthropic({ apiKey, baseUrl, model, messages, system, tool
 
 /* --------------------- OpenAI-compatible (DeepSeek, etc.) --------------- */
 
-async function* streamOpenAI({ apiKey, baseUrl, model, messages, tools, signal, maxTokens, temperature }) {
+async function* streamOpenAI({ apiKey, baseUrl, model, messages, tools, signal, maxTokens, temperature, reasoning }) {
   const base = (baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
   const url = /\/v\d+$/.test(base) || base.endsWith('/chat/completions')
     ? (base.endsWith('/chat/completions') ? base : `${base}/chat/completions`)
     : `${base}/v1/chat/completions`;
 
+  // Les modèles de raisonnement OpenAI (o*, gpt-5/6) refusent `max_tokens` et
+  // `temperature` : ils attendent `max_completion_tokens`.
+  const modeleRaisonnement = /^(o[1-9]|gpt-5|gpt-6)/i.test(String(model || ''));
   const body = {
     model,
     stream: true,
     messages,
-    max_tokens: maxTokens || 8192
+    ...(modeleRaisonnement
+      ? { max_completion_tokens: maxTokens || 8192 }
+      : { max_tokens: maxTokens || 8192 })
   };
   if (tools && tools.length) {
     body.tools = tools;
     body.tool_choice = 'auto';
   }
-  if (typeof temperature === 'number') body.temperature = temperature;
+  if (!modeleRaisonnement && typeof temperature === 'number') body.temperature = temperature;
+  // L'effort de raisonnement n'est envoyé qu'aux modèles qui le documentent.
+  // Les passer à un modèle qui l'ignore ferait échouer la requête.
+  if (reasoning && modeleRaisonnement) {
+    body.reasoning_effort = reasoning;
+  }
 
   // Un serveur local (LM Studio, Ollama, vLLM…) n'a pas de clé : envoyer
   // « Authorization: Bearer » vide ferait rejeter certains serveurs.
