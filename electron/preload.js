@@ -185,6 +185,7 @@ contextBridge.exposeInMainWorld('cerveau', {
   agent: {
     envoyer: (payload) => ipcRenderer.invoke('agent:envoyer', payload),
     resumer: (payload) => ipcRenderer.invoke('agent:resumer', payload),
+    titre: (payload) => ipcRenderer.invoke('agent:titre', payload),
     arreter: () => ipcRenderer.invoke('agent:arreter'),
     surEvenement: (cb) => {
       const handler = (_e, data) => cb(data);

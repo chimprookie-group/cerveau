@@ -4,6 +4,13 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.35.0] — 2026-11-06
+
+### Ajouté
+- **Titres automatiques** : après le premier échange, un petit appel au modèle
+  donne un titre court (3 à 6 mots) à la conversation, affiché dans l'en-tête et
+  la liste. Désactivable dans `Réglages → Général`.
+
 ## [2.34.0] — 2026-11-06
 
 ### Ajouté

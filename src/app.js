@@ -2184,6 +2184,7 @@ function brancherReglagesAvances() {
   lier('#reglageRestaurer', g.restaurerDerniere, 'general.restaurerDerniere', (v) => v, false);
   lier('#reglageAutostart', g.demarrerAuDemarrage, 'general.demarrerAuDemarrage', (v) => v, false);
   lier('#reglageNotifications', g.notifications, 'general.notifications', (v) => v, true);
+  lier('#reglageTitresAuto', g.titresAuto, 'general.titresAuto', (v) => v, true);
   lier('#reglageHistorique', g.historiqueMax, 'general.historiqueMax', (v) => Number(v) || 200, 200);
 
   lier('#reglageAppelsParalleles', a.appelsParalleles, 'agent.appelsParalleles', (v) => v, true);
@@ -3346,6 +3347,32 @@ function finaliserMessage(conv, etatFlux, res) {
   afficherConversations();
   defilerEnBas();
   rafraichirCoffre();
+  demanderTitre(conv);
+}
+
+/** Demande au modèle un titre court après le premier échange. */
+async function demanderTitre(conv) {
+  if (!conv || etat.config.general?.titresAuto === false) return;
+  if (conv.titreGenere || conv.titreTente) return;
+
+  const demandes = conv.messages.filter((m) => m.role === 'user');
+  if (demandes.length !== 1) return;
+  const reponse = conv.messages.find((m) => m.role === 'assistant');
+  if (!reponse) return;
+
+  conv.titreTente = true;
+  try {
+    const r = await API.agent.titre({
+      texte: `Utilisateur : ${demandes[0].contenu.slice(0, 1500)}\n`
+        + `Assistant : ${reponse.contenu.slice(0, 1500)}`
+    });
+    if (!r?.ok || !r.titre) return;
+    conv.titre = r.titre;
+    conv.titreGenere = true;
+    if (etat.conversationCourante === conv) $('#titreConversation').textContent = r.titre;
+    afficherConversations();
+    persisterConversations();
+  } catch { /* le titre est un bonus, jamais bloquant */ }
 }
 
 function basculerEtatEnvoi(enCours) {

@@ -372,6 +372,54 @@ ipcMain.handle('agent:resumer', async (_e, { texte } = {}) => {
   }
 });
 
+ipcMain.handle('agent:titre', async (_e, { texte } = {}) => {
+  const cfg = config.getConfig({ revealKeys: true });
+  const creds = config.getProviderCredentials(cfg.activeProvider);
+  if (!creds?.apiKey && !fournisseurSansCle(cfg.activeProvider, creds)) {
+    return { ok: false, message: "Aucune clé d'API configurée." };
+  }
+  const contenu = String(texte || '').slice(0, 6000);
+  if (!contenu.trim()) return { ok: false, message: 'Rien à titrer.' };
+
+  const controleur = new AbortController();
+  const minuteur = setTimeout(() => controleur.abort(), 15000);
+  try {
+    let titre = '';
+    const flux = providers.stream({
+      providerId: cfg.activeProvider,
+      apiKey: creds.apiKey,
+      baseUrl: creds.baseUrl,
+      model: creds.model,
+      messages: [{
+        role: 'user',
+        content: "Donne un titre court (3 à 6 mots) en français pour cette conversation. "
+          + 'Pas de guillemets, pas de ponctuation finale, pas de préfixe. '
+          + "Réponds uniquement par le titre.\n\nConversation :\n" + contenu
+      }],
+      tools: [],
+      maxTokens: 30,
+      temperature: 0.2,
+      signal: controleur.signal
+    });
+    for await (const evt of flux) {
+      if (evt.type === 'texte') titre += evt.delta;
+      if (evt.type === 'erreur') return { ok: false, message: evt.message };
+      if (evt.type === 'fin') break;
+    }
+    titre = titre
+      .replace(/^[\s"«”'’]+|[\s"«”'’.!?…]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 60);
+    if (!titre) return { ok: false, message: 'Titre vide.' };
+    return { ok: true, titre };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  } finally {
+    clearTimeout(minuteur);
+  }
+});
+
 ipcMain.handle('providers:tester', async (_e, id, modeleChoisi) => {
   const creds = config.getProviderCredentials(id, modeleChoisi);
   if (!creds?.apiKey && !fournisseurSansCle(id, creds)) {

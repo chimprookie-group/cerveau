@@ -63,6 +63,9 @@ défiler depuis la palette de commandes.
 réponse en arrière-plan, vérification des mises à jour depuis À propos, journal
 de crash dans `agent.log`.
 
+**Titres automatiques** — après le premier échange, le modèle donne un titre
+court à la conversation (désactivable dans Général).
+
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
 ![Réglages](docs/04-reglages.png)
@@ -165,7 +168,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.34.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.35.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
