@@ -2214,8 +2214,10 @@ body.fenetre-inactive * {
   pointer-events: auto;
 }
 
+.notification.info { border-left-color: var(--accent); }
 .notification.succes { border-left-color: var(--succes); }
 .notification.erreur { border-left-color: var(--danger); }
+.notification.maj { cursor: pointer; border-left-color: var(--accent); }
 
 @keyframes glisse {
   from { opacity: 0; transform: translateX(24px); }

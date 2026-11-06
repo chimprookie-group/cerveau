@@ -102,7 +102,9 @@ const DEFAULTS = {
     historiqueMax: 200,
     demarrerAuDemarrage: false,  // autostart du bureau
     notifications: true,         // notification système quand la réponse arrive
-    titresAuto: true             // titre de conversation généré par le modèle
+    titresAuto: true,            // titre de conversation généré par le modèle
+    verifierMajAuto: true,       // vérifier les mises à jour au lancement (1×/jour)
+    majDerniereVerif: 0
   },
   agent: {
     appelsParalleles: true,

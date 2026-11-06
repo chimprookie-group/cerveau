@@ -203,6 +203,11 @@ contextBridge.exposeInMainWorld('cerveau', {
     autostart: () => ipcRenderer.invoke('app:autostart'),
     definirAutostart: (actif) => ipcRenderer.invoke('app:definir-autostart', actif),
     verifierMaj: () => ipcRenderer.invoke('app:verifier-mise-a-jour'),
+    surMajDisponible: (cb) => {
+      const handler = (_e, info) => cb(info);
+      ipcRenderer.on('app:maj-disponible', handler);
+      return () => ipcRenderer.removeListener('app:maj-disponible', handler);
+    },
     ouvrirJournal: () => ipcRenderer.invoke('app:ouvrir-journal'),
     rechercher: (payload) => ipcRenderer.invoke('app:rechercher', payload),
     arreterRecherche: () => ipcRenderer.invoke('app:arreter-recherche'),

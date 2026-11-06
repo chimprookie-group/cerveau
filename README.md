@@ -79,6 +79,10 @@ miniatures et s'ouvrent en grand au clic.
 mémorisés par fournisseur et réappliqués au lancement ; l'effort de raisonnement
 est transmis aux modèles compatibles.
 
+**Mises à jour automatiques (vérification)** — au lancement, une fois par jour,
+Cerveau vérifie la dernière release et propose un lien si une version est
+disponible (désactivable dans Général).
+
 **Contexte adaptatif et recherche globale** — la compaction s'adapte à la
 fenêtre du modèle (plus de détail sur les grands modèles) ; `Ctrl+Maj+F` cherche
 dans le texte de toutes les conversations et ouvre le message trouvé.
@@ -199,7 +203,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.40.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.41.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

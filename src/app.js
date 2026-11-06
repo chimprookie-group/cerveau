@@ -102,6 +102,26 @@ function el(tag, attrs = {}, ...enfants) {
 }
 
 
+function notifierMaj(version, url) {
+  const n = el('div', {
+    class: 'notification info maj',
+    text: `Cerveau ${version} est disponible — cliquer pour ouvrir la page de téléchargement.`
+  });
+  n.style.cursor = 'pointer';
+  n.title = url || '';
+  n.addEventListener('click', () => {
+    if (url) API.app.ouvrirUrl(url);
+    n.remove();
+  });
+  $('#notifications').append(n);
+  setTimeout(() => {
+    n.style.opacity = '0';
+    n.style.transform = 'translateX(20px)';
+    n.style.transition = 'all 0.2s';
+    setTimeout(() => n.remove(), 220);
+  }, 20000);
+}
+
 function notifier(message, type = 'info', duree = 3600) {
   const n = el('div', { class: `notification ${type}`, text: message });
   $('#notifications').append(n);
@@ -303,6 +323,7 @@ async function demarrer() {
 
   synchroniserHauteurEntete();
 
+  API.app.surMajDisponible?.((info) => notifierMaj(info.version, info.url));
   API.agent.surEvenement(traiterEvenementAgent);
   API.menu.surAction(traiterActionMenu);
 
@@ -2206,6 +2227,7 @@ function brancherReglagesAvances() {
   lier('#reglageAutostart', g.demarrerAuDemarrage, 'general.demarrerAuDemarrage', (v) => v, false);
   lier('#reglageNotifications', g.notifications, 'general.notifications', (v) => v, true);
   lier('#reglageTitresAuto', g.titresAuto, 'general.titresAuto', (v) => v, true);
+  lier('#reglageMajAuto', g.verifierMajAuto, 'general.verifierMajAuto', (v) => v, true);
   lier('#reglageHistorique', g.historiqueMax, 'general.historiqueMax', (v) => Number(v) || 200, 200);
 
   lier('#reglageAppelsParalleles', a.appelsParalleles, 'agent.appelsParalleles', (v) => v, true);

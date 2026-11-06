@@ -4,6 +4,14 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.41.0] — 2026-11-06
+
+### Ajouté
+- **Vérification automatique des mises à jour** au lancement (une fois par
+  24 h, sans bloquer le démarrage). Si une version est disponible, une
+  notification cliquable ouvre la page de téléchargement. Désactivable dans
+  `Réglages → Général → Vérifier les mises à jour au lancement`.
+
 ## [2.40.0] — 2026-11-06
 
 ### Amélioré

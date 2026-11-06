@@ -1744,7 +1744,7 @@ X-GNOME-Autostart-enabled=true
 ipcMain.handle('app:autostart', () => ({ actif: autostartActif() }));
 ipcMain.handle('app:definir-autostart', (_e, actif) => definirAutostart(Boolean(actif)));
 
-ipcMain.handle('app:verifier-mise-a-jour', async () => {
+async function verifierMiseAJour() {
   try {
     const reponse = await fetch(
       'https://api.github.com/repos/chimprookie-group/cerveau/releases/latest',
@@ -1775,7 +1775,9 @@ ipcMain.handle('app:verifier-mise-a-jour', async () => {
   } catch (err) {
     return { ok: false, message: String(err.message || err) };
   }
-});
+}
+
+ipcMain.handle('app:verifier-mise-a-jour', async () => verifierMiseAJour());
 
 ipcMain.handle('app:ouvrir-journal', async () => {
   try {
@@ -1881,6 +1883,26 @@ if (!instanceUnique) {
     nativeTheme.themeSource = cfg.ui?.theme === 'clair' ? 'light' : 'dark';
     buildMenu();
     createWindow();
+
+    // vérification automatique des mises à jour : une fois par 24 h, sans bloquer
+    setTimeout(async () => {
+      try {
+        const cfgMaj = config.getConfig();
+        if (cfgMaj.general?.verifierMajAuto === false) return;
+        const derniere = Number(cfgMaj.general?.majDerniereVerif || 0);
+        if (Date.now() - derniere < 24 * 60 * 60 * 1000) return;
+        const r = await verifierMiseAJour();
+        if (!r.ok) return;
+        config.updateConfig({ general: { majDerniereVerif: Date.now() } });
+        if (r.aJour || !r.url) return;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('app:maj-disponible', {
+            version: r.distante,
+            url: r.url
+          });
+        }
+      } catch { /* une vérification ne doit jamais gêner le démarrage */ }
+    }, 6000);
 
     // Fichier PID de l'application : le démon s'en sert pour lui céder la
     // place. Sans lui, les deux exécuteraient les mêmes tâches en double.
