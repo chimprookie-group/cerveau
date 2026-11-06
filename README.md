@@ -132,6 +132,11 @@ consultables.
 
 ![Plugins](docs/06-plugins.png)
 
+**Plugins par défaut et catalogue** — cinq plugins prêts à l'emploi, plus
+« Ouvrir » et « Texte » à installer en un clic.
+
+![Catalogue de plugins](docs/10-plugins-catalogue.png)
+
 **Mémoire de long terme** — ce que Cerveau retient d'une conversation à l'autre :
 préférences, conventions de projet, décisions.
 
@@ -215,7 +220,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.43.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.44.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -362,6 +367,12 @@ disponibles dans tous les modes. Un exemple est fourni au premier démarrage.
 erreurs, et permet de **recharger**, **ouvrir le dossier**, **retirer** ou
 **créer** un plugin (formulaire avec code pré-rempli). Une compétence « Créer un
 plugin » aide l'agent à rédiger le code.
+
+**Cinq plugins sont installés par défaut** : date et heure, calculs exacts,
+presse-papiers, notifications de bureau et informations système. Le **catalogue**
+propose en plus « Ouvrir » (fichier/dossier/URL) et « Texte » (statistiques),
+installables en un clic ; chaque plugin indique ses outils et peut être retiré ou
+modifié dans son fichier.
 
 > Un plugin s'exécute avec les droits de l'application : n'installe que du code
 > que tu as lu ou écrit.

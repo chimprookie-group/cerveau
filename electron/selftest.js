@@ -1059,6 +1059,20 @@ async function run(mainWindow, deps) {
   verifier('Champ de commande MCP présent', uiPlugins.champCommande === true);
   verifier('Bouton « Tout démarrer » présent', uiPlugins.demarrerTout === true);
   verifier('Zone de résultat MCP présente', uiPlugins.resultatMCP === true);
+  const uiCatalogue = await mainWindow.webContents.executeJavaScript(`(async () => {
+    window.cerveauUI.ouvrirReglages('agents');
+    await new Promise((r) => setTimeout(r, 400));
+    document.querySelector('#btnFermerReglages2')?.click();
+    await new Promise((r) => setTimeout(r, 200));
+    return {
+      cartes: document.querySelectorAll('#cataloguePlugins .competence').length,
+      installes: document.querySelectorAll('#cataloguePlugins .badge.ok').length,
+      boutons: document.querySelectorAll('#cataloguePlugins button').length
+    };
+  })()`);
+  verifier('Catalogue de plugins visible',
+    uiCatalogue.cartes >= 6 && uiCatalogue.boutons >= 1,
+    `${uiCatalogue.cartes} cartes, ${uiCatalogue.installes} installés`);
 
   // nombre total d'outils selon le mode
   const agentTools = require('./agent');
@@ -1430,6 +1444,15 @@ async function run(mainWindow, deps) {
     verifier('Plugins : outils préfixés',
       rPlug.outils.some((o) => o.nom.startsWith('plugin_exemple_')),
       rPlug.outils.map((o) => o.nom).join(', '));
+    verifier('Catalogue de plugins avec défauts',
+      pluginsMod.CATALOGUE.length >= 6
+      && pluginsMod.CATALOGUE.filter((p) => p.defaut).length >= 4,
+      `${pluginsMod.CATALOGUE.length} plugins, ${pluginsMod.CATALOGUE.filter((p) => p.defaut).length} par défaut`);
+    const rCatalogue = pluginsMod.installerCatalogue('texte');
+    verifier('Catalogue : installation à la demande',
+      rCatalogue.plugins.some((p) => p.id === 'texte')
+      && rCatalogue.outils.some((o) => o.nom.startsWith('plugin_texte_')),
+      rCatalogue.plugins.map((p) => p.id).join(', '));
     process.env.CERVEAU_SANS_PLUGINS = '1';
     pluginsMod.recharger();
   } catch (err) {

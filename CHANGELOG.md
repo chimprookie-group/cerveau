@@ -4,6 +4,16 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.44.0] — 2026-11-06
+
+### Ajouté
+- **Cinq plugins installés par défaut** : date et heure, calculs exacts,
+  presse-papiers, notifications de bureau et informations système. Ils sont
+  ajoutés une fois au premier lancement, sans écraser un fichier existant.
+- **Catalogue de plugins** dans `Agent et outils` : cartes avec description et
+  outils, installation en un clic (« Ouvrir », « Texte ») en plus de la
+  création manuelle.
+
 ## [2.43.0] — 2026-11-06
 
 ### Modifié

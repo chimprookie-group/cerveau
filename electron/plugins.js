@@ -26,6 +26,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const config = require('./config');
+const { CATALOGUE } = require('./plugins-catalogue');
+
+const VERSION_DEFAUTS = 1;
 
 const DOSSIER = path.join(config.APP_DIR, 'plugins');
 const PREFIXE = 'plugin_';
@@ -82,13 +85,32 @@ function identifiant(brut) {
 
 function assurerDossier() {
   fs.mkdirSync(DOSSIER, { recursive: true, mode: 0o700 });
-  const fichiers = fs.readdirSync(DOSSIER).filter((f) => f.endsWith('.js'));
-  if (!fichiers.length) {
-    fs.writeFileSync(path.join(DOSSIER, 'exemple.js'), EXEMPLE, { mode: 0o600 });
+  // l'exemple reste toujours disponible, même quand le catalogue est installé
+  const exemple = path.join(DOSSIER, 'exemple.js');
+  if (!fs.existsSync(exemple)) {
+    fs.writeFileSync(exemple, EXEMPLE, { mode: 0o600 });
   }
 }
 
+/** Installe une fois les plugins du catalogue marqués « par défaut ». */
+function installerDefauts() {
+  if (process.env.CERVEAU_SANS_PLUGINS === '1') return;
+  try {
+    const cfg = config.getConfig();
+    if ((Number(cfg.pluginsDefautsVersion) || 0) >= VERSION_DEFAUTS) return;
+    assurerDossier();
+    for (const item of CATALOGUE.filter((p) => p.defaut)) {
+      const fichier = path.join(DOSSIER, `${item.id}.js`);
+      if (!fs.existsSync(fichier)) {
+        fs.writeFileSync(fichier, `${item.code}\n`, { mode: 0o600 });
+      }
+    }
+    config.updateConfig({ pluginsDefautsVersion: VERSION_DEFAUTS });
+  } catch { /* le catalogue ne doit jamais empêcher les plugins de charger */ }
+}
+
 function fichiersPlugins() {
+  installerDefauts();
   assurerDossier();
   return fs.readdirSync(DOSSIER)
     .filter((f) => f.endsWith('.js') && !f.startsWith('.'))
@@ -221,6 +243,16 @@ function ajouter({ nom, code, description = '' }) {
   return { ...charger({ force: true }), fichier };
 }
 
+/** Installe un plugin du catalogue (écrase une version précédente). */
+function installerCatalogue(id) {
+  const item = CATALOGUE.find((p) => p.id === identifiant(id));
+  if (!item) throw new Error('Plugin inconnu dans le catalogue.');
+  assurerDossier();
+  const fichier = path.join(DOSSIER, `${item.id}.js`);
+  fs.writeFileSync(fichier, `${item.code}\n`, { mode: 0o600 });
+  return { ...charger({ force: true }), fichier, plugin: item.id };
+}
+
 function supprimer(fichier) {
   const base = path.basename(String(fichier || ''));
   if (!/^[a-z0-9_-]+\.js$/i.test(base)) throw new Error('Nom de fichier de plugin invalide.');
@@ -241,5 +273,7 @@ module.exports = {
   outils,
   PAR_NOM,
   ajouter,
+  installerCatalogue,
+  CATALOGUE,
   supprimer
 };

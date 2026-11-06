@@ -327,6 +327,14 @@ async function principal() {
   await pause(1000);
   await capture(win, '05-outils.png');
 
+  // 5b. catalogue de plugins installés par défaut
+  await ui(`(async () => {
+    document.querySelector('#cataloguePlugins')?.scrollIntoView({ block: 'center' });
+    return true;
+  })()`);
+  await pause(900);
+  await capture(win, '10-plugins-catalogue.png');
+
   // 6. plugins et web — le nouveau tableau MCP
   await ui(`(async () => {
     document.querySelector('.nav-reglage[data-reglage="plugins"]').click();

@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('cerveau', {
     recharger: () => ipcRenderer.invoke('plugins:recharger'),
     ouvrirDossier: () => ipcRenderer.invoke('plugins:ouvrir-dossier'),
     creer: (payload) => ipcRenderer.invoke('plugins:creer', payload),
+    catalogue: () => ipcRenderer.invoke('plugins:catalogue'),
+    installer: (id) => ipcRenderer.invoke('plugins:installer', id),
     supprimer: (fichier) => ipcRenderer.invoke('plugins:supprimer', fichier)
   },
 

@@ -331,6 +331,18 @@ ipcMain.handle('plugins:ouvrir-dossier', async () => {
   } catch (err) { return { ok: false, message: String(err.message || err) }; }
 });
 
+ipcMain.handle('plugins:catalogue', () => ({
+  ok: true,
+  catalogue: plugins.CATALOGUE.map(({ id, nom, description, outils, defaut }) => ({
+    id, nom, description, outils, defaut
+  }))
+}));
+
+ipcMain.handle('plugins:installer', (_e, id) => {
+  try { return { ok: true, ...plugins.installerCatalogue(id) }; }
+  catch (err) { return { ok: false, message: String(err.message || err) }; }
+});
+
 ipcMain.handle('plugins:creer', (_e, { nom, code, description } = {}) => {
   try { return { ok: true, ...plugins.ajouter({ nom, code, description }) }; }
   catch (err) { return { ok: false, message: String(err.message || err) }; }

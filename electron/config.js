@@ -53,6 +53,7 @@ const DEFAULTS = {
   presetsComportement: [],
   temperature: 0.7,
   efforts: {},             // niveau de raisonnement mémorisé, par fournisseur
+  pluginsDefautsVersion: 0, // plugins du catalogue installés une fois
   // Employés : profils d'assistant (rôle + instructions) applicables à une conversation
   employes: [
     {

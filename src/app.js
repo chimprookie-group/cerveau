@@ -2316,6 +2316,48 @@ const MODELE_PLUGIN = `module.exports = {
 };`;
 
 /** Liste les plugins chargés (dossier de configuration). */
+async function rendreCataloguePlugins() {
+  const zone = $('#cataloguePlugins');
+  if (!zone) return;
+  zone.innerHTML = '';
+
+  let catalogue = [];
+  const installes = new Set();
+  try {
+    const [r, l] = await Promise.all([API.plugins.catalogue(), API.plugins.lister()]);
+    catalogue = r.catalogue || [];
+    for (const p of l.plugins || []) installes.add(p.id);
+  } catch { /* catalogue indisponible */ }
+
+  if (!catalogue.length) {
+    zone.append(el('p', { class: 'vide petit', text: 'Catalogue indisponible.' }));
+    return;
+  }
+
+  for (const item of catalogue) {
+    const installe = installes.has(item.id);
+    zone.append(el('div', { class: 'competence' },
+      el('div', { class: 'competence-nom', text: `${item.nom}${item.defaut ? ' · par défaut' : ''}` }),
+      el('div', { class: 'competence-desc', text: item.description }),
+      el('div', { class: 'competence-outils', text: (item.outils || []).join(' · ') }),
+      installe
+        ? el('span', { class: 'badge ok', text: 'Installé' })
+        : el('button', {
+            class: 'btn-mini',
+            text: 'Installer',
+            onclick: async () => {
+              const r = await API.plugins.installer(item.id);
+              if (!r.ok) { notifier(r.message || 'Installation impossible.', 'erreur', 5000); return; }
+              notifier(`Plugin « ${item.nom} » installé.`, 'succes', 2500);
+              await rendrePlugins();
+              rendreOutilsReglage();
+              await rendreCataloguePlugins();
+            }
+          })
+    ));
+  }
+}
+
 async function rendrePlugins() {
   const zone = $('#listePlugins');
   if (!zone) return;
@@ -5684,6 +5726,7 @@ function initialiserReglagesAvances() {
   brancherReglagesAvances();
   rendreCompetences();
   rendrePlugins();
+  rendreCataloguePlugins();
   API.app.autostart().then((r) => {
     const case_ = $('#reglageAutostart');
     if (case_) case_.checked = Boolean(r?.actif);
