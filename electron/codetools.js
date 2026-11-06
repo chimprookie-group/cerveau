@@ -11,6 +11,7 @@
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
+const os = require('node:os');
 const { spawn } = require('node:child_process');
 
 const MAX_LECTURE = 400 * 1024;      // 400 Ko par lecture
@@ -53,31 +54,97 @@ function tronquer(texte, max = MAX_SORTIE) {
   return `${s.slice(0, max)}\n…[tronqué : ${s.length - max} caractères supplémentaires]`;
 }
 
+/**
+ * Forme normalisée d'une commande. Les guillemets, les échappements et les
+ * variables d'environnement ne changent pas la cible réellement atteinte :
+ * il faut donc les développer avant de filtrer, sinon « rm -rf "/" » passe
+ * là où « rm -rf / » est bloqué.
+ */
+function normaliserCommande(cmd) {
+  const foyer = os.homedir();
+  let c = String(cmd || '');
+  c = c.replace(/\$\{?HOME\}?/g, foyer);
+  c = c.replace(/\$\{?USER\}?/g, os.userInfo().username);
+  c = c.replace(/\$\{?PWD\}?/g, '.');
+  // guillemets et barres obliques inverses
+  c = c.replace(/["'\\]/g, '');
+  // ~ seul ou en tête de chemin
+  c = c.replace(/(^|[\s=:|;&(])~(?=\/|\s|$)/g, (_m, pre) => pre + foyer);
+  // barres obliques redondantes et segments « . »
+  c = c.replace(/\/{2,}/g, '/').replace(/\/\.(?=\/|\s|$)/g, '');
+  return c.replace(/\s+/g, ' ').trim();
+}
+
+/** Racines dont la suppression récursive est irréversible. */
+const DOSSIERS_SYSTEME = /^\/(usr|bin|sbin|lib|lib64|boot|etc|dev|proc|sys|var|opt|root|home|srv)(\/|$)/;
+
+/** Vrai si la cible visée ne doit jamais être supprimée récursivement. */
+function cibleInterdite(cible) {
+  const foyer = os.homedir();
+  const aGlob = /[*?[\]]/.test(cible);
+  // les globs ne changent pas la racine visée : « /* » vise « / »
+  const t = cible.replace(/[*?[\]]/g, '').replace(/\/+$/, '');
+  if (t === '') return true;                  // « / », « /* », « // »
+  if (t === foyer || t === '.') return true;  // foyer, racine du projet
+  if (/^\/home\/[^/]+$/.test(t)) return true; // n'importe quel foyer
+  if (DOSSIERS_SYSTEME.test(t)) {
+    // à l'intérieur d'un dossier système, seule une cible précise
+    // (sans glob et d'au moins deux niveaux) reste acceptable
+    const profondeur = t.split('/').filter(Boolean).length;
+    if (profondeur <= 1 || aGlob) return true;
+  }
+  return false;
+}
+
+/** Cibles d'une commande « rm » dans un segment de shell. */
+function ciblesDeSuppression(segment) {
+  const jetons = segment.split(' ').filter(Boolean);
+  const i = jetons.findIndex((j) => j === 'rm' || j.endsWith('/rm'));
+  if (i === -1) return [];
+  const cibles = [];
+  for (let k = i + 1; k < jetons.length; k++) {
+    const j = jetons[k];
+    if (j === '--' || j.startsWith('-')) continue; // options, dont -rf
+    cibles.push(j);
+  }
+  return cibles;
+}
+
 /** Refuse les commandes manifestement destructrices. */
 const INTERDITS = [
-  /rm\s+(-[a-zA-Z]*\s+)*\/(\s|$)/,
-  /rm\s+(-[a-zA-Z]*\s+)*~(\s|$)/,
-  /mkfs(\.\w+)?\s/,
-  /dd\s+[^|]*of=\/dev\/(sd|nvme|hd)/,
-  />\s*\/dev\/(sd|nvme|hd)/,
+  /\bmkfs(\.\w+)?\s/,
+  /\bdd\b[^|]*\bof=\/dev\/(sd|nvme|hd|vd|mmcblk)/,
+  />\s*\/dev\/(sd|nvme|hd|vd|mmcblk)/,
   /:\(\)\s*\{\s*:\|:&\s*\};:/,
-  /chmod\s+-R\s+777\s+\/(\s|$)/,
-  /shutdown|reboot|poweroff/,
-  /pacman\s+-Rdd|pacman\s+-Rns\s+\/|--noconfirm\s+.*-R/,
-  /userdel|passwd\s+root/,
-  /curl\s+[^|]*\|\s*(sudo\s+)?(ba)?sh/,
-  /wget\s+[^|]*\|\s*(sudo\s+)?(ba)?sh/
+  /\bchmod\s+(-[a-zA-Z]+\s+)*777\s+\/(\s|$)/,
+  /\b(shutdown|reboot|poweroff|halt)\b/,
+  /\bpacman\s+-Rdd\b|\bpacman\s+-Rns\b/,
+  /\buserdel\b|\bpasswd\s+root\b/,
+  /\b(curl|wget)\b[^|]*\|\s*(sudo\s+|pkexec\s+)?(ba)?sh\b/,
+  /--no-preserve-root/
 ];
 
 function verifierCommande(cmd) {
-  const c = String(cmd || '').replace(/\s+/g, ' ').trim();
-  if (!c) throw new Error('Commande vide.');
+  const normalisee = normaliserCommande(cmd);
+  if (!normalisee) throw new Error('Commande vide.');
+
   for (const motif of INTERDITS) {
-    if (motif.test(c)) {
+    if (motif.test(normalisee)) {
       throw new Error(`Commande bloquée par sécurité : elle correspond à un motif destructeur (${motif}).`);
     }
   }
-  return c;
+
+  // une suppression récursive vise-t-elle une cible critique ?
+  for (const segment of normalisee.split(/\s*(?:&&|\|\||;|\|)\s*/)) {
+    for (const cible of ciblesDeSuppression(segment)) {
+      if (cibleInterdite(cible)) {
+        throw new Error(`Commande bloquée par sécurité : suppression de « ${cible} » refusée.`);
+      }
+    }
+  }
+
+  // la commande réellement exécutée reste celle d'origine
+  return String(cmd || '').replace(/\s+/g, ' ').trim();
 }
 
 /* ------------------------------- exécution ------------------------------ */

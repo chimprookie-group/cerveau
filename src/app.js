@@ -208,8 +208,8 @@ const renduMarkdown = (() => {
     } catch {
       html = `<p>${echapper(texte)}</p>`;
     }
-    if (window.DOMPurify) {
-      html = DOMPurify.sanitize(html, {
+    if (window.DOMPurify?.sanitize) {
+      return DOMPurify.sanitize(html, {
         ADD_ATTR: ['data-note', 'data-tag', 'target', 'rel', 'title'],
         ADD_TAGS: ['input'],
         // formulaires et cadres n'ont aucune raison d'apparaître dans une note :
@@ -218,7 +218,9 @@ const renduMarkdown = (() => {
         FORBID_ATTR: ['action', 'formaction', 'srcdoc', 'ping']
       });
     }
-    return html;
+    // sans DOMPurify, aucun nettoyage n'est possible : on n'injecte pas de
+    // HTML brut, on retombe sur du texte échappé (fail-closed)
+    return `<pre class="markdown-brut">${echapper(texte)}</pre>`;
   }
 
   function embellir(conteneur) {
@@ -1770,19 +1772,20 @@ async function rendreServeursMCP() {
 
   const serveurs = etat.config.serveursMCP || [];
 
-  if (!serveurs.length) {
-    zone.append(el('p', { class: 'vide petit', text:
-      'Aucun serveur MCP configuré. Utilisez un exemple prêt à l’emploi ci-dessous.' }));
-    return;
-  }
-
-  // en-têtes du tableau
+  // en-têtes du tableau : affichés même sans serveur, pour que la section
+  // garde sa structure au lieu de disparaître
   zone.append(el('div', { class: 'mcp-entetes' },
     el('span', { text: 'Serveur' }),
     el('span', { text: 'Commande' }),
     el('span', { class: 'mcp-col-etat', text: 'État' }),
     el('span', { class: 'mcp-col-actions', text: 'Actions' })
   ));
+
+  if (!serveurs.length) {
+    zone.append(el('p', { class: 'vide petit', text:
+      'Aucun serveur MCP configuré. Utilisez un exemple prêt à l’emploi ci-dessous.' }));
+    return;
+  }
 
   serveurs.forEach((srv, index) => {
     const info = etatsMCPCourants[srv.nom];

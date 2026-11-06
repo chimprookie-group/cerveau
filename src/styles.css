@@ -1644,6 +1644,14 @@ body.fenetre-inactive * {
 
 /* ══════════════════ MARKDOWN ══════════════════ */
 
+/* Repli quand DOMPurify n'est pas chargé : le texte reste lisible sans HTML. */
+.markdown-brut {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
+
 .markdown-corps h1, .markdown-corps h2, .markdown-corps h3,
 .markdown-corps h4, .markdown-corps h5, .markdown-corps h6 {
   margin: 1.4em 0 0.5em;

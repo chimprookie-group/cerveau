@@ -10,6 +10,24 @@ const path = require('node:path');
 app.setName('cerveau');
 
 /**
+ * Autotest : dossier de configuration jetable.
+ *
+ * Doit être décidé avant le chargement de ./config, qui calcule son chemin à
+ * partir de XDG_CONFIG_HOME. Sans cela, `npm test` écrirait dans la vraie
+ * configuration (~/.config/cerveau) et remplacerait les coffres de
+ * l'utilisateur par le coffre temporaire du test.
+ */
+let dossierConfigTest = null;
+if (process.env.CERVEAU_SELFTEST === '1' && !process.env.XDG_CONFIG_HOME_TEST) {
+  const os0 = require('node:os');
+  const fs0 = require('node:fs');
+  const path0 = require('node:path');
+  dossierConfigTest = fs0.mkdtempSync(path0.join(os0.tmpdir(), 'cerveau-selftest-conf-'));
+  process.env.XDG_CONFIG_HOME = dossierConfigTest;
+  process.env.XDG_CONFIG_HOME_TEST = dossierConfigTest;
+}
+
+/**
  * Récupère les données d'une installation antérieure.
  *
  * Les versions précédentes rangeaient leurs fichiers dans ~/.config/Cerveau
@@ -64,6 +82,21 @@ const { Objectifs } = require('./objectifs');
 const { Planificateur, analyserIntervalle, NIVEAUX, permissionsDuNiveau } = require('./planificateur');
 
 const isDev = !app.isPackaged;
+
+/**
+ * Autotest : la configuration est remplacée par un profil jetable (coffre
+ * temporaire, serveur MCP inerte) pour que les tests ne dépendent ni de la
+ * machine ni des données réelles de l'utilisateur.
+ */
+function preparerProfilDeTest() {
+  if (process.env.CERVEAU_SELFTEST !== '1') return;
+  try {
+    require('./profil-test').appliquer(config);
+  } catch (err) {
+    console.error('[cerveau] profil de test indisponible :', err.message);
+  }
+}
+
 let mainWindow = null;
 let generationEnCours = null;   // AbortController
 const confirmationsEnAttente = new Map();
@@ -1912,6 +1945,7 @@ if (!instanceUnique) {
   app.whenReady().then(() => {
     // après whenReady, app.getPath('userData') est fiable
     migrerDonneesAnciennes();
+    preparerProfilDeTest();
 
     const cfg = config.getConfig();
     nativeTheme.themeSource = cfg.ui?.theme === 'clair' ? 'light' : 'dark';
