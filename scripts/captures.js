@@ -132,7 +132,7 @@ function preparerConfigDemo(coffreDemo) {
       mode: 'auto', allowDelete: false,
       autoCommandes: true, autoPush: false, autoGithub: false
     },
-    rechercheWeb: { moteur: 'duckduckgo', urlBase: '', cle: '' },
+    rechercheWeb: { baseUrl: 'https://api.deepseek.com/v1/tools', cle: '', count: 8 },
     serveursMCP: [
       { nom: 'memory', commande: 'npx', arguments: ['-y', '@modelcontextprotocol/server-memory'], actif: true },
       { nom: 'git', commande: 'npx', arguments: ['-y', '@cyanheads/git-mcp-server'], actif: true },
@@ -331,7 +331,8 @@ async function principal() {
   await ui(`(async () => {
     document.querySelector('.nav-reglage[data-reglage="plugins"]').click();
     await new Promise((r) => setTimeout(r, 700));
-    document.querySelector('#listeServeursMCP')?.scrollIntoView({ block: 'center' });
+    const zone = document.querySelector('.reglages-contenu');
+    if (zone) zone.scrollTop = 0;
     return true;
   })()`);
   await pause(1100);

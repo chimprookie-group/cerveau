@@ -368,6 +368,8 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
   if (ctx.memoire) {
     try {
       const dernierUtilisateur = [...historique].reverse().find((m) => m.role === 'user');
+      // question d'origine, envoyée à la recherche web (comme le harnais)
+      ctx.derniereDemande = String(dernierUtilisateur?.contenu || '').slice(0, 500);
       ctx.blocMemoire = await ctx.memoire.blocPourInvite(dernierUtilisateur?.contenu || '');
     } catch { ctx.blocMemoire = ''; }
   }
@@ -958,7 +960,7 @@ function resumerResultat(nom, res) {
     case 'memoire_retenir': return res.dejaConnu ? 'déjà connu' : (res.remplace ? 'mis à jour' : 'retenu');
     case 'memoire_chercher': return `${res.total} fait(s) en mémoire`;
     case 'memoire_oublier': return res.oublie ? 'oublié' : 'aucun fait correspondant';
-    case 'web_search': return `${res.total} résultat(s) · ${res.moteur}`;
+    case 'web_search': return `${res.total} source(s) · ${res.moteur || 'DeepSeek Search'}`;
     case 'web_fetch': return `${res.titre || res.url} — ${res.longueurTotale} caractères`;
     default:
       // outils MCP / plugins : la réponse est déjà du texte ou un petit objet

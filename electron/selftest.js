@@ -672,6 +672,33 @@ async function run(mainWindow, deps) {
   verifier('Conversion HTML → texte', html.includes('Titre') && html.includes('&') && !html.includes('x()'),
     JSON.stringify(html.slice(0, 60)));
 
+  // recherche web DeepSeek : contrat de l'API et formatage des sources
+  let corpsRechercheWeb = null;
+  const srvWeb = require('node:http').createServer((req, res) => {
+    let corps = '';
+    req.on('data', (c) => { corps += c; });
+    req.on('end', () => {
+      corpsRechercheWeb = JSON.parse(corps);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ results: [{
+        title: 'Doc Electron', url: 'https://example.com/electron',
+        snippet: 'extrait', summary: 'résumé clair', date: '2026-11-06'
+      }] }));
+    });
+  });
+  await new Promise((r) => srvWeb.listen(0, r));
+  const resWeb = await webtoolsMod.PAR_NOM.get('web_search').executer(
+    { queries: ['electron'] },
+    { rechercheWeb: { baseUrl: `http://127.0.0.1:${srvWeb.address().port}/v1/tools`, cle: 'k', count: 5 },
+      derniereDemande: 'Question utilisateur' }
+  );
+  srvWeb.close();
+  verifier('Recherche web DeepSeek : source et format',
+    resWeb.total === 1 && /example\.com/.test(resWeb.texte) && /Contenu web externe/.test(resWeb.texte));
+  verifier('Recherche web DeepSeek : requête et ori_question',
+    corpsRechercheWeb?.query === 'electron' && corpsRechercheWeb?.count === 5
+    && corpsRechercheWeb?.ori_question === 'Question utilisateur');
+
   const urlInvalide = await mainWindow.webContents.executeJavaScript(
     `window.cerveau.web ? true : false`);
   verifier('API web exposée', urlInvalide === true);
@@ -1014,7 +1041,8 @@ async function run(mainWindow, deps) {
     await new Promise(r => setTimeout(r, 300));
     const r = {
       section: document.querySelector('.volet-reglage.actif')?.id,
-      moteur: document.querySelector('#reglageMoteurWeb')?.value,
+      baseRecherche: document.querySelector('#reglageUrlRecherche')?.value,
+      countRecherche: document.querySelector('#reglageNbRecherche')?.value,
       exemples: document.querySelectorAll('#exemplesMCP .preset').length,
       champCommande: !!document.querySelector('#mcpCommande'),
       demarrerTout: !!document.querySelector('#btnDemarrerMCP'),
@@ -1024,7 +1052,9 @@ async function run(mainWindow, deps) {
     return r;
   })()`);
   verifier('Section Plugins accessible', uiPlugins.section === 'reglage-plugins');
-  verifier('Moteur de recherche par défaut : DuckDuckGo', uiPlugins.moteur === 'duckduckgo', uiPlugins.moteur);
+  verifier('Recherche web DeepSeek configurée',
+    /api\.deepseek\.com/.test(uiPlugins.baseRecherche || '') && uiPlugins.countRecherche === '8',
+    `${uiPlugins.baseRecherche} · ${uiPlugins.countRecherche}`);
   verifier('Exemples MCP proposés', uiPlugins.exemples >= 4, `${uiPlugins.exemples} exemples`);
   verifier('Champ de commande MCP présent', uiPlugins.champCommande === true);
   verifier('Bouton « Tout démarrer » présent', uiPlugins.demarrerTout === true);

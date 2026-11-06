@@ -115,7 +115,7 @@ const DEFAULTS = {
   },
   outilsDesactives: [],
   // recherche web : 'duckduckgo' (sans clé) ou 'fournisseur'
-  rechercheWeb: { moteur: 'duckduckgo', urlBase: '', cle: '' },
+  rechercheWeb: { baseUrl: 'https://api.deepseek.com/v1/tools', cle: '', count: 8 },
   // serveurs MCP : [{ nom, commande, arguments: [], variablesEnv: {}, actif }]
   serveursMCP: []
 };
@@ -153,6 +153,14 @@ function load() {
     raw = {};
   }
   cache = deepMerge(structuredClone(DEFAULTS), raw);
+
+  // recherche web : passage à l'API DeepSeek Search
+  if (cache.rechercheWeb) {
+    if (!cache.rechercheWeb.baseUrl) cache.rechercheWeb.baseUrl = 'https://api.deepseek.com/v1/tools';
+    if (!Number(cache.rechercheWeb.count)) cache.rechercheWeb.count = 8;
+    delete cache.rechercheWeb.moteur;
+    delete cache.rechercheWeb.urlBase;
+  }
 
   // apparence par défaut « DeepSeek » : bascule unique des anciens thèmes
   if (!cache.ui.themeMigre) {

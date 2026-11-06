@@ -4,6 +4,17 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.43.0] — 2026-11-06
+
+### Modifié
+- **Recherche web DeepSeek Search** : remplace DuckDuckGo et le fournisseur
+  externe. 1 à 4 requêtes en parallèle, sources dédupliquées, résumés, dates et
+  citation des URL ; cache de 5 minutes. Utilise la clé du fournisseur DeepSeek
+  (ou une clé dédiée) et `https://api.deepseek.com/v1/tools`.
+- Réglages `Plugins et web` simplifiés : base URL, clé dédiée facultative,
+  nombre de sources et test réel.
+- `web_fetch` reste une lecture HTTP locale, sans service tiers.
+
 ## [2.42.0] — 2026-11-06
 
 ### Ajouté

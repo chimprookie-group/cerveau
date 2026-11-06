@@ -79,6 +79,9 @@ message (images comprises) ; un fournisseur de secours de la même famille d'API
 prend le relais si le principal échoue. Les images jointes s'affichent en
 miniatures et s'ouvrent en grand au clic.
 
+**Recherche web DeepSeek** — multi-requêtes, sources et citations, avec la clé
+DeepSeek existante ; DuckDuckGo et le fournisseur externe ont été retirés.
+
 **Choix persistants** — le modèle et le niveau de raisonnement choisis sont
 mémorisés par fournisseur et réappliqués au lancement ; l'effort de raisonnement
 est transmis aux modèles compatibles.
@@ -123,8 +126,9 @@ désactivables un par un.
 
 ![Outils](docs/05-outils.png)
 
-**Plugins et web** — recherche internet et serveurs MCP, avec leur état réel et
-leurs outils consultables.
+**Plugins et web** — recherche web **DeepSeek Search** (1 à 4 requêtes,
+résumés et dates) et serveurs MCP, avec leur état réel et leurs outils
+consultables.
 
 ![Plugins](docs/06-plugins.png)
 
@@ -211,7 +215,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.42.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.43.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources
@@ -337,10 +341,13 @@ tourne avec `pipefail`, donc un `npm test | tail` renvoie bien le code d'échec 
 
 ### Sur le web
 
-`web_search` — recherche DuckDuckGo, sans clé ni configuration. Un fournisseur externe
-compatible Tavily peut être branché dans les réglages.
+`web_search` — recherche via l'API **DeepSeek Search** (la même famille que
+DeepSeek Harness) : 1 à 4 requêtes en parallèle, sources dédupliquées, résumés,
+dates et citation des URL. Utilise la clé du fournisseur DeepSeek, ou une clé
+dédiée si tu préfères.
 
-`web_fetch` — récupère une page et la convertit en texte lisible.
+`web_fetch` — récupère une page et la convertit en texte lisible (lecture HTTP
+locale, sans service tiers).
 
 Ces deux outils sont **intégrés à l'application** : aucun serveur MCP ni paquet à
 installer. Ils se désactivent un par un dans `Réglages → Agent → Outils`.

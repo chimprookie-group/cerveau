@@ -2024,34 +2024,26 @@ function brancherPlugins() {
   if (initialiserPluginsBranche) return;
   initialiserPluginsBranche = true;
   const rw = etat.config.rechercheWeb || {};
-  const moteur = $('#reglageMoteurWeb');
-  if (moteur) {
-    moteur.value = rw.moteur || 'duckduckgo';
-    const majLignes = () => {
-      const externe = moteur.value === 'fournisseur';
-      if ($('#ligneUrlRecherche')) $('#ligneUrlRecherche').hidden = !externe;
-      if ($('#ligneCleRecherche')) $('#ligneCleRecherche').hidden = !externe;
-    };
-    majLignes();
-    moteur.addEventListener('change', async () => {
-      await enregistrerConfig({ rechercheWeb: { moteur: moteur.value } });
-      majLignes();
+  const urlR = $('#reglageUrlRecherche');
+  if (urlR) {
+    urlR.value = rw.baseUrl || 'https://api.deepseek.com/v1/tools';
+    urlR.addEventListener('change', async () => {
+      await enregistrerConfig({ rechercheWeb: { baseUrl: urlR.value.trim() } });
     });
   }
-
-  const url = $('#reglageUrlRecherche');
-  if (url) {
-    url.value = rw.urlBase || '';
-    url.addEventListener('change', async () => {
-      await enregistrerConfig({ rechercheWeb: { urlBase: url.value.trim() } });
+  const cleR = $('#reglageCleRecherche');
+  if (cleR) {
+    cleR.value = rw.cle ? '••••••••' : '';
+    cleR.addEventListener('change', async () => {
+      if (cleR.value === '••••••••') return;
+      await enregistrerConfig({ rechercheWeb: { cle: cleR.value.trim() } });
     });
   }
-  const cle = $('#reglageCleRecherche');
-  if (cle) {
-    cle.value = rw.cle ? '••••••••' : '';
-    cle.addEventListener('change', async () => {
-      if (cle.value === '••••••••') return;
-      await enregistrerConfig({ rechercheWeb: { cle: cle.value.trim() } });
+  const nbR = $('#reglageNbRecherche');
+  if (nbR) {
+    nbR.value = String(rw.count || 8);
+    nbR.addEventListener('change', async () => {
+      await enregistrerConfig({ rechercheWeb: { count: Math.min(Math.max(Number(nbR.value) || 8, 1), 50) } });
     });
   }
 
@@ -2061,7 +2053,7 @@ function brancherPlugins() {
     const r = await API.web.tester();
     if (cible) {
       cible.textContent = r.ok
-        ? `${r.total} résultat(s) via ${r.moteur}. Exemple : ${r.exemple || '—'}`
+        ? `${r.total} source(s) via ${r.moteur}. Exemple : ${r.exemple || '—'}`
         : `Échec : ${r.message}`;
       cible.style.color = r.ok ? 'var(--succes)' : 'var(--danger)';
     }

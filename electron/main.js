@@ -241,6 +241,17 @@ function familleFournisseur(id) {
  * Fournisseur de secours : même famille d'API (les formats de messages
  * diffèrent entre Anthropic et OpenAI), clé disponible, modèle défini.
  */
+function configRechercheWeb(cfg) {
+  const rw = cfg.rechercheWeb || {};
+  // clé dédiée, sinon la clé du fournisseur DeepSeek (comme le harnais)
+  const cle = String(rw.cle || config.getProviderCredentials('deepseek')?.apiKey || '').trim();
+  return {
+    baseUrl: String(rw.baseUrl || 'https://api.deepseek.com/v1/tools').replace(/\/+$/, ''),
+    cle,
+    count: Math.min(Math.max(Number(rw.count) || 8, 1), 50)
+  };
+}
+
 function construireFallback(cfg, actifId, modeles = {}) {
   const id = cfg.agent?.fallbackProvider;
   if (!id || id === actifId) return null;
@@ -658,7 +669,7 @@ async function executerTachePlanifiee(tache) {
     }),
     memoire: obtenirMemoire(),
     serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
-    rechercheWeb: cfg.rechercheWeb || {}
+    rechercheWeb: configRechercheWeb(cfg)
   };
 
   // tâche liée à un objectif : on joue un tour de cet objectif
@@ -897,7 +908,7 @@ async function jouerTour(id, { annoncer = true } = {}) {
         confirmer: contexte.confirmer,
         memoire: obtenirMemoire(),
         serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
-        rechercheWeb: cfg.rechercheWeb || {}
+        rechercheWeb: configRechercheWeb(cfg)
       },
       emit: (evt) => {
         if (evt.type === 'outil_resultat') envoyer('tour:outil', { nom: evt.nom, message: evt.message });
@@ -1138,7 +1149,7 @@ function contexteSuperviseur(cfg) {
         // le Superviseur travaille comme le chat : mêmes outils, même mémoire
         memoire: obtenirMemoire(),
         serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
-        rechercheWeb: cfg.rechercheWeb || {}
+        rechercheWeb: configRechercheWeb(cfg)
       },
       emit: params.emit
     })
@@ -1216,17 +1227,16 @@ ipcMain.handle('superviseur:reinitialiser', async () => {
 ipcMain.handle('web:tester', async () => {
   try {
     const cfg = config.getConfig();
-    const rw = cfg.rechercheWeb || {};
     const outil = webtools.PAR_NOM.get('web_search');
     const r = await outil.executer(
-      { requete: 'documentation electron', limite: 3 },
-      { rechercheWeb: { moteur: rw.moteur, urlBase: rw.urlBase, cle: rw.cle } }
+      { queries: ['documentation electron'] },
+      { rechercheWeb: configRechercheWeb(cfg) }
     );
     return {
       ok: r.total > 0,
       total: r.total,
       moteur: r.moteur,
-      exemple: r.resultats?.[0]?.titre || ''
+      exemple: r.sources?.[0]?.titre || ''
     };
   } catch (err) {
     return { ok: false, message: String(err.message || err) };
@@ -1614,7 +1624,7 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
     agentCapSortie: cfg.agent?.capSortie,
     fallback: construireFallback(cfg, cfg.activeProvider),
     agentDelaiReponse: cfg.agent?.delaiReponse,
-    rechercheWeb: cfg.rechercheWeb || {},
+    rechercheWeb: configRechercheWeb(cfg),
     serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
     memoire: obtenirMemoire(),
     presets: presetsActifs(cfg),

@@ -932,39 +932,38 @@
         <!-- Plugins et web -->
         <div class="volet-reglage" id="reglage-plugins">
           <section class="section-reglage">
-            <h3 class="section-reglage-titre">Recherche web</h3>
+            <h3 class="section-reglage-titre">Recherche web (DeepSeek)</h3>
             <p class="section-reglage-desc">
-              Donne à l'IA la capacité de chercher sur internet et de lire des pages.
-              DuckDuckGo fonctionne sans configuration ni clé.
+              Recherche via l'API <strong>DeepSeek Search</strong> : plusieurs requêtes
+              en parallèle, sources dédupliquées, résumés et dates, sans scraping.
+              La clé du fournisseur DeepSeek est réutilisée automatiquement.
             </p>
 
             <div class="champ-reglage">
               <div class="champ-reglage-texte">
-                <label for="reglageMoteurWeb">Moteur de recherche</label>
-                <p class="champ-reglage-aide">DuckDuckGo ne demande aucune clé. Le fournisseur externe attend une API compatible Tavily.</p>
-              </div>
-              <select id="reglageMoteurWeb" class="champ-reglage-controle">
-                <option value="duckduckgo">DuckDuckGo (sans clé)</option>
-                <option value="fournisseur">Fournisseur externe</option>
-              </select>
-            </div>
-
-            <div class="champ-reglage" id="ligneUrlRecherche" hidden>
-              <div class="champ-reglage-texte">
-                <label for="reglageUrlRecherche">URL de l'API de recherche</label>
-                <p class="champ-reglage-aide">Endpoint qui accepte <code>{ query, max_results }</code> et renvoie <code>results[]</code>.</p>
+                <label for="reglageUrlRecherche">Base URL de l'API</label>
+                <p class="champ-reglage-aide">Par défaut <code>https://api.deepseek.com/v1/tools</code> ; <code>/search</code> est ajouté.</p>
               </div>
               <input type="text" id="reglageUrlRecherche" class="champ-reglage-controle large"
-                     placeholder="https://api.tavily.com/search" />
+                     placeholder="https://api.deepseek.com/v1/tools" />
             </div>
 
-            <div class="champ-reglage" id="ligneCleRecherche" hidden>
+            <div class="champ-reglage">
               <div class="champ-reglage-texte">
-                <label for="reglageCleRecherche">Clé du fournisseur</label>
-                <p class="champ-reglage-aide">Stockée chiffrée, comme les clés de modèles.</p>
+                <label for="reglageCleRecherche">Clé dédiée (facultatif)</label>
+                <p class="champ-reglage-aide">Laisser vide pour utiliser la clé du fournisseur DeepSeek.</p>
               </div>
               <input type="password" id="reglageCleRecherche" class="champ-reglage-controle large"
-                     placeholder="sk-…" autocomplete="off" />
+                     placeholder="utilise la clé DeepSeek" autocomplete="off" />
+            </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageNbRecherche">Sources par recherche</label>
+                <p class="champ-reglage-aide">Entre 1 et 50 ; 8 par défaut.</p>
+              </div>
+              <input type="number" id="reglageNbRecherche" min="1" max="50" step="1"
+                     class="champ-reglage-controle champ-nombre" placeholder="8" />
             </div>
 
             <div class="champ-reglage">
