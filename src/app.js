@@ -348,7 +348,10 @@ function cleConfiguree() {
 }
 
 function appliquerTheme(theme) {
-  document.body.dataset.theme = theme === 'clair' ? 'clair' : 'sombre';
+  const nom = theme === 'clair' ? 'clair' : 'sombre';
+  document.body.dataset.theme = nom;
+  // garde les menus/dialogues natifs en accord avec le thème de l'interface
+  API.app?.definirTheme?.(nom)?.catch?.(() => {});
 }
 
 /** Active ou coupe les effets visuels (halo, grille, lueurs). */

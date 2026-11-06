@@ -1763,6 +1763,11 @@ X-GNOME-Autostart-enabled=true
   }
 }
 
+ipcMain.handle('app:definir-theme', (_e, theme) => {
+  nativeTheme.themeSource = theme === 'clair' ? 'light' : 'dark';
+  return { ok: true, theme: nativeTheme.themeSource };
+});
+
 ipcMain.handle('app:autostart', () => ({ actif: autostartActif() }));
 ipcMain.handle('app:definir-autostart', (_e, actif) => definirAutostart(Boolean(actif)));
 
@@ -1890,10 +1895,17 @@ const instanceUnique = app.requestSingleInstanceLock();
 if (!instanceUnique) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_evenement, argv = []) => {
+    // Une deuxième invocation (raccourci bureau --new/--settings) doit agir
+    // sur la fenêtre déjà ouverte, pas seulement la remettre au premier plan.
+    const action = argv.includes('--settings') ? 'reglages'
+      : argv.includes('--new') ? 'nouvelle-conversation'
+      : null;
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
       mainWindow.focus();
+      if (action) mainWindow.webContents.send('menu', action);
     }
   });
 

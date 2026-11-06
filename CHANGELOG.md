@@ -4,6 +4,15 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.45.1] — 2026-11-06
+
+### Corrigé
+- **Raccourcis du bureau** : `cerveau --new` et `cerveau --settings` agissent
+  maintenant sur la fenêtre déjà ouverte (instance unique), au lieu de seulement
+  la remettre au premier plan.
+- **Thème natif** : les menus et dialogues système suivent immédiatement le
+  passage Sombre ↔ Clair, sans redémarrage.
+
 ## [2.45.0] — 2026-11-06
 
 ### Modifié

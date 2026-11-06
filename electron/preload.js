@@ -204,6 +204,7 @@ contextBridge.exposeInMainWorld('cerveau', {
     ouvrirChemin: (p) => ipcRenderer.invoke('app:ouvrir-chemin', p),
     autostart: () => ipcRenderer.invoke('app:autostart'),
     definirAutostart: (actif) => ipcRenderer.invoke('app:definir-autostart', actif),
+    definirTheme: (theme) => ipcRenderer.invoke('app:definir-theme', theme),
     verifierMaj: () => ipcRenderer.invoke('app:verifier-mise-a-jour'),
     surMajDisponible: (cb) => {
       const handler = (_e, info) => cb(info);
