@@ -285,6 +285,9 @@ async function demarrer() {
   } else {
     $('#panneauObsidian').classList.remove('replie');
   }
+  // la disposition et la largeur du panneau s'appliquent dès le démarrage,
+  // sans attendre l'ouverture des réglages
+  appliquerDispositionPanneau();
 
   brancherEvenements();
   synchroniserHauteurEntete();
