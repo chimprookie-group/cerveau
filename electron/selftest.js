@@ -794,6 +794,27 @@ async function run(mainWindow, deps) {
   verifier('Brouillons, régénération et retour en bas présents',
     uiComp.boutonBas && uiComp.brouillon && uiComp.regenerer);
 
+  // recherche dans la conversation + statistiques
+  const outilsRecherche = await mainWindow.webContents.executeJavaScript(`(async () => {
+    ouvrirRechercheConversation();
+    await new Promise((r) => setTimeout(r, 120));
+    const barreVisible = !document.querySelector('#rechercheConversation').hidden;
+    fermerRechercheConversation();
+    await new Promise((r) => setTimeout(r, 120));
+    const barreFermee = document.querySelector('#rechercheConversation').hidden;
+    ouvrirStatistiques();
+    await new Promise((r) => setTimeout(r, 120));
+    const statsOuvertes = !document.querySelector('#modaleStatistiques').hidden;
+    const lignes = document.querySelectorAll('#corpsStatistiques tr').length;
+    document.querySelector('#btnFermerStatistiques').click();
+    return { barreVisible, barreFermee, statsOuvertes, lignes };
+  })()`);
+  verifier('Recherche dans la conversation',
+    outilsRecherche.barreVisible && outilsRecherche.barreFermee);
+  verifier('Statistiques de conversation',
+    outilsRecherche.statsOuvertes && outilsRecherche.lignes >= 10,
+    `${outilsRecherche.lignes} ligne(s)`);
+
   // thème par défaut puis palettes appliquées distinctement
   const themeDefaut = await mainWindow.webContents.executeJavaScript('document.body.dataset.theme');
   verifier('Thème par défaut : DeepSeek', themeDefaut === 'deepseek', themeDefaut);

@@ -2719,6 +2719,82 @@ function formaterJetons(n) {
  * Barre de statistiques sous la conversation : jetons consommés (entrée /
  * sortie) et état du dernier appel API (latence, erreur).
  */
+/* ------------------- recherche et statistiques ------------------------- */
+
+let minuteurRecherche = null;
+let statistiquesTexte = '';
+
+function ouvrirRechercheConversation() {
+  const barre = $('#rechercheConversation');
+  const champ = $('#champRechercheConversation');
+  if (!barre || !champ) return;
+  barre.hidden = false;
+  champ.focus();
+  champ.select();
+  if (champ.value.trim()) lancerRechercheConversation(true);
+}
+
+function fermerRechercheConversation() {
+  const barre = $('#rechercheConversation');
+  if (!barre || barre.hidden) return;
+  barre.hidden = true;
+  const compte = $('#compteRecherche');
+  if (compte) compte.textContent = '0';
+  API.app.arreterRecherche().catch(() => {});
+}
+
+function lancerRechercheConversation(premier = false) {
+  const champ = $('#champRechercheConversation');
+  if (!champ) return;
+  clearTimeout(minuteurRecherche);
+  minuteurRecherche = setTimeout(() => {
+    API.app.rechercher({ texte: champ.value, premier }).catch(() => {});
+  }, 120);
+}
+
+function chercherSuivant(precedent = false) {
+  const champ = $('#champRechercheConversation');
+  if (!champ) return;
+  API.app.rechercher({ texte: champ.value, suivant: !precedent, precedent }).catch(() => {});
+}
+
+function ouvrirStatistiques() {
+  const conv = etat.conversationCourante;
+  const corps = $('#corpsStatistiques');
+  if (!corps) return;
+
+  const usage = conv?.usage || {};
+  const messages = conv?.messages?.length || 0;
+  const tours = conv?.messages?.filter((m) => m.role === 'user').length || 0;
+  const outils = conv?.messages?.reduce((n, m) => n + (m.outils?.length || 0), 0) || 0;
+  const total = Number(usage.entree || 0) + Number(usage.sortie || 0);
+
+  const lignes = [
+    ['Conversation', conv?.titre || '—'],
+    ['Mode', conv?.mode || '—'],
+    ['Fournisseur', usage.fournisseur || '—'],
+    ['Modèle', usage.modele || '—'],
+    ['Messages', String(messages)],
+    ['Tours', String(tours)],
+    ['Appels API', String(usage.appels || 0)],
+    ['Jetons entrée', formaterJetons(usage.entree || 0)],
+    ['Jetons sortie', formaterJetons(usage.sortie || 0)],
+    ['Jetons total', formaterJetons(total)],
+    ['Dernière latence', usage.derniereMs ? `${usage.derniereMs} ms` : '—'],
+    ['Étapes d’outils', String(outils)],
+    ['Contexte compacté', conv?.resume ? 'oui' : 'non']
+  ];
+
+  corps.innerHTML = '';
+  const table = el('table', { class: 'table-infos' });
+  for (const [cle, valeur] of lignes) {
+    table.append(el('tr', {}, el('td', { text: cle }), el('td', { text: valeur })));
+  }
+  corps.append(table);
+  statistiquesTexte = lignes.map(([cle, valeur]) => `${cle} : ${valeur}`).join('\n');
+  $('#modaleStatistiques').hidden = false;
+}
+
 function majStatistiquesConversation() {
   const conv = etat.conversationCourante;
   const usage = conv?.usage || null;
@@ -2772,6 +2848,7 @@ const convDeplies = new Set();
 
 function afficherConversation() {
   const conv = etat.conversationCourante;
+  if (typeof fermerRechercheConversation === 'function') fermerRechercheConversation();
   nettoyerReflexion();
   brancherRailTours();
   const messages = $('#messages');
@@ -4460,6 +4537,45 @@ function brancherEvenements() {
   // processus en arrière-plan : l'état est poussé par le processus principal
   API.taches?.surEvenement?.(() => rafraichirTachesFond());
   rafraichirTachesFond();
+
+  // recherche dans la conversation
+  $('#statsConversation')?.addEventListener('click', ouvrirStatistiques);
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'f') {
+      e.preventDefault();
+      ouvrirRechercheConversation();
+    }
+  });
+  $('#champRechercheConversation')?.addEventListener('input', () => lancerRechercheConversation(true));
+  $('#champRechercheConversation')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      chercherSuivant(e.shiftKey);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      fermerRechercheConversation();
+    }
+  });
+  $('#btnRecherchePrec')?.addEventListener('click', () => chercherSuivant(true));
+  $('#btnRechercheSuiv')?.addEventListener('click', () => chercherSuivant(false));
+  $('#btnFermerRecherche')?.addEventListener('click', fermerRechercheConversation);
+  API.app.surResultatRecherche?.((r) => {
+    const compte = $('#compteRecherche');
+    if (!compte) return;
+    compte.textContent = r.matches ? `${r.actif}/${r.matches}` : '0';
+  });
+
+  // statistiques
+  for (const id of ['btnFermerStatistiques', 'btnFermerStatistiques2']) {
+    $('#' + id)?.addEventListener('click', () => { $('#modaleStatistiques').hidden = true; });
+  }
+  $('#modaleStatistiques .modale-fond')?.addEventListener('click', () => {
+    $('#modaleStatistiques').hidden = true;
+  });
+  $('#btnCopierStatistiques')?.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(statistiquesTexte);
+    notifier('Statistiques copiées.', 'succes', 1800);
+  });
 
   // saisie
   const saisie = $('#saisie');

@@ -4,6 +4,16 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.36.0] — 2026-11-06
+
+### Ajouté
+- **Recherche dans la conversation** (`Ctrl+F`) : barre discrète, compteur de
+  résultats, navigation précédent/suivant (Entrée / Maj+Entrée) et surlignage
+  natif des occurrences.
+- **Statistiques de conversation** : un clic sur la barre d'état ouvre le détail
+  (tours, messages, appels API, jetons, latence, étapes d'outils, compaction),
+  copiable en un clic.
+
 ## [2.35.0] — 2026-11-06
 
 ### Ajouté

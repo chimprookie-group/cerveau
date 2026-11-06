@@ -139,6 +139,13 @@
         <nav id="navTours" class="nav-tours" hidden aria-label="Navigation entre les tours"></nav>
         <div id="tourApercu" class="tour-apercu" hidden></div>
         <button id="btnRetourBas" class="retour-bas" hidden title="Revenir en bas">↓</button>
+        <div id="rechercheConversation" class="recherche-conversation" hidden>
+          <input id="champRechercheConversation" type="text" placeholder="Rechercher dans la conversation…" spellcheck="false" />
+          <span id="compteRecherche" class="compte-recherche">0</span>
+          <button id="btnRecherchePrec" class="btn-icone" title="Précédent (Maj+Entrée)">↑</button>
+          <button id="btnRechercheSuiv" class="btn-icone" title="Suivant (Entrée)">↓</button>
+          <button id="btnFermerRecherche" class="btn-icone" title="Fermer (Échap)">✕</button>
+        </div>
       </div>
 
       <div class="zone-saisie">
@@ -159,7 +166,7 @@
           </div>
         </div>
         <div class="pied-saisie">
-          <span class="pied-infos">
+          <span id="statsConversation" class="pied-infos" title="Statistiques de la conversation">
             <span id="statTokens" class="stat-jetons" title="Jetons consommés dans cette conversation">Aucun jeton utilisé</span>
             <span id="statApi" class="stat-api pret" title="État de la dernière requête">API · prête</span>
             <span id="statContexte" class="stat-jetons stat-contexte" hidden>contexte résumé</span>
@@ -1440,6 +1447,22 @@
       </div>
       <div class="modale-pied">
         <button id="btnFermerDiff2" class="btn-principal">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODALE STATISTIQUES ══════════════ -->
+  <div id="modaleStatistiques" class="modale" hidden>
+    <div class="modale-fond"></div>
+    <div class="modale-contenu petite" role="dialog" aria-modal="true" aria-labelledby="titreStatistiques">
+      <div class="modale-entete">
+        <h2 id="titreStatistiques">Statistiques de la conversation</h2>
+        <button id="btnFermerStatistiques" class="btn-icone">✕</button>
+      </div>
+      <div class="modale-corps" id="corpsStatistiques"></div>
+      <div class="modale-pied">
+        <button id="btnCopierStatistiques" class="btn-secondaire">Copier</button>
+        <button id="btnFermerStatistiques2" class="btn-principal">Fermer</button>
       </div>
     </div>
   </div>

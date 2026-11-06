@@ -66,6 +66,10 @@ de crash dans `agent.log`.
 **Titres automatiques** — après le premier échange, le modèle donne un titre
 court à la conversation (désactivable dans Général).
 
+**Recherche et statistiques** — `Ctrl+F` cherche dans la conversation (surlignage,
+précédent/suivant) ; un clic sur la barre d'état affiche les statistiques
+détaillées de la discussion.
+
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
 ![Réglages](docs/04-reglages.png)
@@ -168,7 +172,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.35.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.36.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

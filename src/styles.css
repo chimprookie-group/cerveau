@@ -716,6 +716,42 @@ body.fenetre-inactive * {
   animation-play-state: paused !important;
 }
 
+.pied-infos { cursor: pointer; }
+
+.recherche-conversation {
+  position: absolute;
+  top: 10px;
+  right: 18px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px 5px 10px;
+  border: 1px solid var(--bordure-claire);
+  border-radius: 9px;
+  background: var(--fond-2);
+  box-shadow: var(--ombre);
+}
+
+.recherche-conversation[hidden] { display: none; }
+
+.recherche-conversation input {
+  width: 200px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--texte);
+}
+
+.compte-recherche {
+  min-width: 30px;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--texte-3);
+  font-variant-numeric: tabular-nums;
+}
+
 .retour-bas {
   position: absolute;
   right: 22px;

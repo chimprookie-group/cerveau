@@ -91,6 +91,15 @@ function createWindow() {
     }
   });
 
+  mainWindow.webContents.on('found-in-page', (_e, resultat) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('app:resultat-recherche', {
+        matches: resultat.matches || 0,
+        actif: resultat.activeMatchOrdinal || 0
+      });
+    }
+  });
+
   mainWindow.loadFile(path.join(__dirname, '..', 'src', 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
@@ -1749,6 +1758,28 @@ ipcMain.handle('app:ouvrir-journal', async () => {
   } catch (err) {
     return { ok: false, message: String(err.message || err) };
   }
+});
+
+ipcMain.handle('app:rechercher', (_e, { texte, suivant = false, precedent = false, premier = false } = {}) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return { ok: false };
+  const requete = String(texte || '');
+  if (!requete.trim()) {
+    mainWindow.webContents.stopFindInPage('clearSelection');
+    return { ok: true, vide: true };
+  }
+  mainWindow.webContents.findInPage(requete, {
+    forward: !precedent,
+    findNext: Boolean(suivant || precedent),
+    matchCase: false
+  });
+  return { ok: true };
+});
+
+ipcMain.handle('app:arreter-recherche', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.stopFindInPage('clearSelection');
+  }
+  return { ok: true };
 });
 
 ipcMain.handle('app:ouvrir-url', async (_e, url) => {
