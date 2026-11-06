@@ -5,8 +5,8 @@ et **intégration GitHub**. Conçu pour [Omarchy](https://omarchy.org) et Arch L
 
 ![Icône Cerveau](build/icon-256.png)
 
-[![Dernière version](https://img.shields.io/github/v/release/chimprookie-group/cerveau?label=version&color=22d3ee)](https://github.com/chimprookie-group/cerveau/releases/latest)
-[![Licence](https://img.shields.io/github/license/chimprookie-group/cerveau?color=22d3ee)](LICENSE)
+[![Dernière version](https://img.shields.io/github/v/release/chimprookie-group/cerveau?label=version&color=7c8cff)](https://github.com/chimprookie-group/cerveau/releases/latest)
+[![Licence](https://img.shields.io/github/license/chimprookie-group/cerveau?color=7c8cff)](LICENSE)
 
 Il réunit dans une seule fenêtre ce qu'on fait d'habitude dans quatre outils :
 
