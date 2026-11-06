@@ -570,6 +570,7 @@ async function executerTachePlanifiee(tache) {
     outilsDesactives: cfg.outilsDesactives || [],
     appelsParalleles: cfg.agent?.appelsParalleles !== false,
     agentCapSortie: cfg.agent?.capSortie,
+    agentDelaiReponse: cfg.agent?.delaiReponse,
     temperature: cfg.temperature,
     presets: cfg.presetsComportement || [],
     permissions: permissionsDuNiveau(tache.niveau),
@@ -810,6 +811,7 @@ async function jouerTour(id, { annoncer = true } = {}) {
         outilsDesactives: cfg.outilsDesactives || [],
         appelsParalleles: cfg.agent?.appelsParalleles !== false,
         agentCapSortie: cfg.agent?.capSortie,
+    agentDelaiReponse: cfg.agent?.delaiReponse,
         temperature: cfg.temperature,
         presets: cfg.presetsComportement || [],
         permissions: contexte.permissions,
@@ -1049,6 +1051,7 @@ function contexteSuperviseur(cfg) {
         outilsDesactives: cfg.outilsDesactives || [],
         appelsParalleles: cfg.agent?.appelsParalleles !== false,
         agentCapSortie: cfg.agent?.capSortie,
+    agentDelaiReponse: cfg.agent?.delaiReponse,
         temperature: cfg.temperature,
         presets: cfg.presetsComportement || [],
         systemPrompt: cfg.systemPrompt || '',
@@ -1527,6 +1530,7 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
     outilsDesactives: Array.isArray(cfg.outilsDesactives) ? cfg.outilsDesactives : [],
     appelsParalleles: cfg.agent?.appelsParalleles !== false,
     agentCapSortie: cfg.agent?.capSortie,
+    agentDelaiReponse: cfg.agent?.delaiReponse,
     rechercheWeb: cfg.rechercheWeb || {},
     serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],
     memoire: obtenirMemoire(),
@@ -1683,6 +1687,17 @@ ipcMain.handle('app:verifier-mise-a-jour', async () => {
       aJour: comparer(distante, actuelle) <= 0,
       url: data.html_url || ''
     };
+  } catch (err) {
+    return { ok: false, message: String(err.message || err) };
+  }
+});
+
+ipcMain.handle('app:ouvrir-journal', async () => {
+  try {
+    journaliserAgent('journal ouvert depuis les réglages');
+    const fichier = path.join(app.getPath('userData'), 'agent.log');
+    await shell.openPath(fichier);
+    return { ok: true, chemin: fichier };
   } catch (err) {
     return { ok: false, message: String(err.message || err) };
   }

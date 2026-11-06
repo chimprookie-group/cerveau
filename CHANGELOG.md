@@ -4,6 +4,17 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.34.0] — 2026-11-06
+
+### Ajouté
+- **Thème « Système »** : suit automatiquement le mode clair/sombre du bureau
+  (DeepSeek en sombre, Clair en clair) et bascule en direct quand l'OS change.
+- **Délai maximum d'une réponse** : réglable dans `Agent et outils` (180 s par
+  défaut, 0 = illimité). Une requête qui ne répond plus est interrompue au lieu
+  de bloquer la conversation.
+- **Journal de diagnostic accessible** : bouton « Ouvrir le journal » dans
+  `À propos` (ouvre `agent.log`).
+
 ## [2.33.1] — 2026-11-06
 
 ### Corrigé

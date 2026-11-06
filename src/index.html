@@ -477,6 +477,20 @@
           </section>
 
           <section class="section-reglage">
+            <h3 class="section-reglage-titre">Réponse du modèle</h3>
+            <p class="section-reglage-desc">Une requête qui ne répond plus est interrompue pour ne pas bloquer la conversation.</p>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageDelaiReponse">Délai maximum d'une réponse (secondes)</label>
+                <p class="champ-reglage-aide">0 = pas de limite. Une valeur trop basse peut couper un modèle lent.</p>
+              </div>
+              <input type="number" id="reglageDelaiReponse" min="0" max="1800" step="10"
+                     class="champ-reglage-controle champ-nombre" placeholder="180" />
+            </div>
+          </section>
+
+          <section class="section-reglage">
             <h3 class="section-reglage-titre">Terminal</h3>
             <p class="section-reglage-desc">Limites appliquées aux commandes exécutées par l'agent et par le terminal intégré.</p>
 
@@ -1075,6 +1089,7 @@
               <option value="capucine">Capucine</option>
               <option value="nord">Nord</option>
               <option value="amethyste">Améthyste</option>
+              <option value="systeme">Système (auto)</option>
             </select>
           </label>
           <label class="champ">
@@ -1130,6 +1145,12 @@
               <tr><td>Node</td><td id="infoNode">—</td></tr>
               <tr><td>Chrome</td><td id="infoChrome">—</td></tr>
               <tr><td>Configuration</td><td id="infoConfig">—</td></tr>
+              <tr>
+                <td>Journal</td>
+                <td>
+                  <button id="btnOuvrirJournal" class="btn-mini">Ouvrir le journal</button>
+                </td>
+              </tr>
               <tr>
                 <td>Mises à jour</td>
                 <td>

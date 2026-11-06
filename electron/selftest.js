@@ -812,12 +812,12 @@ async function run(mainWindow, deps) {
     appliquerTheme('deepseek');
     return { valeurs, fonds, accents };
   })()`);
-  verifier('Sept thèmes disponibles',
-    themesUi.valeurs.length === 7
-    && ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste'].every((t) => themesUi.valeurs.includes(t)),
+  verifier('Huit thèmes disponibles',
+    themesUi.valeurs.length === 8
+    && ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste', 'systeme'].every((t) => themesUi.valeurs.includes(t)),
     themesUi.valeurs.join(', '));
   verifier('Thèmes distincts (fonds et accents)',
-    new Set(Object.values(themesUi.fonds)).size >= 6
+    new Set(Object.values(themesUi.fonds)).size >= 7
     && new Set(Object.values(themesUi.accents)).size === 7,
     `${new Set(Object.values(themesUi.fonds)).size} fonds, ${new Set(Object.values(themesUi.accents)).size} accents`);
 
@@ -1088,6 +1088,36 @@ async function run(mainWindow, deps) {
   verifier('Pas de limite de tours (30 appels)',
     toursLongs >= 31 && /Fini après 30/.test(resLong.texte),
     `${toursLongs} tour(s)`);
+
+  // délai de réponse : un fournisseur muet est interrompu
+  let requeteMuette = 0;
+  const serveurMuet = require('node:http').createServer((req, res) => {
+    if (req.method !== 'POST') { res.writeHead(200); return res.end('ok'); }
+    req.on('data', () => {});
+    req.on('end', () => {
+      requeteMuette += 1;
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      // on ne termine jamais la réponse : le client doit abandonner
+    });
+  });
+  await new Promise((r) => serveurMuet.listen(0, r));
+  const portMuet = serveurMuet.address().port;
+  const debutMuet = Date.now();
+  const resMuet = await agentModule2.run({
+    providerId: 'custom',
+    credentials: { apiKey: 'k', baseUrl: `http://127.0.0.1:${portMuet}/v1`, model: 'muet' },
+    historique: [{ role: 'user', contenu: 'réponds' }],
+    ctx: { mode: 'complet', vaultPath: null, coffre: null, workspace: os.tmpdir(),
+      permissions: { mode: 'auto' }, confirmer: async () => ({ autorise: true }),
+      agentDelaiReponse: 1 },
+    emit: () => {},
+    limiteTours: 3
+  });
+  serveurMuet.close();
+  const dureeMuet = Date.now() - debutMuet;
+  verifier('Délai de réponse : requête interrompue',
+    requeteMuette >= 1 && /Délai de réponse dépassé/.test(resMuet.erreur || '') && dureeMuet < 8000,
+    `${dureeMuet} ms`);
 
   // 6undecies. Non-régression des bugs corrigés lors de l'audit
   const tMcp = Date.now();

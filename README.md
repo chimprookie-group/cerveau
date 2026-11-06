@@ -53,10 +53,11 @@ inactive, et contexte borné pendant les longues tâches.
 tâche ; un garde-fou technique très haut et le bouton d'arrêt restent seuls
 limites.
 
-**Sept thèmes** — **DeepSeek** (sombre neutre, bleu, par défaut), Sombre (cuivré),
+**Huit thèmes** — **DeepSeek** (sombre neutre, bleu, par défaut), Sombre (cuivré),
 Clair, **Matrix** (vert terminal), **Capucine** (crème et orange), **Nord** (bleu
-arctique) et **Améthyste** (violet profond), à choisir dans
-`Réglages → Apparence` ou en les faisant défiler depuis la palette de commandes.
+arctique), **Améthyste** (violet profond) et **Système** (suit le mode
+clair/sombre du bureau), à choisir dans `Réglages → Apparence` ou en les faisant
+défiler depuis la palette de commandes.
 
 **Intégration système** — lancement au démarrage, notifications de fin de
 réponse en arrière-plan, vérification des mises à jour depuis À propos, journal
@@ -164,7 +165,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.33.1-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.34.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

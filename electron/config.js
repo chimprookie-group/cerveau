@@ -83,6 +83,7 @@ const DEFAULTS = {
   agent: {
     appelsParalleles: true,
     delaiCommande: 120,
+    delaiReponse: 180,       // secondes ; 0 = pas de limite
     capSortie: 60
   },
   outilsDesactives: [],

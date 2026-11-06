@@ -312,9 +312,20 @@ function cleConfiguree() {
   return Boolean(p && p.hasKey);
 }
 
-function appliquerTheme(theme) {
-  document.body.dataset.theme = theme;
+const mediaSombre = window.matchMedia('(prefers-color-scheme: dark)');
+
+function themeEffectif(theme) {
+  if (theme === 'systeme') return mediaSombre.matches ? 'deepseek' : 'clair';
+  return theme;
 }
+
+function appliquerTheme(theme) {
+  document.body.dataset.theme = themeEffectif(theme);
+}
+
+mediaSombre.addEventListener('change', () => {
+  if (etat.config?.ui?.theme === 'systeme') appliquerTheme('systeme');
+});
 
 /** Active ou coupe les effets visuels (halo, grille, lueurs). */
 function appliquerEffets(actif) {
@@ -2177,6 +2188,7 @@ function brancherReglagesAvances() {
 
   lier('#reglageAppelsParalleles', a.appelsParalleles, 'agent.appelsParalleles', (v) => v, true);
   lier('#reglageDelaiCommande', a.delaiCommande, 'agent.delaiCommande', (v) => Number(v) || 120, 120);
+  lier('#reglageDelaiReponse', a.delaiReponse, 'agent.delaiReponse', (v) => Number(v) || 0, 180);
   lier('#reglageCapSortie', a.capSortie, 'agent.capSortie', (v) => Number(v) || 60, 60);
 
   const chemin = $('#reglageCheminConfig');
@@ -2213,6 +2225,11 @@ function brancherReglagesAvances() {
     if (r.url && ouvrir) { urlMaj = r.url; ouvrir.hidden = false; }
   });
   $('#btnOuvrirMaj')?.addEventListener('click', () => { if (urlMaj) API.app.ouvrirUrl(urlMaj); });
+  $('#btnOuvrirJournal')?.addEventListener('click', async () => {
+    const r = await API.app.ouvrirJournal();
+    if (!r.ok) notifier(r.message || 'Journal inaccessible.', 'erreur', 4000);
+    else notifier('Journal de diagnostic ouvert.', 'succes', 2500);
+  });
 
   $('#btnOuvrirConfig')?.addEventListener('click', () => API.app.ouvrirDossierConfig());
   $('#btnOuvrirCompetences')?.addEventListener('click', () => API.competences.ouvrirDossier());
@@ -4223,8 +4240,8 @@ const COMMANDES = [
   { id: 'coffres', titre: 'Gérer les coffres Obsidian', action: () => ouvrirReglages('coffres') },
   { id: 'permissions', titre: 'Régler les permissions', action: () => ouvrirReglages('permissions') },
   { id: 'theme', titre: 'Changer de thème', action: async () => {
-      const ordre = ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste'];
-      const noms = { deepseek: 'DeepSeek', sombre: 'Sombre', clair: 'Clair', matrix: 'Matrix', capucine: 'Capucine', nord: 'Nord', amethyste: 'Améthyste' };
+      const ordre = ['deepseek', 'sombre', 'clair', 'matrix', 'capucine', 'nord', 'amethyste', 'systeme'];
+      const noms = { deepseek: 'DeepSeek', sombre: 'Sombre', clair: 'Clair', matrix: 'Matrix', capucine: 'Capucine', nord: 'Nord', amethyste: 'Améthyste', systeme: 'Système' };
       const actuel = etat.config.ui?.theme || 'sombre';
       const suivant = ordre[(ordre.indexOf(actuel) + 1) % ordre.length];
       await enregistrerConfig({ ui: { theme: suivant } });

@@ -490,6 +490,14 @@ Réponds uniquement par OUI ou NON.`;
       emit({ type: 'avertissement', message: 'Contexte volumineux : anciens résultats d\'outils allégés.' });
     }
 
+    // délai maximum d'une réponse (0 = pas de limite)
+    const delaiMs = Math.max(0, Number(ctx.agentDelaiReponse ?? 180) || 0) * 1000;
+    const controleurDelai = new AbortController();
+    const minuteurDelai = delaiMs ? setTimeout(() => controleurDelai.abort(), delaiMs) : null;
+    const signalFlux = signal
+      ? AbortSignal.any([signal, controleurDelai.signal])
+      : controleurDelai.signal;
+
     const flux = providers.stream({
       providerId,
       apiKey: credentials.apiKey,
@@ -499,7 +507,7 @@ Réponds uniquement par OUI ou NON.`;
       system: isAnthropic ? systeme : undefined,
       tools: sansOutils ? [] : (isAnthropic ? versAnthropic(tools) : versOpenAI(tools)),
       temperature: ctx.temperature,
-      signal
+      signal: signalFlux
     });
 
     try {
@@ -568,9 +576,16 @@ Réponds uniquement par OUI ou NON.`;
         continue;
       }
     } catch (err) {
+      if (controleurDelai.signal.aborted && !signal?.aborted) {
+        const msg = `Délai de réponse dépassé (${Math.round(delaiMs / 1000)} s).`;
+        emit({ type: 'erreur', message: msg });
+        return { texte: texteFinal + texteTour, outils: outilsExecutes, erreur: msg };
+      }
       const msg = messageErreur(err);
       emit({ type: 'erreur', message: msg });
       return { texte: texteFinal + texteTour, outils: outilsExecutes, erreur: msg };
+    } finally {
+      if (minuteurDelai) clearTimeout(minuteurDelai);
     }
 
     texteFinal += texteTour;
