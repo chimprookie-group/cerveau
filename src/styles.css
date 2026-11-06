@@ -3,6 +3,35 @@
    Clair (blanc froid/indigo). Un seul jeu de variables par thème.
    ═══════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════
+   Envy Code R — police de l'application (SIL OFL 1.1, voir
+   fonts/EnvyCodeR-LICENCE.md). Fichiers Nerd Font non modifiés.
+   ═══════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'Envy Code R';
+  src: url('fonts/EnvyCodeRNerdFont-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Envy Code R';
+  src: url('fonts/EnvyCodeRNerdFont-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Envy Code R';
+  src: url('fonts/EnvyCodeRNerdFont-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   /* repli avant l'application du thème : graphite */
   --fond: #08090c;
@@ -24,8 +53,8 @@
   --rayon-petit: 8px;
   --ombre: 0 12px 40px rgba(0, 0, 0, 0.55);
   --echelle: 1;
-  --police: "Inter", "Cantarell", "Noto Sans", system-ui, sans-serif;
-  --police-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  --police: "Envy Code R", "Inter", "Cantarell", "Noto Sans", system-ui, sans-serif;
+  --police-mono: "Envy Code R", "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
   --largeur-sidebar: 268px;
   --largeur-panneau: 400px;
   --hauteur-entete: 44px;
