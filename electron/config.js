@@ -85,6 +85,7 @@ const DEFAULTS = {
     appelsParalleles: true,
     delaiCommande: 120,
     delaiReponse: 180,       // secondes ; 0 = pas de limite
+    fallbackProvider: '',    // fournisseur de secours (même famille)
     capSortie: 60
   },
   outilsDesactives: [],

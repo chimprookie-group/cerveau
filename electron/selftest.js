@@ -815,6 +815,43 @@ async function run(mainWindow, deps) {
     outilsRecherche.statsOuvertes && outilsRecherche.lignes >= 10,
     `${outilsRecherche.lignes} ligne(s)`);
 
+  // édition du dernier message + images dans la conversation
+  const editionUi = await mainWindow.webContents.executeJavaScript(`(async () => {
+    etat.conversations = [{ id: 'edition', titre: 'Édition', date: Date.now(), mode: 'complet', messages: [
+      { role: 'user', contenu: 'Texte initial' },
+      { role: 'assistant', contenu: 'Réponse initiale' }
+    ] }];
+    etat.conversationCourante = etat.conversations[0];
+    afficherConversation();
+    await new Promise((r) => setTimeout(r, 120));
+    const bouton = [...document.querySelectorAll('.message.utilisateur .btn-message')]
+      .find((b) => b.textContent === 'Modifier');
+    bouton?.click();
+    await new Promise((r) => setTimeout(r, 120));
+    const apres = {
+      messages: etat.conversationCourante.messages.length,
+      saisie: document.querySelector('#saisie').value
+    };
+    etat.conversations = [{ id: 'images', titre: 'Images', date: Date.now(), mode: 'complet', messages: [
+      { role: 'user', contenu: 'Image jointe', images: [
+        { nom: 'a.png', mime: 'image/png', dataUrl: 'data:image/png;base64,iVBORw0KGgo=' }
+      ] }
+    ] }];
+    etat.conversationCourante = etat.conversations[0];
+    afficherConversation();
+    await new Promise((r) => setTimeout(r, 120));
+    return {
+      bouton: Boolean(bouton),
+      messages: apres.messages,
+      saisie: apres.saisie,
+      images: document.querySelectorAll('.message.utilisateur .image-message').length
+    };
+  })()`);
+  verifier('Modifier le dernier message',
+    editionUi.bouton && editionUi.messages === 0 && editionUi.saisie === 'Texte initial',
+    `${editionUi.messages} message(s) restant(s)`);
+  verifier('Images jointes affichées', editionUi.images === 1, `${editionUi.images} image(s)`);
+
   // thème par défaut puis palettes appliquées distinctement
   const themeDefaut = await mainWindow.webContents.executeJavaScript('document.body.dataset.theme');
   verifier('Thème par défaut : DeepSeek', themeDefaut === 'deepseek', themeDefaut);
@@ -1139,6 +1176,47 @@ async function run(mainWindow, deps) {
   verifier('Délai de réponse : requête interrompue',
     requeteMuette >= 1 && /Délai de réponse dépassé/.test(resMuet.erreur || '') && dureeMuet < 8000,
     `${dureeMuet} ms`);
+
+  // fournisseur de secours : le principal échoue (401), le secours répond
+  const httpFB = require('node:http');
+  const faireServeur = (code, texte) => new Promise((resolve) => {
+    const srv = httpFB.createServer((req, res) => {
+      if (req.method !== 'POST') { res.writeHead(200); return res.end('ok'); }
+      req.on('data', () => {});
+      req.on('end', () => {
+        if (code !== 200) {
+          res.writeHead(code, { 'content-type': 'application/json' });
+          return res.end(JSON.stringify({ error: { message: 'clé invalide (test)' } }));
+        }
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: texte } }] })}\n\n`);
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }], usage: { prompt_tokens: 10, completion_tokens: 4 } })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+      });
+    });
+    srv.listen(0, () => resolve(srv));
+  });
+  const srvPrincipal = await faireServeur(401);
+  const srvSecours = await faireServeur(200, 'Réponse de secours.');
+  const evtsSecours = [];
+  const resSecours = await agentModule2.run({
+    providerId: 'custom',
+    credentials: { apiKey: 'k', baseUrl: `http://127.0.0.1:${srvPrincipal.address().port}/v1`, model: 'principal' },
+    historique: [{ role: 'user', contenu: 'test secours' }],
+    ctx: { mode: 'complet', vaultPath: null, coffre: null, workspace: os.tmpdir(),
+      permissions: { mode: 'auto' }, confirmer: async () => ({ autorise: true }),
+      fallback: { providerId: 'deepseek', credentials: { apiKey: 'k', baseUrl: `http://127.0.0.1:${srvSecours.address().port}/v1`, model: 'secours' } } },
+    emit: (e) => evtsSecours.push(e),
+    limiteTours: 3
+  });
+  srvPrincipal.close();
+  srvSecours.close();
+  verifier('Fournisseur de secours',
+    /Réponse de secours/.test(resSecours.texte || '')
+    && !resSecours.erreur
+    && evtsSecours.some((e) => e.type === 'avertissement' && /bascule/.test(e.message)),
+    resSecours.erreur || 'ok');
 
   // 6undecies. Non-régression des bugs corrigés lors de l'audit
   const tMcp = Date.now();

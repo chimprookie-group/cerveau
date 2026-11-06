@@ -70,6 +70,10 @@ court à la conversation (désactivable dans Général).
 précédent/suivant) ; un clic sur la barre d'état affiche les statistiques
 détaillées de la discussion.
 
+**Édition et secours** — « Modifier » replace le dernier message dans la saisie
+(images comprises) ; un fournisseur de secours de la même famille d'API prend le
+relais si le principal échoue.
+
 **Les réglages** — navigation verticale, champs alignés, tout au même endroit.
 
 ![Réglages](docs/04-reglages.png)
@@ -172,7 +176,7 @@ version et **contrôle son empreinte SHA-256** avant de l'installer.
 
 ```bash
 # télécharge le paquet depuis la page Releases, puis :
-sudo pacman -U cerveau-2.36.0-1-x86_64.pkg.tar.zst
+sudo pacman -U cerveau-2.37.0-1-x86_64.pkg.tar.zst
 ```
 
 ### Depuis les sources

@@ -233,6 +233,24 @@ function ctxPermissions() {
  * fonctionne sans clé : une URL de base suffit. Les fournisseurs publics,
  * eux, en exigent une.
  */
+function familleFournisseur(id) {
+  return id === 'anthropic' ? 'anthropic' : 'openai';
+}
+
+/**
+ * Fournisseur de secours : même famille d'API (les formats de messages
+ * diffèrent entre Anthropic et OpenAI), clé disponible, modèle défini.
+ */
+function construireFallback(cfg, actifId, modeles = {}) {
+  const id = cfg.agent?.fallbackProvider;
+  if (!id || id === actifId) return null;
+  if (familleFournisseur(id) !== familleFournisseur(actifId)) return null;
+  const creds = config.getProviderCredentials(id, modeles?.[id] || null);
+  if (!creds?.model) return null;
+  if (!creds.apiKey && !fournisseurSansCle(id, creds)) return null;
+  return { providerId: id, credentials: creds };
+}
+
 function fournisseurSansCle(id, creds) {
   return id === 'custom' && Boolean(String(creds?.baseUrl || '').trim());
 }
@@ -627,6 +645,7 @@ async function executerTachePlanifiee(tache) {
     outilsDesactives: cfg.outilsDesactives || [],
     appelsParalleles: cfg.agent?.appelsParalleles !== false,
     agentCapSortie: cfg.agent?.capSortie,
+    fallback: construireFallback(cfg, cfg.activeProvider),
     agentDelaiReponse: cfg.agent?.delaiReponse,
     temperature: cfg.temperature,
     presets: cfg.presetsComportement || [],
@@ -868,6 +887,7 @@ async function jouerTour(id, { annoncer = true } = {}) {
         outilsDesactives: cfg.outilsDesactives || [],
         appelsParalleles: cfg.agent?.appelsParalleles !== false,
         agentCapSortie: cfg.agent?.capSortie,
+    fallback: construireFallback(cfg, cfg.activeProvider),
     agentDelaiReponse: cfg.agent?.delaiReponse,
         temperature: cfg.temperature,
         presets: cfg.presetsComportement || [],
@@ -1108,6 +1128,7 @@ function contexteSuperviseur(cfg) {
         outilsDesactives: cfg.outilsDesactives || [],
         appelsParalleles: cfg.agent?.appelsParalleles !== false,
         agentCapSortie: cfg.agent?.capSortie,
+    fallback: construireFallback(cfg, cfg.activeProvider),
     agentDelaiReponse: cfg.agent?.delaiReponse,
         temperature: cfg.temperature,
         presets: cfg.presetsComportement || [],
@@ -1587,6 +1608,7 @@ ipcMain.handle('agent:envoyer', async (event, { historique, providerId, mode, mo
     outilsDesactives: Array.isArray(cfg.outilsDesactives) ? cfg.outilsDesactives : [],
     appelsParalleles: cfg.agent?.appelsParalleles !== false,
     agentCapSortie: cfg.agent?.capSortie,
+    fallback: construireFallback(cfg, cfg.activeProvider),
     agentDelaiReponse: cfg.agent?.delaiReponse,
     rechercheWeb: cfg.rechercheWeb || {},
     serveursMCP: Array.isArray(cfg.serveursMCP) ? cfg.serveursMCP : [],

@@ -2190,6 +2190,7 @@ function brancherReglagesAvances() {
   lier('#reglageAppelsParalleles', a.appelsParalleles, 'agent.appelsParalleles', (v) => v, true);
   lier('#reglageDelaiCommande', a.delaiCommande, 'agent.delaiCommande', (v) => Number(v) || 120, 120);
   lier('#reglageDelaiReponse', a.delaiReponse, 'agent.delaiReponse', (v) => Number(v) || 0, 180);
+  lier('#reglageFallback', a.fallbackProvider, 'agent.fallbackProvider', (v) => v, '');
   lier('#reglageCapSortie', a.capSortie, 'agent.capSortie', (v) => Number(v) || 60, 60);
 
   const chemin = $('#reglageCheminConfig');
@@ -2932,6 +2933,43 @@ function ajouterMessageDOM(m) {
   }
   bloc.append(corps);
 
+  if (estUtilisateur && Array.isArray(m.images) && m.images.length) {
+    const galerie = el('div', { class: 'images-message' });
+    for (const img of m.images) {
+      if (!img?.dataUrl) continue;
+      galerie.append(el('img', {
+        class: 'image-message',
+        src: img.dataUrl,
+        alt: img.nom || 'image jointe',
+        title: img.nom || 'image jointe'
+      }));
+    }
+    if (galerie.children.length) bloc.append(galerie);
+  }
+
+  if (estUtilisateur && m.contenu) {
+    const actions = el('div', { class: 'message-actions' },
+      el('button', {
+        class: 'btn-message', text: 'Copier',
+        onclick: async () => {
+          await navigator.clipboard.writeText(m.contenu);
+          notifier('Message copié.', 'succes', 1800);
+        }
+      })
+    );
+    const dernierUtilisateur = etat.conversationCourante
+      ? [...etat.conversationCourante.messages].reverse().find((x) => x.role === 'user')
+      : null;
+    if (dernierUtilisateur === m) {
+      actions.append(el('button', {
+        class: 'btn-message', text: 'Modifier',
+        title: 'Replacer ce message dans la saisie pour le modifier',
+        onclick: () => modifierDernierMessage(m)
+      }));
+    }
+    bloc.append(actions);
+  }
+
   if (!estUtilisateur && m.contenu) {
     const actions = el('div', { class: 'message-actions' },
       el('button', {
@@ -3334,6 +3372,35 @@ async function envoyerMessage(options = {}) {
 }
 
 let fluxActif = null;
+
+/** Replace le dernier message dans la saisie et retire la suite du fil. */
+function modifierDernierMessage(message) {
+  if (etat.enCours) {
+    notifier('Attends la fin de la réponse avant de modifier le message.', 'info', 3000);
+    return;
+  }
+  const conv = etat.conversationCourante;
+  const index = conv?.messages?.indexOf(message);
+  if (!conv || index < 0) return;
+
+  conv.messages.splice(index);
+  conv.date = Date.now();
+  persisterConversations();
+  afficherConversation();
+
+  const saisie = $('#saisie');
+  if (saisie) {
+    saisie.value = message.contenu || '';
+    ajusterHauteurSaisie();
+    sauverBrouillon();
+    saisie.focus();
+  }
+  piecesJointes = Array.isArray(message.images)
+    ? message.images.map((img) => ({ ...img, type: 'image' }))
+    : [];
+  rendrePieces();
+  notifier('Message replacé dans la saisie : modifie-le puis renvoie.', 'info', 4000);
+}
 
 function regenererReponse() {
   if (etat.enCours) {

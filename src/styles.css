@@ -1061,6 +1061,22 @@ body.fenetre-inactive * {
 .outils-message { display: flex; flex-direction: column; gap: 4px; padding-left: 30px; margin: 2px 0; }
 
 /* détails du travail : repliés après coup, pour une conversation lisible */
+.images-message {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 30px;
+  margin: 2px 0;
+}
+
+.image-message {
+  max-width: 220px;
+  max-height: 180px;
+  border-radius: 8px;
+  border: 1px solid var(--bordure);
+  object-fit: cover;
+}
+
 .details-travail {
   margin: 2px 0 4px 30px;
   font-size: 11.5px;

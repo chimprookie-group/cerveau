@@ -428,6 +428,11 @@ async function run({ providerId, credentials, historique, ctx, emit, signal, lim
    * Demande au modèle si la tâche est réellement terminée. Un petit appel à
    * part, sans outils ni historique : il ne pollue pas la conversation.
    */
+  // fournisseur actif (peut basculer vers le secours en cas d'échec)
+  let actif = { providerId, credentials };
+  let fallbackUtilise = false;
+  let basculerFallback = false;
+
   const verifierDemande = async (texte) => {
     const demande = [...historique].reverse().find((m) => m.role === 'user')?.contenu || '';
     if (!demande) return { termine: true };
@@ -452,10 +457,10 @@ Réponds uniquement par OUI ou NON.`;
 
     try {
       for await (const evt of providers.stream({
-        providerId,
-        apiKey: credentials.apiKey,
-        baseUrl: credentials.baseUrl,
-        model: credentials.model,
+        providerId: actif.providerId,
+        apiKey: actif.credentials.apiKey,
+        baseUrl: actif.credentials.baseUrl,
+        model: actif.credentials.model,
         messages: [{ role: 'user', content: invite }],
         tools: [],
         maxTokens: 40,
@@ -499,10 +504,10 @@ Réponds uniquement par OUI ou NON.`;
       : controleurDelai.signal;
 
     const flux = providers.stream({
-      providerId,
-      apiKey: credentials.apiKey,
-      baseUrl: credentials.baseUrl,
-      model: credentials.model,
+      providerId: actif.providerId,
+      apiKey: actif.credentials.apiKey,
+      baseUrl: actif.credentials.baseUrl,
+      model: actif.credentials.model,
       messages,
       system: isAnthropic ? systeme : undefined,
       tools: sansOutils ? [] : (isAnthropic ? versAnthropic(tools) : versOpenAI(tools)),
@@ -542,6 +547,12 @@ Réponds uniquement par OUI ou NON.`;
             break;
           }
 
+          // fournisseur principal en échec : on tente le secours, une fois
+          if (ctx.fallback && !fallbackUtilise && !texteTour.trim() && !signal?.aborted) {
+            basculerFallback = true;
+            break;
+          }
+
           emit({ type: 'erreur', message: evt.message });
           return { texte: texteFinal + texteTour, outils: outilsExecutes, erreur: evt.message };
         } else if (evt.type === 'fin') {
@@ -549,6 +560,21 @@ Réponds uniquement par OUI ou NON.`;
           if (evt.usage) emit({ type: 'usage', usage: evt.usage, ms: Date.now() - debutFlux });
         }
       }
+      // Bascule vers le fournisseur de secours et nouvel essai.
+      if (basculerFallback) {
+        basculerFallback = false;
+        fallbackUtilise = true;
+        actif = {
+          providerId: ctx.fallback.providerId,
+          credentials: ctx.fallback.credentials
+        };
+        emit({
+          type: 'avertissement',
+          message: `Fournisseur principal indisponible : bascule vers ${actif.providerId}.`
+        });
+        continue;
+      }
+
       // Contexte refusé pour sa taille : on allège fortement et on réessaie.
       if (messageContexte) {
         allegerMessages(messages, isAnthropic, {
@@ -580,6 +606,18 @@ Réponds uniquement par OUI ou NON.`;
         const msg = `Délai de réponse dépassé (${Math.round(delaiMs / 1000)} s).`;
         emit({ type: 'erreur', message: msg });
         return { texte: texteFinal + texteTour, outils: outilsExecutes, erreur: msg };
+      }
+      if (ctx.fallback && !fallbackUtilise && !texteTour.trim() && !signal?.aborted) {
+        fallbackUtilise = true;
+        actif = {
+          providerId: ctx.fallback.providerId,
+          credentials: ctx.fallback.credentials
+        };
+        emit({
+          type: 'avertissement',
+          message: `Fournisseur principal indisponible : bascule vers ${actif.providerId}.`
+        });
+        continue;
       }
       const msg = messageErreur(err);
       emit({ type: 'erreur', message: msg });

@@ -503,6 +503,20 @@
               <input type="number" id="reglageDelaiReponse" min="0" max="1800" step="10"
                      class="champ-reglage-controle champ-nombre" placeholder="180" />
             </div>
+
+            <div class="champ-reglage">
+              <div class="champ-reglage-texte">
+                <label for="reglageFallback">Fournisseur de secours</label>
+                <p class="champ-reglage-aide">Utilisé si le fournisseur principal échoue (même famille d'API : OpenAI compatible ou Anthropic).</p>
+              </div>
+              <select id="reglageFallback" class="champ-reglage-controle">
+                <option value="">Aucun</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="openai">OpenAI</option>
+                <option value="custom">Compatible OpenAI (local / autre)</option>
+              </select>
+            </div>
           </section>
 
           <section class="section-reglage">

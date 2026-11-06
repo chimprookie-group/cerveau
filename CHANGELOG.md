@@ -4,6 +4,18 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.37.0] — 2026-11-06
+
+### Ajouté
+- **Modifier le dernier message** : un bouton « Modifier » sur le dernier message
+  utilisateur retire ce message et la suite du fil, et replace le texte (images
+  comprises) dans la saisie pour le corriger avant de renvoyer.
+- **Images jointes affichées** dans la conversation, en miniatures.
+- **Fournisseur de secours** : si le fournisseur principal échoue (clé, réseau,
+  service indisponible), l'agent bascule une fois vers un fournisseur de secours
+  de la même famille d'API (OpenAI compatible ou Anthropic), réglable dans
+  `Agent et outils`. Une notification signale la bascule.
+
 ## [2.36.0] — 2026-11-06
 
 ### Ajouté
