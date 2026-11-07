@@ -4,6 +4,39 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.46.2] — 2026-11-07
+
+### Corrigé
+- **Effets décoratifs de l'accueil : ~90 % de CPU pour du décor**. Mesuré sur
+  l'application réelle, fenêtre au premier plan : **46,4 % GPU + 63,8 % de
+  renderer** au repos avec les effets, contre **0,9 % / 0,7 %** sans eux. Une
+  fois la fenêtre focalisée et l'accueil affiché, trois animations concentraient
+  la dépense. Après correction : **4,5–5,1 % GPU / 3,6–3,8 % renderer**, mesures
+  répétées trois fois, soit environ **−90 %**.
+  - **Liseré d'en-tête** (~20 points de GPU à lui seul). L'en-tête est une zone
+    `-webkit-app-region: drag` : sa région est recalculée à chaque image dès
+    qu'un descendant peint. Vérifié que ce n'est pas la propriété animée qui
+    coûte — `transform`, opacité et couche dédiée mesurent tous ~23 % là où
+    l'état figé mesure 4,5 %. Le dégradé reste en place
+    (`background-position: 50% 0`) mais ne balaie plus.
+  - **Pulsation d'ombre du logo** (~27 points de renderer). Une `box-shadow`
+    dont le rayon change impose un repeint complet du halo flouté. L'ombre est
+    désormais fixe ; l'anneau en `conic-gradient` continue de tourner, lui sur sa
+    propre couche, pour un coût négligeable.
+  - **Grille de fond** (défilement par `background-position`, qui repeint toute
+    la couche à chaque image). Remplacé par un `translate3d` sur couche
+    composée ; le motif est décalé d'une période vers le haut pour que la
+    translation reste invisible aux bords.
+- Deux `@keyframes` devenues orphelines sont retirées, avec la raison en
+  commentaire.
+
+### Note
+Le rendu est préservé : comparaison pixel à pixel avant/après sur capture
+d'accueil — **0,47 % de pixels modifiés**, liseré et grille identiques au pixel
+près, halo à −6 % de luminance moyenne (pulsation figée). Conservés : halo, grille
+animée, anneau tournant, reflet du bouton d'envoi, pastille de statut. Le bloc
+`prefers-reduced-motion` continue de tout neutraliser.
+
 ## [2.46.1] — 2026-11-07
 
 ### Corrigé

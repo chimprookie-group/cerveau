@@ -4363,18 +4363,16 @@ html.entete-etroite #principal { position: relative; }
 }
 
 @keyframes effetsGrille {
-  to { background-position: 0 34px, 34px 0; }
+  to { transform: translate3d(0, 34px, 0); }
 }
 
-@keyframes effetsBalayage {
-  from { background-position: -45% 0; }
-  to   { background-position: 145% 0; }
-}
+/* @keyframes effetsBalayage retiré : le liseré d'en-tête est désormais fixe
+   (voir body.effets .entete::after). Animer un descendant d'une zone
+   -webkit-app-region: drag coûtait à lui seul plus que tous les autres effets. */
 
-@keyframes effetsHalo {
-  0%, 100% { box-shadow: 0 0 0 1px var(--bordure), 0 10px 28px color-mix(in srgb, var(--accent) 24%, transparent); }
-  50%      { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--bordure)), 0 12px 38px color-mix(in srgb, var(--accent) 42%, transparent); }
-}
+/* @keyframes effetsHalo retiré : l'ombre du logo est désormais statique
+   (voir body.effets .accueil-logo). Repeindre une ombre floutée à chaque image
+   coûtait ~27 points de renderer à lui seul. */
 
 @keyframes effetsReflet {
   0%, 62%   { transform: translateX(-130%); }
@@ -4409,11 +4407,14 @@ body.effets .accueil::before {
   will-change: transform, opacity;
 }
 
-/* grille fine, estompée aux bords, qui glisse vers le bas */
+/* grille fine, estompée aux bords, qui glisse vers le bas.
+   Défilement par transform (couche composée) et non par background-position :
+   cette dernière repeint la couche entière à chaque image. Le motif est décalé
+   d'une période vers le haut pour que la translation reste invisible aux bords. */
 body.effets .accueil::after {
   content: '';
   position: absolute;
-  inset: 0 -24px;
+  inset: -34px -24px 0;
   z-index: 0;
   pointer-events: none;
   background-image:
@@ -4423,6 +4424,7 @@ body.effets .accueil::after {
   -webkit-mask-image: radial-gradient(62% 58% at 50% 42%, #000 12%, transparent 78%);
   mask-image: radial-gradient(62% 58% at 50% 42%, #000 12%, transparent 78%);
   opacity: 0.55;
+  will-change: transform;
   animation: effetsGrille 26s linear infinite;
 }
 
@@ -4431,11 +4433,14 @@ body.effets .accueil > * {
   z-index: 1;
 }
 
-/* anneau lumineux en rotation autour du logo d'accueil */
+/* anneau lumineux en rotation autour du logo d'accueil.
+   La pulsation d'ombre (effetsHalo) est retirée : une ombre qui change de rayon
+   force un repeint complet du halo flouté. L'anneau en conic-gradient, lui,
+   tourne sur sa propre couche et ne coûte presque rien. */
 body.effets .accueil-logo:not(.petit) {
   position: relative;
   overflow: visible;
-  animation: effetsHalo 4.6s ease-in-out infinite;
+  box-shadow: 0 0 0 1px var(--bordure), 0 10px 28px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 body.effets .accueil-logo:not(.petit) img {
@@ -4486,7 +4491,11 @@ body.effets .entete::after {
   background-size: 45% 100%;
   background-repeat: no-repeat;
   opacity: 0.55;
-  animation: effetsBalayage 7s linear infinite;
+  /* Balayage fixe, volontairement. Mesuré à ~20 points de GPU : l'en-tête est
+     une zone -webkit-app-region: drag, dont la région est recalculée à chaque
+     image dès qu'un de ses descendants peint. Le dégradé reste donc en place ;
+     l'animation coûtait plus cher que tous les autres effets réunis. */
+  background-position: 50% 0;
 }
 
 /* contrôles actifs : lueur discrète */
