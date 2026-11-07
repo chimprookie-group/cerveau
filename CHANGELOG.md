@@ -4,6 +4,31 @@ Toutes les versions notables de Cerveau. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions selon
 [SemVer](https://semver.org/lang/fr/).
 
+## [2.46.1] — 2026-11-07
+
+### Corrigé
+- **Fuite de dossiers temporaires à chaque exécution des tests**. Le nettoyage
+  ne reconnaissait que le préfixe `cerveau-selftest-`, alors que le test
+  multi-modèles crée un dossier `cerveau-cfg-` : celui-ci survivait
+  indéfiniment dans `/tmp`. Les deux préfixes sont désormais balayés, et un
+  balayage final a lieu à la fin de l'autotest. Ce qui reste verrouillé par
+  Electron pendant l'exécution est repris au démarrage suivant.
+- **Nettoyage susceptible de casser le test en cours**. Le balayage était
+  appelé après la création du dossier de configuration du test : il pouvait
+  supprimer un dossier en cours d'utilisation. Le dossier courant est maintenant
+  explicitement exclu (`nettoyerResidus(exclure)`), et un dossier étranger à
+  l'autotest n'est jamais touché.
+- **Version incohérente dans le fichier de verrouillage**. `package-lock.json`
+  déclarait encore `1.0.0`, une version qui n'existait nulle part ailleurs. Un
+  `npm ci` pouvait échouer sur ce contrôle. Le fichier suit désormais la version
+  du projet.
+
+### Note
+Aucun fichier embarqué dans l'application n'est modifié par cette version : le
+paquet livré est fonctionnellement identique à celui de la 2.46.0. Cette
+publication réaligne le tag sur l'arbre de travail, les correctifs ci-dessus
+étant intervenus après la pose du tag précédent.
+
 ## [2.46.0] — 2026-11-07
 
 ### Corrigé
