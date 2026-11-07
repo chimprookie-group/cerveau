@@ -16,9 +16,21 @@ const path = require('node:path');
 
 const MARQUEUR = 'cerveau-selftest-';
 
-/** Vrai si le dossier a été créé par ce module (jamais nettoyé ailleurs). */
+/**
+ * Préfixes des dossiers jetables de l'autotest.
+ *
+ * `cerveau-selftest-` : coffre temporaire et dossier de configuration.
+ * `cerveau-cfg-` : configuration minimale du test multi-modèles, créée par
+ * selftest.js. Sans lui dans cette liste, ce dossier survivait indéfiniment
+ * dans /tmp à chaque exécution des tests.
+ */
+const MARQUEURS = [MARQUEUR, 'cerveau-cfg-'];
+
+/** Vrai si le dossier a été créé par l'autotest (jamais nettoyé ailleurs). */
 function estDossierDeTest(dossier) {
-  return Boolean(dossier) && path.basename(dossier).startsWith(MARQUEUR);
+  if (!dossier) return false;
+  const base = path.basename(dossier);
+  return MARQUEURS.some((m) => base.startsWith(m));
 }
 
 /**
@@ -28,7 +40,7 @@ function estDossierDeTest(dossier) {
  * l'application tourne (fichiers verrouillés par Electron) : on le retire au
  * démarrage suivant.
  */
-function nettoyerResidus() {
+function nettoyerResidus(exclure) {
   const tmp = os.tmpdir();
   let entrees = [];
   try {
@@ -36,11 +48,17 @@ function nettoyerResidus() {
   } catch {
     return 0;
   }
+  // le dossier de config du test en cours est créé avant cet appel : le
+  // supprimer casserait le run en cours (Electron écrirait dans un dossier
+  // recréé au hasard des écritures).
+  const garder = exclure ? path.resolve(exclure) : null;
   let supprimes = 0;
   for (const nom of entrees) {
-    if (!nom.startsWith(MARQUEUR)) continue;
+    if (!MARQUEURS.some((m) => nom.startsWith(m))) continue;
+    const cible = path.join(tmp, nom);
+    if (garder && path.resolve(cible) === garder) continue;
     try {
-      fs.rmSync(path.join(tmp, nom), { recursive: true, force: true });
+      fs.rmSync(cible, { recursive: true, force: true });
       supprimes += 1;
     } catch { /* encore verrouillé : on réessaiera */ }
   }
@@ -92,7 +110,7 @@ function serveurMCPDeTest() {
 function appliquer(config) {
   if (process.env.CERVEAU_SELFTEST !== '1') return { actif: false };
 
-  nettoyerResidus();
+  nettoyerResidus(process.env.XDG_CONFIG_HOME_TEST);
   const coffre = creerCoffreTemporaire();
   const vaultId = 'vault_selftest';
 

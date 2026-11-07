@@ -2714,6 +2714,10 @@ async function run(mainWindow, deps) {
     if (dossierConf && profilTest.estDossierDeTest(dossierConf)) {
       fs2.rmSync(dossierConf, { recursive: true, force: true });
     }
+    // balayage final : dossiers `cerveau-cfg-*` du test multi-modèles et
+    // résidus d'exécutions interrompues. Ce qui reste verrouillé par Electron
+    // est repris au démarrage suivant.
+    profilTest.nettoyerResidus(dossierConf);
   } catch { /* un nettoyage raté ne change pas le résultat des tests */ }
 
   const code = echecs.length ? 1 : 0;
